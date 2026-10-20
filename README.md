@@ -33,6 +33,8 @@ This README documents **only what currently exists in this repository** — not 
 | Telemetry | ✅ Complete | In-memory sink; observational only, failure-isolated |
 | End-to-end offline simulation | ✅ Complete | 6 scenario tests (`E2E-01`..`06`) composing real production components |
 | Unity Ghost visual prototype (non-XR) | ✅ Complete, prototype-grade | Primitive-based, code-only visual differentiation of the five execution states |
+| M2 desktop greybox loop (`Game/`, `App/`, `Bootstrap` + `Game_BlackthornHouse` scenes) | ✅ Implemented, automated checks pass | Fuse → fuse box → power → exit → success, plus pause/resume and full restart, on Windows keyboard/mouse. Objective logic is the plain-C# `GameFlow` (FLOW-01..16). A Windows player build passed the in-player route self-test (23/23, scripted route 27.1 s). **Manual Editor play-through not yet done.** No ghost, death or checkpoint (M3/M4). See [`Docs/TechnicalSpec_MilestoneStatus.md`](Docs/TechnicalSpec_MilestoneStatus.md) |
+| Known defects P1–P5 (spec section A) | ⚠️ Unresolved | P1 (hysteresis dwell frozen in virtual-only mode) must be fixed before the ghost enters in M3 |
 | XR / Quest integration | ⛔ Not implemented | `Assets/PHYSXR/XR/` exists but is empty; only auto-generated OpenXR package settings are present, no custom code |
 | RL / learning-based decision provider | ⛔ Not implemented | Only `RuleBasedDecisionProvider` exists; `IDecisionProvider` is designed to allow a future implementation to sit alongside it |
 | Hardware-in-loop integration | ⛔ Not implemented | No ESP32 firmware in this repo; wire format is an explicit placeholder pending a real firmware contract |
@@ -251,7 +253,7 @@ Files: [`Telemetry/`](Assets/PHYSXR/Telemetry)
 
 The project uses a custom, dependency-light test convention (`public static int RunAll()`, with an internal `Run(name, Action)` helper that catches exceptions and reports pass/fail) — **not** Unity's installed `com.unity.test-framework`/NUnit package, despite it being present in `Packages/manifest.json`. There are no `.asmdef` files in the project; tests compile as part of the default assembly, and are also runnable through a standalone `dotnet`-based harness independent of Unity.
 
-**Verified regression checkpoint: 170/170 tests passing** in the standalone .NET harness (not yet run inside Unity). The original 130 tests are unchanged and still pass; the 13 warning-beat, 12 runtime-pipeline and 15 terminal-gate tests were added on the `demo/warning-beat-arbitration` branch. The count is from re-running the harness against this source, not copied from an earlier report.
+**Verified regression checkpoint: 186/186 tests passing** in the standalone .NET harness ([`Tools/TestHarness`](Tools/TestHarness/Program.cs)). The original 130 tests are unchanged and still pass. The 13 warning-beat, 12 runtime-pipeline and 15 terminal-gate tests, and the 16 M2 game-flow tests, were added on the `demo/warning-beat-arbitration` branch. The count is from re-running the harness against this source, not copied from an earlier report. The Unity-side M2 loop is covered separately by the in-player route self-test (see [How to Run / Test](#how-to-run--test)).
 
 | Suite | File | Test IDs | Count |
 |---|---|---|---|
@@ -271,6 +273,7 @@ The project uses a custom, dependency-light test convention (`public static int 
 | Warning-beat arbitration | [`EncounterDecisionLayerTests.cs`](Assets/PHYSXR/Testing/EncounterDecisionLayerTests.cs) | `WB-01`..`12` | 13 |
 | Runtime pipeline integration | [`RuntimePipelineIntegrationTests.cs`](Assets/PHYSXR/Testing/RuntimePipelineIntegrationTests.cs) | `RT-01`..`12` | 12 |
 | Terminal gate / session | [`TerminalGateTests.cs`](Assets/PHYSXR/Testing/TerminalGateTests.cs) | `TERM-01`..`15` | 15 |
+| M2 game flow / session | [`GameFlowTests.cs`](Assets/PHYSXR/Testing/GameFlowTests.cs) | `FLOW-01`..`16` | 16 |
 | **Total** | | | **170** |
 
 The runtime tests share [`RuntimeTestHarness.cs`](Assets/PHYSXR/Testing/RuntimeTestHarness.cs), which builds the pipeline through `GhostRuntimePipeline.CreateRuntimeChain` (the same factory `GhostRuntime` uses) and wraps the real executor and controller in call counters, so the terminal tests assert that nothing was *executed*, not just that a particular action was chosen.
@@ -338,6 +341,16 @@ Confirmed isolation: `GhostVisualController` contains no reference anywhere to `
 ```
 Assets/
 ├── PHYSXR/
+│   ├── App/                  # AppBootstrap (persistent [Systems] object, scene flow)
+│   ├── Game/
+│   │   ├── Flow/              # Plain C#: GameFlow (objective/run states), GameSession, InteractionResult
+│   │   ├── Input/             # IPlayerInput, DesktopInputAdapter
+│   │   ├── Player/            # PlayerController, DesktopMotor, PlayerInteractor
+│   │   ├── Gameplay/          # Interactable, FusePickup, FuseBox, ExitDoor, PowerSystem, GameFlowController
+│   │   ├── Level/             # BlackthornGreybox (primitive greybox builder + wiring)
+│   │   ├── UI/                # GameUI (IMGUI placeholder HUD/menus)
+│   │   └── Dev/               # M2RouteSelfTest, ScriptedPlayerInput (opt-in only)
+│   ├── Scenes/               # Bootstrap (build 0), Game_BlackthornHouse (build 1)
 │   ├── Communication/        # Packet validation, parsing, UDP receiver, staleness handling
 │   ├── Core/
 │   │   ├── Data/              # PhysicalState, PhysicalEvent, PlayerState, VirtualState, GhostState, WorldState
@@ -352,7 +365,7 @@ Assets/
 │   ├── WorldState/              # WorldStateManager
 │   └── XR/                     # Empty — no implementation
 ├── Scenes/
-│   └── SampleScene.unity
+│   └── SampleScene.unity         # Developer scene (ghost prototype); not in the build
 ├── Settings/                   # URP render pipeline settings
 ├── XR/Settings/                 # Auto-generated OpenXR package settings (not custom code)
 └── TutorialInfo/                # Default Unity template readme assets (unrelated to PHYSXR)
@@ -376,7 +389,17 @@ int failed = RuleBasedDecisionProviderTests.RunAll()
 ```
 
 **Run the test suite (standalone, outside Unity):**
-Because none of the tested classes depend on `UnityEngine`, the entire non-Ghost/GhostRuntime test surface can also run under a plain `dotnet run` console project that references copies of the relevant `.cs` files and calls each suite's `RunAll()`. This is how the 130/130 checkpoint in this README was verified.
+`Tools/TestHarness` is a .NET console project. It compiles the Unity-independent sources under `Assets/PHYSXR` directly (no copies, pinned to C# 9 like Unity) and runs every suite's `RunAll()`. Its exit code is the failure count.
+
+```bash
+dotnet run -c Release --project Tools/TestHarness
+```
+
+**Play the M2 desktop greybox:**
+Open `Assets/PHYSXR/Scenes/Bootstrap.unity` and press Play. You can also play `Game_BlackthornHouse` directly; it then uses a local session and logs a warning. Controls: WASD move, mouse look, E interact, Esc pause/resume. If the scenes or build list ever drift, run `PHYS-XR > M2 > Create Or Repair Scenes`.
+
+**Automated M2 route self-test (inside Unity):**
+In the Editor, use `PHYS-XR > M2 > Run Route Self-Test (Play Mode)`. Or launch a Windows build with `-physxr-m2-selftest` (optionally `-batchmode -nographics`); the player exits with the failure count. It logs `M2SELFTEST PASS|FAIL <id>` lines. A batch build: `Unity -batchmode -quit -projectPath . -executeMethod PHYSXR.EditorTools.M2SceneSetup.BuildWindows -buildPath Builds/M2_Windows/PHYS-XR.exe`.
 
 **Preview the non-XR Ghost visual prototype:**
 1. In the Unity Editor, run `GhostPrototypeSceneSetup.Run()` (via the Editor menu or a direct call) to build/rewire the "Ghost" `GameObject` in `Assets/Scenes/SampleScene.unity`.
@@ -411,6 +434,8 @@ These are guarantees actually enforced by the current implementation, not aspira
 - **Hardware-in-loop integration is not implemented.** No ESP32 firmware exists in this repository. The communication layer's wire format (`ProvisionalTextPacketFormat`) is explicitly documented as a placeholder pending an agreed firmware contract; only its Unity-side parsing/validation is implemented and tested.
 - **`WorldStateManager` does not compose `PhysicalEventManager`.** `PhysicalEvent`s are validated, parsed, and deduplicated by `PhysicalCommunicationPipeline`/`PhysicalEventManager`, but `WorldState`/`WorldStateManager` currently carries no reference to event data — only continuous `PhysicalState`. This is a genuine architectural gap between the event-handling and world-snapshot layers as they exist today.
 - **`GhostRuntime.Tick()` sources its timestamp from `DateTimeOffset.UtcNow`** at the Unity integration boundary — the one place in the pipeline where wall-clock time is used; everything downstream of that point (the decision layer and its temporal context) remains deterministic given that timestamp.
+- **The M2 greybox has no ghost, death, checkpoint, defensive lantern, audio or final lighting.** Restart is a full scene reload, not a checkpoint restore. The UI is an IMGUI placeholder (not usable in XR). The greybox is built from primitives at scene load; the art pass replaces it.
+- **Known defects P1–P5 from the Technical Spec are unresolved.** P1 must be fixed before the ghost enters in M3. Whether a new ATTACK outranks a mandatory warning beat is deliberately left open for the encounter milestone.
 - **No Unity Test Runner / NUnit integration**, despite `com.unity.test-framework` being an installed package — tests use a custom convention instead.
 
 ---

@@ -6,8 +6,11 @@ EditorBuildSettings:
   serializedVersion: 2
   m_Scenes:
   - enabled: 1
-    path: Assets/Scenes/SampleScene.unity
-    guid: 99c9720ab356a0642a771bea13969a05
+    path: Assets/PHYSXR/Scenes/Bootstrap.unity
+    guid: a647dc20bab60674fa18e4e112008100
+  - enabled: 1
+    path: Assets/PHYSXR/Scenes/Game_BlackthornHouse.unity
+    guid: 161178fde96a60740a0b5db0bfa2d8cd
   m_configObjects:
     com.unity.dt.app-ui: {fileID: 11400000, guid: 1b1c20d82303e4b5781c3ef50ac1449f, type: 2}
     com.unity.input.settings.actions: {fileID: -944628639613478452, guid: 052faaac586de48259a63d0c4782560b, type: 3}

@@ -1,0 +1,40 @@
+<Project Sdk="Microsoft.NET.Sdk">
+
+  <!--
+    Standalone runner for the PHYS-XR RunAll() suites, outside Unity.
+    It compiles the Unity-independent source under Assets/PHYSXR directly
+    (no copies), so the files tested here are the files Unity compiles.
+    LangVersion is pinned to C# 9 to match Unity 6's compiler.
+
+    Excluded: anything that references UnityEngine/UnityEditor. Those files
+    are verified by Unity itself, not by this harness.
+
+    Run from the repo root: see Program.cs for the command line.
+  -->
+
+  <PropertyGroup>
+    <OutputType>Exe</OutputType>
+    <TargetFramework>net9.0</TargetFramework>
+    <LangVersion>9.0</LangVersion>
+    <Nullable>disable</Nullable>
+    <ImplicitUsings>disable</ImplicitUsings>
+    <EnableDefaultCompileItems>false</EnableDefaultCompileItems>
+    <TreatWarningsAsErrors>false</TreatWarningsAsErrors>
+    <RootNamespace>PHYSXR.TestHarness</RootNamespace>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <Compile Include="Program.cs" />
+    <Compile Include="../../Assets/PHYSXR/Core/**/*.cs" />
+    <Compile Include="../../Assets/PHYSXR/Communication/**/*.cs" />
+    <Compile Include="../../Assets/PHYSXR/PhysicalWorld/**/*.cs" />
+    <Compile Include="../../Assets/PHYSXR/WorldState/**/*.cs" />
+    <Compile Include="../../Assets/PHYSXR/Decision/**/*.cs" />
+    <Compile Include="../../Assets/PHYSXR/Telemetry/**/*.cs" />
+    <Compile Include="../../Assets/PHYSXR/Ghost/**/*.cs"
+             Exclude="../../Assets/PHYSXR/Ghost/GhostRuntime.cs;../../Assets/PHYSXR/Ghost/GhostVisual*.cs" />
+    <Compile Include="../../Assets/PHYSXR/Game/Flow/**/*.cs" />
+    <Compile Include="../../Assets/PHYSXR/Testing/**/*.cs" />
+  </ItemGroup>
+
+</Project>
