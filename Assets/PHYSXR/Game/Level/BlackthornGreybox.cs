@@ -116,6 +116,47 @@ namespace PHYSXR.Game.Level
             ui.Initialize(FlowController, Player.Interactor);
         }
 
+#if UNITY_EDITOR
+        // Edit-mode layout preview. The house is built only at runtime (Awake),
+        // so outside Play mode the scene holds just this component. This replays
+        // the same BuildRooms/BuildFurniture layout code with gizmo drawing
+        // instead of object creation: nothing is added to or saved in the scene,
+        // nothing runs in Play mode, and none of it exists in player builds.
+        // Only BuildRooms/BuildFurniture may run here: their helpers never use
+        // what Group()/Block() return, which are null while drawingGizmos is set.
+        private bool drawingGizmos;
+
+        private void OnDrawGizmos()
+        {
+            if (Application.isPlaying)
+                return;
+
+            drawingGizmos = true;
+            try
+            {
+                BuildRooms(null);
+                BuildFurniture(null);
+            }
+            finally
+            {
+                drawingGizmos = false;
+            }
+
+            Marker(StartPosition + Vector3.up * 0.9f, new Vector3(0.6f, 1.8f, 0.6f), Color.cyan);
+            Marker(FusePosition, new Vector3(0.3f, 0.3f, 0.3f), FuseColor);
+            Marker(FuseBoxPosition, new Vector3(0.25f, 0.6f, 0.45f), MetalColor);
+            Marker(ExitDoorPosition, new Vector3(1.2f, 2.3f, 0.1f), DoorColor);
+        }
+
+        private static void Marker(Vector3 centre, Vector3 size, Color color)
+        {
+            Gizmos.color = color;
+            Gizmos.DrawCube(centre, size);
+            Gizmos.color = Color.white;
+            Gizmos.DrawWireCube(centre, size);
+        }
+#endif
+
         // ---------------------------------------------------------------- rooms
 
         private void BuildRooms(Transform parent)
@@ -326,8 +367,12 @@ namespace PHYSXR.Game.Level
 
         // -------------------------------------------------------------- helpers
 
-        private static Transform Group(Transform parent, string name)
+        private Transform Group(Transform parent, string name)
         {
+#if UNITY_EDITOR
+            if (drawingGizmos)
+                return null;
+#endif
             Transform group = new GameObject(name).transform;
             group.SetParent(parent, false);
             return group;
@@ -335,6 +380,16 @@ namespace PHYSXR.Game.Level
 
         private GameObject Block(Transform parent, string name, Vector3 worldCentre, Vector3 size, Color color)
         {
+#if UNITY_EDITOR
+            if (drawingGizmos)
+            {
+                Gizmos.color = new Color(color.r, color.g, color.b, 0.35f);
+                Gizmos.DrawCube(worldCentre, size);
+                Gizmos.color = color;
+                Gizmos.DrawWireCube(worldCentre, size);
+                return null;
+            }
+#endif
             GameObject block = GameObject.CreatePrimitive(PrimitiveType.Cube);
             block.name = name;
             block.transform.SetParent(parent, false);
