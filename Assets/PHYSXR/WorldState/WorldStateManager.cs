@@ -131,7 +131,9 @@ namespace PHYSXR.WorldStateSystem
             return new VirtualState
             {
                 threatLevel = source.threatLevel,
-                eventActive = source.eventActive
+                eventActive = source.eventActive,
+                mandatoryWarningBeat = source.mandatoryWarningBeat,
+                gameplayTerminal = source.gameplayTerminal
             };
         }
 
@@ -139,7 +141,8 @@ namespace PHYSXR.WorldStateSystem
         {
             return new GhostState
             {
-                currentState = source.currentState
+                currentState = source.currentState,
+                phase = source.phase
             };
         }
     }
