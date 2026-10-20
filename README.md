@@ -25,6 +25,8 @@ This README documents **only what currently exists in this repository** — not 
 | Rule-based AI decision layer (`RuleBasedDecisionProvider`, R1–R8) | ✅ Complete | Deterministic, fully tested |
 | Decision history / temporal context (`DecisionHistory`) | ✅ Complete | Rising-edge disturbance tracking, bounded occurrence window |
 | Hysteresis / anti-thrashing layer | ✅ Complete | Post-processing layer over R1–R8, timestamp-driven |
+| Encounter decision layer (`EncounterDecisionLayer`) | ✅ Complete, standalone-tested | Wraps R1–R8 (unchanged). Precedence G0 terminal → E0 interruption → S safety (`PROTECT`/`RETREAT`) → W mandatory warning beat → inner. Wired into `GhostRuntime` via `GhostRuntimePipeline.CreateRuntimeChain` |
+| Terminal gate (`GameplaySession`, pipeline gate, `GhostBehaviourController.Halt`) | ✅ Complete, standalone-tested | Once the run is terminal no ghost decision, `Execute()` or `ApplyState()` runs until `RestartFromCheckpoint()`. Not yet exercised inside Unity; ATTACK and NavMesh movement do not exist yet |
 | Ghost action execution (`GhostActionExecutor`) | ✅ Complete | Stateless, deterministic `GhostAction → GhostExecutionState` mapping |
 | Ghost behaviour controller (`GhostBehaviourController`) | ✅ Complete | Plain state holder, no Unity/decision coupling |
 | Runtime pipeline (`GhostRuntime`, `GhostRuntimePipeline`) | ✅ Complete | `GhostRuntimePipeline` is Unity-independent; `GhostRuntime` is the one MonoBehaviour adapter |
@@ -249,7 +251,7 @@ Files: [`Telemetry/`](Assets/PHYSXR/Telemetry)
 
 The project uses a custom, dependency-light test convention (`public static int RunAll()`, with an internal `Run(name, Action)` helper that catches exceptions and reports pass/fail) — **not** Unity's installed `com.unity.test-framework`/NUnit package, despite it being present in `Packages/manifest.json`. There are no `.asmdef` files in the project; tests compile as part of the default assembly, and are also runnable through a standalone `dotnet`-based harness independent of Unity.
 
-**Verified regression checkpoint: 130/130 tests passing.** This was re-verified for this README by re-running the standalone harness against the current repository source (diffed byte-for-byte identical beforehand) — not copied from a prior report.
+**Verified regression checkpoint: 170/170 tests passing** in the standalone .NET harness (not yet run inside Unity). The original 130 tests are unchanged and still pass; the 13 warning-beat, 12 runtime-pipeline and 15 terminal-gate tests were added on the `demo/warning-beat-arbitration` branch. The count is from re-running the harness against this source, not copied from an earlier report.
 
 | Suite | File | Test IDs | Count |
 |---|---|---|---|
@@ -266,7 +268,12 @@ The project uses a custom, dependency-light test convention (`public static int 
 | Temporal context wiring | [`RuleBasedDecisionProviderTemporalContextTests.cs`](Assets/PHYSXR/Testing/RuleBasedDecisionProviderTemporalContextTests.cs) | `PDC-01`..`07` | 7 |
 | Rule-based decision (again) | (nested inside `HYST-15`) | `DEC-01`..`13` | 13 |
 | Hysteresis | [`RuleBasedDecisionProviderHysteresisTests.cs`](Assets/PHYSXR/Testing/RuleBasedDecisionProviderHysteresisTests.cs) | `HYST-01`..`18` | 18 |
-| **Total** | | | **130** |
+| Warning-beat arbitration | [`EncounterDecisionLayerTests.cs`](Assets/PHYSXR/Testing/EncounterDecisionLayerTests.cs) | `WB-01`..`12` | 13 |
+| Runtime pipeline integration | [`RuntimePipelineIntegrationTests.cs`](Assets/PHYSXR/Testing/RuntimePipelineIntegrationTests.cs) | `RT-01`..`12` | 12 |
+| Terminal gate / session | [`TerminalGateTests.cs`](Assets/PHYSXR/Testing/TerminalGateTests.cs) | `TERM-01`..`15` | 15 |
+| **Total** | | | **170** |
+
+The runtime tests share [`RuntimeTestHarness.cs`](Assets/PHYSXR/Testing/RuntimeTestHarness.cs), which builds the pipeline through `GhostRuntimePipeline.CreateRuntimeChain` (the same factory `GhostRuntime` uses) and wraps the real executor and controller in call counters, so the terminal tests assert that nothing was *executed*, not just that a particular action was chosen.
 
 Note: `HYST-15_ExistingDecisionRuleSuite_StillPasses` directly re-invokes `RuleBasedDecisionProviderTests.RunAll()` as a regression guard — this is why the 13 `DEC-*` tests are counted twice in the 130 total (once standalone, once nested); it is intentional, not a duplication bug.
 

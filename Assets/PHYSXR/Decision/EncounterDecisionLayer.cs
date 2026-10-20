@@ -12,7 +12,10 @@ namespace PHYSXR.Decision
     // coherent; this layer only decides whether its result is replaced.
     //
     // Precedence, first match wins:
-    //   G0  gameplayTerminal           -> inner result, unchanged (no beat may override)
+    //   G0  gameplayTerminal           -> inner result, unchanged (no beat may override).
+    //       This is decision-level defence in depth only. The terminal state is
+    //       actually ENFORCED one level down: GhostRuntimePipeline's terminal
+    //       gate stops the decide/execute/apply sequence from running at all.
     //   E0  ghost phase INTERRUPTED    -> RETREAT (lantern interruption)
     //   S   inner result PROTECT/RETREAT -> inner result (genuine safety response)
     //   W   mandatoryWarningBeat       -> WARN
@@ -24,7 +27,7 @@ namespace PHYSXR.Decision
     //
     // Deterministic: no clock, no randomness, no state of its own beyond the
     // last reason string.
-    public class EncounterDecisionLayer : IDecisionProvider
+    public class EncounterDecisionLayer : IExplainableDecisionProvider
     {
         private readonly RuleBasedDecisionProvider inner;
 
@@ -37,6 +40,16 @@ namespace PHYSXR.Decision
         }
 
         public RuleBasedDecisionProvider Inner => inner;
+
+        // Checkpoint restart: clears the inner provider's temporal context
+        // (hysteresis history) and this layer's last reason/rule. Calibration
+        // and the R1-R8 rules are untouched.
+        public void Reset()
+        {
+            inner.Reset();
+            LastDecisionReason = string.Empty;
+            LastRuleId = string.Empty;
+        }
 
         public GhostAction Decide(WorldState state)
         {

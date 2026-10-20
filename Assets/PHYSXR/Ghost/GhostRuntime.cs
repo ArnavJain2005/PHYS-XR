@@ -1,6 +1,7 @@
 using System;
 using PHYSXR.Core.Data;
 using PHYSXR.Decision;
+using PHYSXR.SessionSystem;
 using PHYSXR.Telemetry;
 using PHYSXR.WorldStateSystem;
 using UnityEngine;
@@ -31,7 +32,11 @@ namespace PHYSXR.Ghost
     {
         private WorldStateManager worldStateManager;
 
-        private readonly RuleBasedDecisionProvider decisionProvider = new RuleBasedDecisionProvider();
+        // Decision chain: RuleBasedDecisionProvider (R1-R8, frozen) is wrapped
+        // by EncounterDecisionLayer (terminal / interruption / safety /
+        // mandatory-warning-beat arbitration). The pipeline is handed the
+        // OUTER layer, so action, reason and telemetry are all the final ones.
+        private readonly RuleBasedDecisionProvider ruleBasedProvider = new RuleBasedDecisionProvider();
         private readonly IGhostActionExecutor actionExecutor = new GhostActionExecutor();
         private readonly IGhostBehaviourController behaviourController = new GhostBehaviourController();
 
@@ -49,10 +54,20 @@ namespace PHYSXR.Ghost
         // guidance actually warns against.
         public GhostRuntime()
         {
-            pipeline = new GhostRuntimePipeline(decisionProvider, actionExecutor, behaviourController);
+            pipeline = GhostRuntimePipeline.CreateRuntimeChain(ruleBasedProvider, actionExecutor, behaviourController);
         }
 
         public bool IsInitialized { get; private set; }
+
+        // The run's terminal-state owner (EnterTerminal / RestartFromCheckpoint).
+        // Null until Initialize() has supplied the WorldStateManager it needs.
+        public GameplaySession Session { get; private set; }
+
+        // True once the run is terminal: the ghost's decision/execution/
+        // behaviour pipeline is gated off and presentation must not drive
+        // ordinary ghost movement or attacks. CurrentState then stays at the
+        // last state it had; the ghost is not given any new command.
+        public bool IsHalted => behaviourController.IsHalted;
 
         // Current execution-level behaviour state, read-only, for future
         // Unity presentation code (Animator/NavMesh/audio/VFX - none of
@@ -75,12 +90,15 @@ namespace PHYSXR.Ghost
         public void Initialize(WorldStateManager worldStateManager)
         {
             this.worldStateManager = worldStateManager ?? throw new ArgumentNullException(nameof(worldStateManager));
+            Session = new GameplaySession(this.worldStateManager, pipeline);
             IsInitialized = true;
         }
 
         // Runs one pass of the existing pipeline:
-        // WorldState -> GhostAction -> GhostExecutionState -> GhostBehaviourController
-        // (plus optional telemetry, see GhostRuntimePipeline). Contains no
+        // WorldState -> RuleBasedDecisionProvider -> EncounterDecisionLayer ->
+        // GhostAction -> GhostExecutionState -> GhostBehaviourController
+        // (plus optional telemetry, see GhostRuntimePipeline). Once the run is
+        // terminal the pipeline's gate makes this a no-op for the ghost. Contains no
         // decision logic itself - it only fetches WorldState and hands it
         // to the already Unity-independent, already-tested pipeline.
         public void Tick()
