@@ -49,8 +49,24 @@ WASD move · mouse look (pitch clamped ±80°) · E interact · Esc pause/resume
 | In-player automated route (`-physxr-m2-selftest`, headless) | `M2RouteSelfTest`: scripted input drives the real CharacterController, camera ray and interact path | **23 passed, 0 failed**; scripted walk-only route **27.1 s** |
 
 The Unity checks ran on a scratch copy of the project, because the Editor had this checkout open.
-The copy matches the committed `Assets/` and `ProjectSettings/`. It differs in one way: the local,
-uncommitted `com.coplaydev.unity-mcp` package was removed from its manifest.
+What matched the commit, and what did not:
+
+- **Identical to `bf7fb52`:** all of `Assets/PHYSXR` (byte-for-byte), `Packages/manifest.json`, and the
+  regenerated `Packages/packages-lock.json`. The copy's manifest is the committed one, because the
+  local `com.coplaydev.unity-mcp` line is uncommitted and was removed from the copy.
+- **Not identical:**
+  - The copy included the developer's uncommitted XR files: a modified `OpenXR Package Settings.asset`
+    and an untracked `Assets/XR/Loaders/OpenXRLoader.asset`. Unity then generated
+    `XRGeneralSettingsPerBuildTarget.asset` and `OpenXR Editor Settings.asset`.
+  - The copy's `EditorBuildSettings.asset` had an extra `xr.management.loader_settings` entry. Its
+    scene GUIDs were also stale, the same mismatch the commit had (fixed in the follow-up commit).
+    The build was not affected, because `BuildWindows` passes scene paths explicitly.
+  - The fresh import re-serialised `ProjectSettings.asset`, `UnityConnectSettings.asset`,
+    `Assets/Settings/PC_RPAsset.asset`, `UniversalRenderPipelineGlobalSettings.asset` and
+    `DefaultVolumeProfile.asset`. None of these changes was committed.
+- **Not covered:** the self-test ran headless (`-batchmode -nographics`), so nothing was rendered.
+  Cursor lock, the IMGUI HUD and menus, and real keyboard/mouse input through `DesktopInputAdapter`
+  were not exercised.
 
 ### Spec test cases
 
