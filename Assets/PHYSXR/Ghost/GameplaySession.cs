@@ -1,9 +1,8 @@
 using System;
 using PHYSXR.Core.Data;
-using PHYSXR.Ghost;
 using PHYSXR.WorldStateSystem;
 
-namespace PHYSXR.SessionSystem
+namespace PHYSXR.Ghost
 {
     public enum TerminalReason
     {
@@ -13,6 +12,10 @@ namespace PHYSXR.SessionSystem
         RunCompleted
     }
 
+    // Lives in the Ghost folder/namespace on purpose: GhostRuntime exposes it
+    // and it drives GhostRuntimePipeline, so a separate Session assembly would
+    // be an assembly cycle once asmdefs are added.
+    //
     // Plain C#, Unity-independent owner of the run's terminal state. This is
     // the single call-site game flow uses to end and restart a run:
     //

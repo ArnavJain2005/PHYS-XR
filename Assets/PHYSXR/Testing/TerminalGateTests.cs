@@ -2,7 +2,6 @@ using System;
 using PHYSXR.Core.Data;
 using PHYSXR.Core.Enums;
 using PHYSXR.Ghost;
-using PHYSXR.SessionSystem;
 using PHYSXR.Telemetry;
 
 namespace PHYSXR.Testing

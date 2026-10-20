@@ -26,7 +26,7 @@ This README documents **only what currently exists in this repository** — not 
 | Decision history / temporal context (`DecisionHistory`) | ✅ Complete | Rising-edge disturbance tracking, bounded occurrence window |
 | Hysteresis / anti-thrashing layer | ✅ Complete | Post-processing layer over R1–R8, timestamp-driven |
 | Encounter decision layer (`EncounterDecisionLayer`) | ✅ Complete, standalone-tested | Wraps R1–R8 (unchanged). Precedence G0 terminal → E0 interruption → S safety (`PROTECT`/`RETREAT`) → W mandatory warning beat → inner. Wired into `GhostRuntime` via `GhostRuntimePipeline.CreateRuntimeChain` |
-| Terminal gate (`GameplaySession`, pipeline gate, `GhostBehaviourController.Halt`) | ✅ Complete, standalone-tested | Once the run is terminal no ghost decision, `Execute()` or `ApplyState()` runs until `RestartFromCheckpoint()`. Not yet exercised inside Unity; ATTACK and NavMesh movement do not exist yet |
+| Terminal gate (`GameplaySession` in `Ghost/`, pipeline gate, `GhostBehaviourController.Halt`) | ✅ Complete, standalone-tested | Once the run is terminal no ghost decision, `Execute()` or `ApplyState()` runs until `RestartFromCheckpoint()`. Not yet exercised inside Unity; ATTACK and NavMesh movement do not exist yet |
 | Ghost action execution (`GhostActionExecutor`) | ✅ Complete | Stateless, deterministic `GhostAction → GhostExecutionState` mapping |
 | Ghost behaviour controller (`GhostBehaviourController`) | ✅ Complete | Plain state holder, no Unity/decision coupling |
 | Runtime pipeline (`GhostRuntime`, `GhostRuntimePipeline`) | ✅ Complete | `GhostRuntimePipeline` is Unity-independent; `GhostRuntime` is the one MonoBehaviour adapter |
