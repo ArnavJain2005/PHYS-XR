@@ -456,7 +456,8 @@ namespace PHYSXR.Testing
                 p.Fail = true;
                 WaitFor(() => r.Status.state == SerialLinkState.FAULTED, "faulted on device error");
                 AssertTrue(r.Status.lastError.Contains("device error"), "reason: " + r.Status.lastError);
-                AssertEq(0, p.OpenHandles, "failed handle closed");
+                // FAULTED is published in the catch; the handle closes just after.
+                WaitFor(() => p.OpenHandles == 0, "failed handle closed");
                 p.Fail = false;
                 WaitFor(() => r.Status.state == SerialLinkState.CONNECTED && p.Opens >= 2, "reconnected");
                 p.Send("ne\n" + FirmwareGoldenState + "\n");
@@ -484,7 +485,7 @@ namespace PHYSXR.Testing
                 WaitFor(() => r.Status.state == SerialLinkState.CONNECTED, "connected");
                 p.Removed = true;
                 WaitFor(() => r.Status.lastError != null && r.Status.lastError.Contains("removed"), "removal noticed");
-                AssertEq(0, p.OpenHandles, "handle released after removal");
+                WaitFor(() => p.OpenHandles == 0, "handle released after removal");
                 p.Removed = false;
                 WaitFor(() => r.Status.state == SerialLinkState.CONNECTED && p.Opens >= 2, "replugged");
             }

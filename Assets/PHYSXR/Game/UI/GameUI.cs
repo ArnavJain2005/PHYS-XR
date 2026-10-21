@@ -280,7 +280,7 @@ namespace PHYSXR.Game.UI
 
         private void BuildDev()
         {
-            devPanel = UIKit.Rect(canvas.transform, "Dev", new Vector2(1f, 1f), new Vector2(1f, 1f), new Vector2(1f, 1f), new Vector2(-30f, -80f), new Vector2(720f, 440f));
+            devPanel = UIKit.Rect(canvas.transform, "Dev", new Vector2(1f, 1f), new Vector2(1f, 1f), new Vector2(1f, 1f), new Vector2(-30f, -80f), new Vector2(760f, 700f));
             Image bg = devPanel.gameObject.AddComponent<Image>();
             bg.sprite = UIKit.Square;
             bg.color = new Color(0f, 0f, 0f, 0.7f);
@@ -520,9 +520,14 @@ namespace PHYSXR.Game.UI
             IPhysicalInputSource sensors = flow.Services?.Sensors;
             if (sensors != null)
             {
+                // SourceLabel names the mode and link ("USB COM5 CONNECTED",
+                // "SIMULATED", "UDP 47800"); the F1 overlay has the full reason.
+                string link = sensors.SourceLabel ?? string.Empty;
+                if (link.Length > 72)
+                    link = link.Substring(0, 69) + "...";
                 sensorChip.text = sensors.Condition == RunCondition.VIRTUAL_ONLY
-                    ? "SENSORS  OFF (virtual only)"
-                    : "SENSORS  " + (sensors.Condition == RunCondition.SIMULATED ? "SIMULATED" : "UDP") + "  -  " + sensors.Status;
+                    ? "SENSORS  " + link
+                    : "SENSORS  " + link + "  -  " + sensors.Status;
             }
         }
 
@@ -569,6 +574,8 @@ namespace PHYSXR.Game.UI
             b.Append("flow       ").Append(flow.Flow.Stage).Append(' ').Append(flow.Flow.RunState)
                 .Append(" t=").Append(flow.RunSeconds.ToString("F1", CultureInfo.InvariantCulture))
                 .Append(" attempt=").Append(flow.Session?.Attempt).Append('\n');
+            if (sensors != null)
+                b.Append('\n').Append(sensors.DiagnosticsText);
             if (sensors != null && sensors.Condition == RunCondition.SIMULATED)
                 b.Append("\nsim keys   1/2/3 presence  4 confidence  5 disturbance\n           6 resend event  7 stale line  8 reboot  9 stop/resume");
             return b.ToString();
