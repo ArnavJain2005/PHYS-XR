@@ -18,7 +18,7 @@ Last updated 21 Oct 2026 (game implementation pass on top of `d9ef09d`; gameplay
 | M2 Desktop loop | Done (automated) | `M2RouteSelfTest` 23/23 in the final build. |
 | M3 Ghost, virtual-only | Done (automated) | `GhostMotionController` + `HollowVisual` on a runtime NavMesh; FOLLOW/WARN/surge RETREAT; DECISION/BEHAVIOUR telemetry; dev overlay (F1). |
 | M4 Attack, lantern, death, checkpoint | Done (automated) | `EncounterSelfTest` 34/34 (T14, T15, T17, T18, T20, plus the bug-fix pass: readable modal, sprint/jump, first-sighting E5, solid ghost body). |
-| M5 Simulated physical input | Done in software | `SimulatedSensorStation` → real validator/pipeline; hotkeys; `SensorScenarioTests` 11/11; encounter self-test under SIMULATED 34/34. |
+| M5 Simulated physical input | Done in software | `SimulatedSensorStation` → real validator/pipeline; hotkeys; `SensorScenarioTests` 11/11; encounter self-test under SIMULATED 36/36 (34 plus the F1 pause checks P01/P02). |
 | M6 Telemetry + analysis | Done in software | `JsonLinesTelemetrySink`, all section G record types, `Tools/analyze_telemetry.py`, T13 determinism test. |
 | M7 ESP32 on Windows | **Software done; hardware run pending** | Transport is USB serial (the project's link; final report §3.3), UDP kept. I-1 addressed in software: `Firmware/physxr_station` emits contract v1 at 115200 baud (host test 47/47; ESP32 compile clean against a VL53L0X API stub). `SerialLineReceiver` → same `SensorFeed`/validator/pipeline; `SerialTransportTests` 25/25. **Not run on the physical station** (no ESP32 connected). Checklist: `Docs/HARDWARE_SERIAL.md` §7. |
 | M8 / M9 Quest | Not started | Desktop only (I-2, I-3). |
@@ -58,7 +58,7 @@ Deviations, recorded:
 
 | Kind | What ran | Result |
 |---|---|---|
-| Standalone .NET harness (`dotnet run -c Release --project Tools/TestHarness`, C# 9, net9.0) | 24 suites | **305 passed, 0 failed** (gameplay bug-fix pass, 21 Oct 2026; includes the serial suite) |
+| Standalone .NET harness (`dotnet run -c Release --project Tools/TestHarness`, C# 9, net9.0) | 24 suites | **310 passed, 0 failed** at `ec4af1e` (full rebuild, `--no-incremental`; 305 before F1 plus WSM-PAUSE-01..05) |
 | Unity compile (the open Editor, 6000.5.8f1) | Full script compile after the last change | 0 errors, 0 warnings in PHYS-XR code |
 | Windows player build (from the open Editor, `BuildPipeline` with explicit scene paths) | StandaloneWindows64, Bootstrap + Game_BlackthornHouse | **Build Finished, Result: Success** |
 | `-physxr-m2-selftest` (headless player) | Objective route | **23/23**, scripted route 33.5 s |
@@ -71,6 +71,21 @@ Deviations, recorded:
 
 The Editor-side Play-mode self-test was attempted, but an unfocused Editor throttles Play mode
 to about 1.5 fps, so all in-engine checks were run in the Windows player instead.
+
+### F1: physical events while paused (`ec4af1e`)
+
+A knock that arrived during a pause used to start a disturbance pulse on the frozen game clock, so
+The Hollow reacted after resume. Events are now ignored while the run is not Playing and logged as
+`PHYS_EVENT_DROPPED`. Details and the audit session's own evidence: [`F1_PauseEventFix.md`](F1_PauseEventFix.md).
+
+Independent re-check by the gameplay session (21 Oct 2026):
+- harness: 24 suites, 310 passed, including WSM-PAUSE-01..05;
+- fresh batch build (0 `error CS`): M2 23/23, SIMULATED 36/36 with P01/P02 passing and one
+  `PHYS_EVENT_DROPPED run_state=Paused` record, default 34/34 (P01/P02 skipped by design).
+
+The build also contained uncommitted serial-monitor additions in `SerialLineFramer.cs` and
+`SerialLineReceiver.cs` (off by default, not used by these tests). Not yet checked on the ESP32
+station or in manual play.
 
 ### Intermittent failures (investigated 21 Oct 2026)
 
@@ -131,7 +146,7 @@ under player load (24 suites, 305 passed).
 | T25 Under five minutes | Not run | Scripted route 33.5 s; needs first-time players |
 | T26 Latency | Not run | Needs hardware and video. `ts`/`tEvent` (T0/T1) and arrival `t2` are logged per line (`PKT_RX`, `PHYS_EVENT`) |
 | T27 Telemetry correlation | Partial | The analyzer joins caused decisions to events and behaviours; no physical-event trial was logged yet |
-| T28 Repo regression | **Pass** | 305/305 |
+| T28 Repo regression | **Pass** | 310/310 at `ec4af1e` |
 | T29 Defect probes P1–P5 | **Pass** | DefectRegressionTests: each "legacy" case still shows the original defect through the old API, each "fixed" case passes |
 
 ## Manual acceptance (gameplay bug-fix pass)
