@@ -180,7 +180,7 @@ namespace PHYSXR.App
             DeviceId = deviceId;
             StateManager = new PhysicalStateManager();
 
-            var validator = new PacketValidator(deviceId) { RequireVersion = UsesSerial };
+            var validator = new PacketValidator(deviceId) { RequireVersion = UsesSerial, RequireDeviceId = UsesSerial };
             pipeline = new PhysicalCommunicationPipeline(validator, new PhysicalStateParser(), StateManager, new PhysicalEventManager())
             {
                 EventsMasked = condition == RunCondition.VIRTUAL_ONLY

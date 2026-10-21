@@ -22,7 +22,8 @@ namespace PHYSXR.Communication
     //
     // Contract v1 fields (spec section E) are optional on the wire: when "v"
     // is present it must be a supported version, and when "dev" is present
-    // and a device ID is configured, it must match.
+    // and a device ID is configured, it must match. The USB-serial link sets
+    // RequireVersion and RequireDeviceId, making both mandatory there.
     public class PacketValidator
     {
         public const int MaxDatagramBytes = 512;
@@ -54,6 +55,12 @@ namespace PHYSXR.Communication
         // versionless line there means old or foreign firmware. Off by default
         // so legacy-format packets and their tests behave as before.
         public bool RequireVersion { get; set; }
+
+        // When true, a line without "dev" is rejected FOREIGN_DEVICE. Set with
+        // RequireVersion on the USB-serial link: the firmware always sends its
+        // device ID, so a line without one is not from the station. Off by
+        // default for the same legacy reason.
+        public bool RequireDeviceId { get; set; }
 
         public ValidationResult Validate(byte[] rawData)
         {
@@ -97,6 +104,8 @@ namespace PHYSXR.Communication
             }
 
             fields.TryGetValue("dev", out var deviceId);
+            if (RequireDeviceId && string.IsNullOrEmpty(deviceId))
+                return ValidationResult.Reject(PacketRejectCode.FOREIGN_DEVICE, "missing device id (dev)");
             if (expectedDeviceId != null && !string.IsNullOrEmpty(deviceId) && deviceId != expectedDeviceId)
                 return ValidationResult.Reject(PacketRejectCode.FOREIGN_DEVICE, "packet from foreign device '" + deviceId + "'");
 

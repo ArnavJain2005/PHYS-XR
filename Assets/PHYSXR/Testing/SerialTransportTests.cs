@@ -300,12 +300,12 @@ namespace PHYSXR.Testing
 
         private static ValidationResult V(string line, bool requireVersion = true)
         {
-            return new PacketValidator("phys-xr-01") { RequireVersion = requireVersion }.Validate(B(line));
+            return new PacketValidator("phys-xr-01") { RequireVersion = requireVersion, RequireDeviceId = requireVersion }.Validate(B(line));
         }
 
         private static void GoldenLines()
         {
-            var validator = new PacketValidator("phys-xr-01") { RequireVersion = true };
+            var validator = new PacketValidator("phys-xr-01") { RequireVersion = true, RequireDeviceId = true };
             ValidationResult state = validator.Validate(B(FirmwareGoldenState));
             AssertTrue(state.isValid, "golden state line: " + state.failureReason);
             AssertEq("NEAR", state.packet.presence, "presence");
@@ -345,12 +345,15 @@ namespace PHYSXR.Testing
             Rejected(g.Replace("eventId=0", "eventId=-3"), PacketRejectCode.INVALID_FIELD, "negative event id");
             Rejected(g.Replace("tEvent=0", "tEvent=NaN"), PacketRejectCode.INVALID_FIELD, "NaN tEvent");
             Rejected(g.Replace("dev=phys-xr-01", "dev=other"), PacketRejectCode.FOREIGN_DEVICE, "foreign device");
+            Rejected(g.Replace("dev=phys-xr-01;", string.Empty), PacketRejectCode.FOREIGN_DEVICE, "missing dev on the serial link");
+            Rejected(g.Replace("dev=phys-xr-01", "dev="), PacketRejectCode.FOREIGN_DEVICE, "empty dev on the serial link");
+            AssertTrue(V(g.Replace("dev=phys-xr-01;", string.Empty), false).isValid, "missing dev still allowed when not required (legacy/UDP)");
             Rejected("v=1;seq", PacketRejectCode.MALFORMED, "key without value separator");
             Rejected("Distance = 41.97 cm", PacketRejectCode.VERSION_UNSUPPORTED, "raw bench line if it ever reached the validator");
             Rejected("Distance = 41.97 cm", PacketRejectCode.INVALID_FIELD, "raw bench line without the version rule", false);
             Rejected(g + ";pad=" + new string('x', 600), PacketRejectCode.BAD_SIZE, "over 512 bytes");
 
-            var validator = new PacketValidator("phys-xr-01") { RequireVersion = true };
+            var validator = new PacketValidator("phys-xr-01") { RequireVersion = true, RequireDeviceId = true };
             ValidationResult bad = validator.Validate(new byte[] { 0x76, 0x3D, 0xFF, 0xFE, 0x3B });
             AssertEq(PacketRejectCode.MALFORMED, bad.code, "invalid UTF-8");
         }
@@ -690,7 +693,7 @@ namespace PHYSXR.Testing
             {
                 Port = Ports.Add("COM5");
                 Receiver = new SerialLineReceiver(Ports, Fast(), () => Interlocked.Read(ref now));
-                Pipeline = new PhysicalCommunicationPipeline(new PacketValidator("phys-xr-01") { RequireVersion = true },
+                Pipeline = new PhysicalCommunicationPipeline(new PacketValidator("phys-xr-01") { RequireVersion = true, RequireDeviceId = true },
                     new PhysicalStateParser(), Physical, new PhysicalEventManager());
                 Feed = new SensorFeed(Receiver, Pipeline);
                 World = new WorldStateManager(Physical, () => Now);
@@ -934,7 +937,7 @@ namespace PHYSXR.Testing
             var station = new SimulatedSensorStation();
             var queue = new UDPReceiver(0, () => now);
             var physical = new PhysicalStateManager();
-            var pipeline = new PhysicalCommunicationPipeline(new PacketValidator("phys-xr-01") { RequireVersion = true },
+            var pipeline = new PhysicalCommunicationPipeline(new PacketValidator("phys-xr-01") { RequireVersion = true, RequireDeviceId = true },
                 new PhysicalStateParser(), physical, new PhysicalEventManager());
             var feed = new SensorFeed(queue, pipeline);
             var world = new WorldStateManager(physical, () => now);
