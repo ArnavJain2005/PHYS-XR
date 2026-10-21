@@ -1,6 +1,8 @@
 using System;
 using System.Collections;
 using System.Collections.Generic;
+using PHYSXR.App;
+using PHYSXR.Communication;
 using PHYSXR.Core.Enums;
 using PHYSXR.Game.Flow;
 using PHYSXR.Game.Gameplay;
@@ -15,7 +17,8 @@ namespace PHYSXR.Game.Dev
     // house, the real decision pipeline, the real NavMesh ghost and the real
     // lantern, driven through ScriptedPlayerInput (Technical Spec tests T14,
     // T15, T17, T18, plus the surge RETREAT, the first-sighting lunge (E5),
-    // the readable modal, sprint and jump, and the ghost's solid body).
+    // the readable modal, sprint and jump, the ghost's solid body, and - with
+    // "-physxr-condition SIMULATED" - a sensor event during a pause).
     //
     // Enabled only by "-physxr-selftest" (or PHYS-XR > Run Encounter
     // Self-Test). Each check logs "SELFTEST PASS|FAIL <id>"; a player build
@@ -52,6 +55,7 @@ namespace PHYSXR.Game.Dev
 
             yield return ReadableModal(house, input);
             yield return SprintAndJump(house, input);
+            yield return PausedSensorEvent(house);
 
             // First sighting: walk into the corridor trigger. The Hollow
             // appears at the far end of the corridor, in view.
@@ -487,6 +491,58 @@ namespace PHYSXR.Game.Dev
                 yield return null;
             }
             input.Stop();
+        }
+
+        // Fix F1: a knock while paused must not make The Hollow react after
+        // resume, and a knock in play still must. Uses the in-game simulated
+        // station, so it runs only with "-physxr-condition SIMULATED". The
+        // ghost is still dormant here, which is fine: decisions are checked.
+        private IEnumerator PausedSensorEvent(BlackthornGreybox house)
+        {
+            GameFlowController flow = house.FlowController;
+            var sensors = flow.Services?.Sensors as SensorService;
+            SimulatedSensorStation station = sensors?.Simulator;
+            if (station == null)
+            {
+                Debug.Log("SELFTEST SKIP P01_PausedKnockIgnored, P02_KnockInPlayInvestigates | needs -physxr-condition SIMULATED");
+                yield break;
+            }
+
+            station.SetPresence(PresenceLevel.NEAR);
+            yield return WaitUntil(() => sensors.Status == PhysicalSourceStatus.FRESH, 2f);
+            yield return Wait(0.5f); // resync: in-order state lines before events count
+
+            flow.Pause();
+            bool paused = flow.Flow.RunState == RunState.Paused;
+            long clockAtPause = flow.GameClockMs;
+            station.TriggerDisturbance(sensors.NowMs);
+            bool acceptedWhilePaused = false;
+            for (float until = Time.realtimeSinceStartup + 2f; Time.realtimeSinceStartup < until;)
+            {
+                if (sensors.FrameAcceptedEvents.Count > 0)
+                    acceptedWhilePaused = true;
+                yield return null;
+            }
+            bool clockStopped = flow.GameClockMs == clockAtPause;
+            flow.Resume();
+
+            bool reacted = false;
+            for (float until = Time.time + 3.5f; Time.time < until;)
+            {
+                if (flow.GhostRuntime.LastAction == GhostAction.INVESTIGATE || flow.World.DisturbancePulseActive)
+                    reacted = true;
+                yield return null;
+            }
+            Check("P01_PausedKnockIgnored", paused && clockStopped && acceptedWhilePaused && !reacted,
+                "paused=" + paused + " clockStopped=" + clockStopped + " accepted=" + acceptedWhilePaused + " reacted=" + reacted);
+
+            station.TriggerDisturbance(sensors.NowMs);
+            yield return WaitUntil(() => flow.GhostRuntime.LastAction == GhostAction.INVESTIGATE, 1.5f);
+            Check("P02_KnockInPlayInvestigates", flow.GhostRuntime.LastAction == GhostAction.INVESTIGATE,
+                "action=" + flow.GhostRuntime.LastAction + " rule=" + flow.GhostRuntime.LastRuleId);
+
+            station.SetPresence(PresenceLevel.NONE);
+            yield return WaitUntil(() => !flow.World.DisturbancePulseActive && flow.GhostRuntime.LastAction == GhostAction.FOLLOW, 6f);
         }
 
         private static IEnumerator Wait(float seconds)

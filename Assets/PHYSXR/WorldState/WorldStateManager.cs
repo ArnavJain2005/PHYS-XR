@@ -40,6 +40,12 @@ namespace PHYSXR.WorldStateSystem
     //     flag is not used, so a repeated packet cannot restart the pulse.
     // The legacy constructor keeps the original pass-through behaviour, which
     // the WORLD suites document.
+    //
+    // SUSPENDED EVENTS (fix F1): the pulse is timed on the game clock, which
+    // stops while the run is paused. A pulse started then would play out in
+    // full after resume, for an event that may be minutes old. While
+    // EventsSuspended is set, NotifyAcceptedEvent therefore ignores new
+    // events; a pulse already running keeps its remaining game time.
     public class WorldStateManager
     {
         public const long DefaultDisturbancePulseMs = 3000L;
@@ -88,6 +94,10 @@ namespace PHYSXR.WorldStateSystem
         // logged upstream, but the decision rules always see neutral physical state.
         public bool PhysicalInputMasked { get; set; }
 
+        // True while the run is not playing (paused). Set by the game flow
+        // each frame, like PhysicalInputMasked; see "SUSPENDED EVENTS" above.
+        public bool EventsSuspended { get; set; }
+
         public bool DisturbancePulseActive => clock != null && clock() < pulseUntil;
 
         public void UpdateSourceStatus(PhysicalSourceStatus status)
@@ -97,14 +107,16 @@ namespace PHYSXR.WorldStateSystem
 
         // A newly accepted (already deduplicated) physical event starts the
         // disturbance pulse. Duplicates never reach here: PhysicalEventManager
-        // drops them first. Ignored in legacy mode.
-        public void NotifyAcceptedEvent(PhysicalEvent physicalEvent)
+        // drops them first. Ignored in legacy mode and while EventsSuspended.
+        // Returns true if the event started a pulse.
+        public bool NotifyAcceptedEvent(PhysicalEvent physicalEvent)
         {
-            if (clock == null || physicalEvent == null)
-                return;
+            if (clock == null || physicalEvent == null || EventsSuspended)
+                return false;
 
             pulseUntil = clock() + DisturbancePulseMs;
             pulseEventId = physicalEvent.eventId;
+            return true;
         }
 
         // Checkpoint restart: an old pulse must not carry into the new attempt.

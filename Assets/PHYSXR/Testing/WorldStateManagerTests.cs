@@ -41,6 +41,10 @@ namespace PHYSXR.Testing
             Run("WORLD-07_NoDecisionLogicOrGhostActionSelection", Test_WORLD07);
             Run("WORLD-08_ConstructionIsDeterministicForIdenticalInputs", Test_WORLD08);
             Run("WORLD-09_ReturnedSnapshotCannotCorruptManagerState", Test_WORLD09);
+            Run("WSM-PAUSE-01_SuspendedEvent_StartsNoPulse", Test_PAUSE01);
+            Run("WSM-PAUSE-02_EventDuringLongPause_NoPulseAfterResume", Test_PAUSE02);
+            Run("WSM-PAUSE-03_PulseFromPlay_KeepsRemainingGameTimeAcrossPause", Test_PAUSE03);
+            Run("WSM-PAUSE-04_NotSuspended_PulseUnchanged_LegacyIgnores", Test_PAUSE04);
 
             Console.WriteLine(string.Format("Total: {0}, Passed: {1}, Failed: {2}", passed + failed, passed, failed));
             return failed;
@@ -218,6 +222,91 @@ namespace PHYSXR.Testing
             AssertTrue(freshSnapshot.physical.timestamp == 10, "mutating a snapshot must not affect the manager's physical timestamp");
             AssertTrue(freshSnapshot.player.distanceToGhost == 5f, "mutating a snapshot must not affect the manager's player state");
             AssertTrue(freshSnapshot.player.movement == false, "mutating a snapshot must not affect the manager's player state");
+        }
+
+        // ------------------------------------------------------------ WSM-PAUSE (fix F1)
+
+        // Gated manager on a game clock the test controls, with a FRESH
+        // NEAR/HIGH source: the R3 INVESTIGATE inputs, apart from the pulse.
+        private static WorldStateManager PauseWorld(Func<long> gameClock)
+        {
+            var physical = new PhysicalStateManager();
+            physical.UpdateState(new PhysicalState { presence = PresenceLevel.NEAR, confidence = ConfidenceLevel.HIGH, timestamp = 1 });
+            var world = new WorldStateManager(physical, gameClock);
+            world.UpdateSourceStatus(PhysicalSourceStatus.FRESH);
+            return world;
+        }
+
+        private static PhysicalEvent Event(long id) => new PhysicalEvent { eventType = "DISTURBANCE", eventId = id, boot = 1 };
+
+        private static void Test_PAUSE01()
+        {
+            long game = 10000;
+            WorldStateManager world = PauseWorld(() => game);
+            world.EventsSuspended = true;
+
+            AssertTrue(!world.NotifyAcceptedEvent(Event(7)), "a suspended event must not start a pulse");
+            PHYSXR.Core.Data.WorldState snapshot = world.GetCurrentWorldState();
+            AssertTrue(!snapshot.physical.disturbance, "no disturbance from a suspended event");
+            AssertTrue(snapshot.physical.causeEventId == 0L, "no cause event from a suspended event");
+            AssertTrue(!world.DisturbancePulseActive, "pulse inactive");
+        }
+
+        private static void Test_PAUSE02()
+        {
+            long game = 10000;
+            WorldStateManager world = PauseWorld(() => game);
+
+            // Paused: the game clock stands still however long the pause is.
+            world.EventsSuspended = true;
+            world.NotifyAcceptedEvent(Event(7));
+
+            world.EventsSuspended = false;
+            for (int i = 0; i < 60; i++)
+            {
+                game += 50;
+                AssertTrue(!world.GetCurrentWorldState().physical.disturbance, "late pulse at +" + (i + 1) * 50 + " ms after resume");
+            }
+
+            // An event after resume behaves exactly as before.
+            AssertTrue(world.NotifyAcceptedEvent(Event(8)), "event after resume starts a pulse");
+            PHYSXR.Core.Data.WorldState snapshot = world.GetCurrentWorldState();
+            AssertTrue(snapshot.physical.disturbance && snapshot.physical.causeEventId == 8L, "pulse carries the new event");
+            game += WorldStateManager.DefaultDisturbancePulseMs;
+            AssertTrue(!world.GetCurrentWorldState().physical.disturbance, "pulse ends after 3 s of game time");
+        }
+
+        private static void Test_PAUSE03()
+        {
+            long game = 10000;
+            WorldStateManager world = PauseWorld(() => game);
+            AssertTrue(world.NotifyAcceptedEvent(Event(7)), "event in play starts a pulse");
+            game += 1000;
+
+            // Pause 1 s into the pulse; another event arrives meanwhile.
+            world.EventsSuspended = true;
+            world.NotifyAcceptedEvent(Event(8));
+            world.EventsSuspended = false;
+
+            PHYSXR.Core.Data.WorldState snapshot = world.GetCurrentWorldState();
+            AssertTrue(snapshot.physical.disturbance && snapshot.physical.causeEventId == 7L,
+                "the running pulse keeps its event; the paused one is not chained on");
+            game += 1999;
+            AssertTrue(world.GetCurrentWorldState().physical.disturbance, "pulse still active at 2.999 s of game time");
+            game += 1;
+            AssertTrue(!world.GetCurrentWorldState().physical.disturbance, "pulse ends at 3 s of game time, not extended by the pause");
+        }
+
+        private static void Test_PAUSE04()
+        {
+            long game = 10000;
+            WorldStateManager world = PauseWorld(() => game);
+            AssertTrue(!world.EventsSuspended, "not suspended by default");
+            AssertTrue(world.NotifyAcceptedEvent(Event(7)), "default: event starts a pulse");
+            AssertTrue(world.GetCurrentWorldState().physical.disturbance, "default: pulse visible");
+
+            var legacy = new WorldStateManager(new PhysicalStateManager());
+            AssertTrue(!legacy.NotifyAcceptedEvent(Event(7)), "legacy mode still ignores events");
         }
     }
 }

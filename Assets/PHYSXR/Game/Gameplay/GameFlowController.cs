@@ -363,7 +363,9 @@ namespace PHYSXR.Game.Gameplay
         }
 
         // Sensing reaches the WorldStateManager every frame, paused or not, so
-        // freshness and the event pulse are never stale when play resumes.
+        // freshness is never stale when play resumes. Events are different: the
+        // pulse runs on the game clock, which stops while paused, so an event
+        // that arrives then is dropped (and logged) rather than played on resume.
         private void BridgeSensing()
         {
             if (World == null || services == null)
@@ -372,9 +374,15 @@ namespace PHYSXR.Game.Gameplay
             IPhysicalInputSource sensors = services.Sensors;
             World.UpdateSourceStatus(sensors.Status);
             World.PhysicalInputMasked = sensors.PhysicalInputMasked;
+            World.EventsSuspended = Flow.RunState != RunState.Playing;
             var events = sensors.FrameAcceptedEvents;
             for (int i = 0; i < events.Count; i++)
-                World.NotifyAcceptedEvent(events[i]);
+            {
+                if (!World.NotifyAcceptedEvent(events[i]) && World.EventsSuspended)
+                    Telemetry.Emit("PHYS_EVENT_DROPPED", string.Format(CultureInfo.InvariantCulture,
+                        "evt={0} boot={1} reason=NOT_PLAYING run_state={2}", events[i].eventId, events[i].boot, Flow.RunState),
+                        relatedId: events[i].eventId);
+            }
         }
 
         private void OnDestroy()

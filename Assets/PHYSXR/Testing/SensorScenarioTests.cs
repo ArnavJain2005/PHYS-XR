@@ -50,6 +50,7 @@ namespace PHYSXR.Testing
             Run("SENS-T09_Disconnection_StaleThenUnavailable_ResyncBeforeEvents", T09);
             Run("SENS-T10_Reboot_LoggedAccepted_EventAfterResync", T10);
             Run("SENS-BLACKOUT_RestartBlackout1s", Blackout);
+            Run("WSM-PAUSE-05_EventDuringPause_NoReactionOnResume_NextEventInvestigates", Pause05);
 
             Console.WriteLine("SensorScenarioTests: " + passed + " passed, " + failed + " failed");
             return failed;
@@ -68,15 +69,24 @@ namespace PHYSXR.Testing
             public readonly EncounterDecisionLayer Layer;
             public readonly List<PacketOutcome> Log = new List<PacketOutcome>();
             public int PulsesStarted;
+            public int EventsDropped;
 
-            public Rig(bool masked = false)
+            // Game clock, used by the world and the decision layers only when
+            // the rig is built with gameClock: true. It stops while Paused, as
+            // GameFlowController's GameClockMs does; the sensor clock (Now)
+            // keeps running.
+            public long Game = 100000;
+            public bool Paused;
+
+            public Rig(bool masked = false, bool gameClock = false)
             {
+                Func<long> worldClock = gameClock ? (Func<long>)(() => Game) : () => Now;
                 Receiver = new UDPReceiver(0, () => Now);
                 Pipeline = new PhysicalCommunicationPipeline(new PacketValidator(SimulatedSensorStation.DefaultDeviceId),
                     new PhysicalStateParser(), Physical, Events) { EventsMasked = masked };
                 Feed = new SensorFeed(Receiver, Pipeline);
-                World = new WorldStateManager(Physical, () => Now) { PhysicalInputMasked = masked };
-                Layer = new EncounterDecisionLayer(new RuleBasedDecisionProvider(decisionClock: () => Now), () => Now);
+                World = new WorldStateManager(Physical, worldClock) { PhysicalInputMasked = masked };
+                Layer = new EncounterDecisionLayer(new RuleBasedDecisionProvider(decisionClock: worldClock), worldClock);
                 World.UpdatePlayerState(new PlayerState { distanceToGhost = 8f });
                 World.UpdateVirtualState(new VirtualState { threatLevel = 0.2f });
                 World.UpdateGhostState(new GhostState());
@@ -86,24 +96,33 @@ namespace PHYSXR.Testing
             public GhostAction Frame(long dtMs = 50)
             {
                 Now += dtMs;
+                if (!Paused)
+                    Game += dtMs;
                 foreach (byte[] datagram in Station.Poll(Now))
                     Receiver.Enqueue(datagram, Now);
                 Station.ClearOutbox();
                 return Pump();
             }
 
+            // Mirrors GameFlowController: sensing is bridged every frame, events
+            // are suspended while paused, and the ghost decides only in play.
             public GhostAction Pump()
             {
+                World.EventsSuspended = Paused;
                 foreach (PacketOutcome outcome in Feed.Pump(Now))
                 {
                     Log.Add(outcome);
                     if (outcome.acceptedEvent != null)
                     {
-                        World.NotifyAcceptedEvent(outcome.acceptedEvent);
-                        PulsesStarted++;
+                        if (World.NotifyAcceptedEvent(outcome.acceptedEvent))
+                            PulsesStarted++;
+                        else
+                            EventsDropped++;
                     }
                 }
                 World.UpdateSourceStatus(Feed.Status);
+                if (Paused)
+                    return Layer.PreviousAction ?? GhostAction.FOLLOW;
                 return Layer.Decide(World.GetCurrentWorldState());
             }
 
@@ -135,6 +154,54 @@ namespace PHYSXR.Testing
                 for (int i = 0; i < frames; i++)
                     Frame();
             }
+        }
+
+        // Fix F1, end to end: a knock while the run is paused is accepted and
+        // deduplicated by the pipeline as usual but starts no pulse, so after a
+        // minute-long pause the ghost does not react to it on resume. The next
+        // knock in play gets the normal single INVESTIGATE.
+        private static void Pause05()
+        {
+            var rig = new Rig(gameClock: true);
+            rig.Station.SetPresence(PresenceLevel.NEAR);
+            rig.Settle();
+            AssertEq(GhostAction.FOLLOW, rig.Frame(), "NEAR/HIGH without an event follows");
+
+            rig.Paused = true;
+            long gameAtPause = rig.Game;
+            rig.Station.TriggerDisturbance(rig.Now);
+            for (int i = 0; i < 1200; i++) // 60 s of real time
+                rig.Frame();
+            AssertEq(gameAtPause, rig.Game, "game clock stopped while paused");
+            AssertEq(1, rig.Count(EventAcceptance.ACCEPTED), "the pipeline accepts the paused knock once");
+            AssertEq(1, rig.EventsDropped, "and the world drops it");
+            AssertEq(0, rig.PulsesStarted, "no pulse while paused");
+
+            rig.Paused = false;
+            for (int i = 0; i < 100; i++) // 5 s of play
+            {
+                GhostAction a = rig.Frame();
+                AssertTrue(a == GhostAction.FOLLOW, "reaction to the paused knock after resume at frame " + i + ": " + a);
+            }
+
+            rig.Station.TriggerDisturbance(rig.Now);
+            int investigateFrames = 0, episodes = 0;
+            GhostAction previous = GhostAction.FOLLOW;
+            for (int i = 0; i < 120; i++)
+            {
+                GhostAction a = rig.Frame();
+                if (a == GhostAction.INVESTIGATE)
+                {
+                    investigateFrames++;
+                    if (previous != GhostAction.INVESTIGATE)
+                        episodes++;
+                }
+                previous = a;
+            }
+            AssertEq(1, episodes, "one INVESTIGATE episode for the knock in play");
+            AssertTrue(investigateFrames * 50 >= 3000, "INVESTIGATE lasts the 3 s pulse: " + investigateFrames * 50 + " ms");
+            AssertEq(1, rig.PulsesStarted, "one pulse in play");
+            AssertEq(2, rig.Count(EventAcceptance.ACCEPTED), "two knocks accepted in all");
         }
 
         private static void AssertTrue(bool condition, string message)
