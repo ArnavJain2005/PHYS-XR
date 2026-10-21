@@ -79,6 +79,10 @@ namespace PHYSXR.Testing
             Run("SER-18f_EndToEnd_Reboot_ResyncBeforeEvents", E2eReboot);
             Run("SER-18g_EndToEnd_SerialAndSimulatorDecideIdentically", E2eParity);
             Run("SER-18h_EndToEnd_PhysicalFloodCannotStartAttack", E2eNoAttack);
+            Run("SER-19_RawPrintable_EscapesControlBytesAndTruncates", RawPrintable);
+            Run("SER-20_RawCapture_OffByDefault_NothingQueued_NoWritePath", RawCaptureOff);
+            Run("SER-21_RawCapture_On_EscapedLinesSameCounters", RawCaptureOn);
+            Run("SER-22_RawCapture_FloodBoundedByQueueSizeAndRate", RawCaptureFlood);
 
             Console.WriteLine("SerialTransportTests: " + passed + " passed, " + failed + " failed");
             return failed;
@@ -980,6 +984,136 @@ namespace PHYSXR.Testing
                 }
                 AssertTrue(rig.Count(EventAcceptance.ACCEPTED) >= 5, "events were flowing");
             }
+        }
+
+        // ------------------------------------------------------------ raw monitor mode
+
+        private static void RawPrintable()
+        {
+            AssertEq("Scanning...", SerialLineClassifier.Printable(B("Scanning...")), "plain text unchanged");
+
+            byte[] hostile = { (byte)'o', (byte)'k', 0x1B, (byte)'[', (byte)'2', (byte)'J', 0x07, 0x00, (byte)'\t', 0xFF, 0x7F, (byte)'\\' };
+            string escaped = SerialLineClassifier.Printable(hostile);
+            AssertEq("ok\\x1B[2J\\x07\\x00\\x09\\xFF\\x7F\\x5C", escaped, "ESC, BEL, NUL, tab, non-ASCII, DEL and backslash escaped");
+            foreach (char c in escaped)
+                AssertTrue(c >= 0x20 && c < 0x7F, "only printable ASCII in output, found " + (int)c);
+
+            var longLine = new byte[10000];
+            for (int i = 0; i < longLine.Length; i++)
+                longLine[i] = (byte)'A';
+            AssertEq(new string('A', 160) + "...(+9840 bytes)", SerialLineClassifier.Printable(longLine, 160), "cut to 160 chars");
+
+            var escapes = new byte[100];
+            for (int i = 0; i < escapes.Length; i++)
+                escapes[i] = 0x1B;
+            AssertEq("\\x1B\\x1B...(+98 bytes)", SerialLineClassifier.Printable(escapes, 10), "an escape is never split by the limit");
+        }
+
+        private static void RawCaptureOff()
+        {
+            AssertTrue(!new SerialLinkSettings().CaptureRawLines, "raw capture is off by default");
+
+            // The port interface has no way to send bytes at all.
+            foreach (System.Reflection.MethodInfo m in typeof(ISerialPortIO).GetMethods())
+                AssertTrue(m.Name == "Read" || m.Name == "Dispose", "unexpected port method " + m.Name);
+
+            var ports = new FakePorts();
+            FakePort p = ports.Add("COM5");
+            var r = new SerialLineReceiver(ports, Fast());
+            r.Start();
+            try
+            {
+                WaitFor(() => r.Status.state == SerialLinkState.CONNECTED, "connected");
+                p.Send("Scanning...\nDistance = 41.97 cm\n");
+                WaitFor(() => r.Status.noiseLines == 1 && r.Status.legacyLines == 1, "lines counted");
+                AssertTrue(!r.TryDequeueRaw(out _), "nothing queued when raw capture is off");
+                AssertEq(0L, r.Status.rawDropped, "no raw drops");
+            }
+            finally
+            {
+                r.Stop();
+            }
+        }
+
+        private static void RawCaptureOn()
+        {
+            var ports = new FakePorts();
+            FakePort p = ports.Add("COM5");
+            SerialLinkSettings settings = Fast();
+            settings.CaptureRawLines = true;
+            var r = new SerialLineReceiver(ports, settings);
+            r.Start();
+            try
+            {
+                WaitFor(() => r.Status.state == SerialLinkState.CONNECTED, "connected");
+                p.Send("I2C device found at 0x68\r\nDistance = 41.97 cm\n#HELLO proto=1;fw=1.0.0\n"
+                       + FirmwareGoldenState + "\n\u001b[2Jboom\n");
+                WaitFor(() => r.Status.contractLines == 1 && r.Status.diagnosticLines == 1
+                              && r.Status.noiseLines == 2 && r.Status.legacyLines == 1, "all five lines classified as without --raw");
+
+                var raw = new List<SerialRawLine>();
+                while (r.TryDequeueRaw(out SerialRawLine line))
+                    raw.Add(line);
+                AssertEq(3, raw.Count, "noise and old-sketch lines captured, nothing else");
+                AssertEq("I2C device found at 0x68", raw[0].text, "CR stripped by the framer");
+                AssertEq(SerialLineKind.Noise, raw[0].kind, "scanner text is noise");
+                AssertEq("Distance = 41.97 cm", raw[1].text, "old sketch line");
+                AssertEq(SerialLineKind.Legacy, raw[1].kind, "old sketch kind");
+                AssertEq("\\x1B[2Jboom", raw[2].text, "terminal escape neutralised");
+
+                AssertEq(1, r.QueuedCount, "the contract line still goes to the pipeline");
+                AssertTrue(r.TryDequeueDiagnostic(out SerialDiagnosticLine d) && d.text.StartsWith("#HELLO"), "#HELLO still routed to diagnostics");
+                AssertTrue(r.Status.identified, "identification unchanged");
+            }
+            finally
+            {
+                r.Stop();
+            }
+        }
+
+        private static void RawCaptureFlood()
+        {
+            var ports = new FakePorts();
+            FakePort p = ports.Add("COM5");
+            SerialLinkSettings settings = Fast();
+            settings.CaptureRawLines = true;
+            var r = new SerialLineReceiver(ports, settings);
+            r.Start();
+            try
+            {
+                WaitFor(() => r.Status.state == SerialLinkState.CONNECTED, "connected");
+                var sb = new StringBuilder();
+                for (int i = 0; i < 500; i++)
+                    sb.Append("noise ").Append(i).Append('\n');
+                sb.Append(new string('x', 4000)).Append('\n');  // longer than any line the framer keeps
+                p.Send(sb.ToString());
+                WaitFor(() => r.Status.noiseLines == 500 && r.Status.oversizedLines == 1, "flood read");
+
+                int queued = 0;
+                string last = null;
+                while (r.TryDequeueRaw(out SerialRawLine line))
+                {
+                    queued++;
+                    last = line.text;
+                    AssertTrue(line.text.Length <= SerialLineReceiver.RawLineMaxChars + 24, "line length bounded");
+                }
+                AssertEq(SerialLineReceiver.RawQueueCapacity, queued, "raw queue bounded");
+                AssertEq(500L - SerialLineReceiver.RawQueueCapacity, r.Status.rawDropped, "drops counted");
+                AssertEq("noise 499", last, "newest kept, oldest dropped; oversized line never captured");
+            }
+            finally
+            {
+                r.Stop();
+            }
+
+            var limiter = new SerialRawLineLimiter(20);
+            int printed = 0;
+            for (long t = 0; t < 1000; t++)
+                if (limiter.Allow(t))
+                    printed++;
+            AssertEq(20, printed, "at most 20 lines printed in one second");
+            AssertEq(980L, limiter.Suppressed, "the rest counted, not printed");
+            AssertTrue(limiter.Allow(1000), "next second prints again");
         }
     }
 }

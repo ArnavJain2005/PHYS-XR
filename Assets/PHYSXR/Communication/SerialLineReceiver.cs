@@ -34,6 +34,11 @@ namespace PHYSXR.Communication
         // unplugged adapter is noticed even if the driver reports no error.
         public int SilenceCheckMs = 1500;
 
+        // Bring-up aid (TestHarness --serial-monitor --raw): also queue the
+        // escaped text of unrecognised and old-sketch lines for display.
+        // Off by default; classification and counters are the same either way.
+        public bool CaptureRawLines;
+
         public bool IsAuto => string.IsNullOrWhiteSpace(PortName)
                               || string.Equals(PortName.Trim(), AutoPort, StringComparison.OrdinalIgnoreCase);
 
@@ -59,6 +64,16 @@ namespace PHYSXR.Communication
     }
 
     // A diagnostic ('#') line with its arrival time; display/telemetry only.
+    // An unrecognised (Noise) or old-sketch (Legacy) line, already escaped by
+    // SerialLineClassifier.Printable; only queued with CaptureRawLines.
+    public struct SerialRawLine
+    {
+        public long arrivalMs;
+        public SerialLineKind kind;
+        public int bytes;
+        public string text;
+    }
+
     public struct SerialDiagnosticLine
     {
         public long arrivalMs;
@@ -81,6 +96,7 @@ namespace PHYSXR.Communication
         public long noiseLines;
         public long oversizedLines;
         public long droppedLines;
+        public long rawDropped;  // raw lines dropped from the bounded raw queue (CaptureRawLines only)
         public long lastLineMs;  // arrival clock of the last complete line; -1 if none
         public long sinceMs;     // arrival clock when the current state began
     }
@@ -108,6 +124,8 @@ namespace PHYSXR.Communication
     {
         public const int DefaultQueueCapacity = 256;
         public const int DiagnosticQueueCapacity = 64;
+        public const int RawQueueCapacity = 64;
+        public const int RawLineMaxChars = 160;
         public const int EventQueueCapacity = 64;
         private const int ReadChunk = 1024;
 
@@ -119,6 +137,7 @@ namespace PHYSXR.Communication
         private readonly int queueCapacity;
         private readonly ConcurrentQueue<UDPReceiver.Datagram> queue = new ConcurrentQueue<UDPReceiver.Datagram>();
         private readonly ConcurrentQueue<SerialDiagnosticLine> diagnostics = new ConcurrentQueue<SerialDiagnosticLine>();
+        private readonly ConcurrentQueue<SerialRawLine> rawLines = new ConcurrentQueue<SerialRawLine>();
         private readonly ConcurrentQueue<SerialLinkEvent> events = new ConcurrentQueue<SerialLinkEvent>();
         private readonly object statusLock = new object();
         private readonly object lifecycleLock = new object();
@@ -212,6 +231,12 @@ namespace PHYSXR.Communication
         public bool TryDequeue(out UDPReceiver.Datagram datagram)
         {
             return queue.TryDequeue(out datagram);
+        }
+
+        // Empty unless the settings enabled CaptureRawLines.
+        public bool TryDequeueRaw(out SerialRawLine line)
+        {
+            return rawLines.TryDequeue(out line);
         }
 
         public bool TryDequeueDiagnostic(out SerialDiagnosticLine line)
@@ -475,6 +500,25 @@ namespace PHYSXR.Communication
                     {
                     }
                     return text.StartsWith("#HELLO", StringComparison.Ordinal) && text.IndexOf("proto=", StringComparison.Ordinal) > 0;
+
+                case SerialLineKind.Legacy:
+                case SerialLineKind.Noise:
+                    if (settings.CaptureRawLines)
+                    {
+                        rawLines.Enqueue(new SerialRawLine
+                        {
+                            arrivalMs = arrivalMs,
+                            kind = kind,
+                            bytes = line.Length,
+                            text = SerialLineClassifier.Printable(line, RawLineMaxChars)
+                        });
+                        while (rawLines.Count > RawQueueCapacity && rawLines.TryDequeue(out _))
+                        {
+                            lock (statusLock)
+                                status.rawDropped++;
+                        }
+                    }
+                    return false;
 
                 default:
                     return false;
