@@ -9,10 +9,16 @@ namespace PHYSXR.TestHarness
     //   dotnet run -c Release --project Tools/TestHarness
     //
     // Passing "--suite <Name>" runs only suites whose name contains <Name>.
+    //
+    // Hardware bring-up without Unity (see SerialMonitor.cs):
+    //   dotnet run -c Release --project Tools/TestHarness -- --serial-monitor AUTO 30
     public static class Program
     {
         public static int Main(string[] args)
         {
+            if (args.Length >= 1 && args[0] == "--serial-monitor")
+                return SerialMonitor.Run(args);
+
             string filter = args.Length >= 2 && args[0] == "--suite" ? args[1] : null;
 
             var suites = new (string name, Func<int> run)[]
@@ -36,6 +42,7 @@ namespace PHYSXR.TestHarness
                 ("DefectRegressionTests", DefectRegressionTests.RunAll),
                 ("EncounterRuleTests", EncounterRuleTests.RunAll),
                 ("SensorScenarioTests", SensorScenarioTests.RunAll),
+                ("SerialTransportTests", SerialTransportTests.RunAll),
                 ("TelemetryJsonLinesTests", TelemetryJsonLinesTests.RunAll),
                 ("GameFlowEncounterTests", GameFlowEncounterTests.RunAll),
                 ("EncounterDirectorTests", EncounterDirectorTests.RunAll),

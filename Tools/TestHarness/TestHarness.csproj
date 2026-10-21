@@ -25,6 +25,7 @@
 
   <ItemGroup>
     <Compile Include="Program.cs" />
+    <Compile Include="SerialMonitor.cs" />
     <Compile Include="../../Assets/PHYSXR/Core/**/*.cs" />
     <Compile Include="../../Assets/PHYSXR/Communication/**/*.cs" />
     <Compile Include="../../Assets/PHYSXR/PhysicalWorld/**/*.cs" />

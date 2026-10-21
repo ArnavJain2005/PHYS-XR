@@ -49,6 +49,12 @@ namespace PHYSXR.Communication
 
         public long CurrentBoot => currentBoot;
 
+        // When true, a line without "v" is rejected VERSION_UNSUPPORTED. The
+        // USB-serial link sets it: the firmware always sends v=1, so a
+        // versionless line there means old or foreign firmware. Off by default
+        // so legacy-format packets and their tests behave as before.
+        public bool RequireVersion { get; set; }
+
         public ValidationResult Validate(byte[] rawData)
         {
             if (rawData == null || rawData.Length == 0)
@@ -84,6 +90,10 @@ namespace PHYSXR.Communication
             {
                 if (!int.TryParse(versionText, out version) || version != SupportedVersion)
                     return ValidationResult.Reject(PacketRejectCode.VERSION_UNSUPPORTED, "unsupported packet version '" + versionText + "'");
+            }
+            else if (RequireVersion)
+            {
+                return ValidationResult.Reject(PacketRejectCode.VERSION_UNSUPPORTED, "missing protocol version (v)");
             }
 
             fields.TryGetValue("dev", out var deviceId);
@@ -126,9 +136,10 @@ namespace PHYSXR.Communication
                 return ValidationResult.Reject(PacketRejectCode.OUT_OF_ORDER, "stale or duplicate sequence number");
 
             fields.TryGetValue("eventType", out var eventType);
-            bool hasEvent = fields.TryGetValue("eventId", out var eventIdText)
-                            && long.TryParse(eventIdText, out long eventId)
-                            && eventId != 0;
+            long eventId = 0;
+            if (fields.TryGetValue("eventId", out var eventIdText) && (!long.TryParse(eventIdText, out eventId) || eventId < 0))
+                return ValidationResult.Reject("invalid event id");
+            bool hasEvent = eventId != 0;
 
             var packet = new SemanticPacket
             {
@@ -138,7 +149,7 @@ namespace PHYSXR.Communication
                 confidence = confidenceText,
                 disturbance = disturbance,
                 eventType = eventType ?? string.Empty,
-                eventId = hasEvent ? long.Parse(eventIdText) : 0,
+                eventId = eventId,
                 hasEvent = hasEvent,
                 version = version,
                 deviceId = deviceId ?? string.Empty,
@@ -163,9 +174,11 @@ namespace PHYSXR.Communication
 
         public long LastAcceptedSequenceNumber => lastAcceptedSequenceNumber;
 
+        // Exact, case-sensitive member names only. Enum.TryParse alone would
+        // also accept numeric text ("presence=7"), including undefined values.
         private static bool IsDefinedEnumName<TEnum>(string value) where TEnum : struct, Enum
         {
-            return Enum.TryParse<TEnum>(value, out _);
+            return !string.IsNullOrEmpty(value) && Enum.IsDefined(typeof(TEnum), value);
         }
     }
 }

@@ -26,6 +26,14 @@ namespace PHYSXR.Game.Flow
         WorldStateManager CreateWorldStateManager(Func<long> clock);
 
         void BeginEventBlackout(long durationMs);
+
+        // Display only, for the HUD chip and the developer overlay: the input
+        // mode and link ("USB COM5 CONNECTED", "SIMULATED", "UDP 47800"), and
+        // a multi-line diagnostics block. Opaque text by design: game code
+        // shows it and never parses it, so raw readings cannot drive gameplay.
+        string SourceLabel { get; }
+
+        string DiagnosticsText { get; }
     }
 
     public sealed class NoPhysicalInput : IPhysicalInputSource
@@ -46,5 +54,9 @@ namespace PHYSXR.Game.Flow
         public void BeginEventBlackout(long durationMs)
         {
         }
+
+        public string SourceLabel => "OFF (no sensor service)";
+
+        public string DiagnosticsText => string.Empty;
     }
 }

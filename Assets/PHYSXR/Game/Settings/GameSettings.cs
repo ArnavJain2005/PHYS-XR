@@ -15,6 +15,12 @@ namespace PHYSXR.Game.Settings
         private const string KeyHeadBob = "physxr.headBob";
         private const string KeyCondition = "physxr.condition";
         private const string KeyDevOverlay = "physxr.devOverlay";
+        private const string KeyTransport = "physxr.sensorTransport";
+        private const string KeySerialPort = "physxr.serialPort";
+        private const string KeySerialBaud = "physxr.serialBaud";
+
+        public const string AutoSerialPort = "AUTO";
+        public const int DefaultSerialBaud = 115200;
 
         public const float MinSensitivity = 0.02f;
         public const float MaxSensitivity = 0.3f;
@@ -30,6 +36,13 @@ namespace PHYSXR.Game.Settings
         public int LastCondition { get; set; }
         public bool DevOverlay { get; set; }
 
+        // Physical sensor link (PHYSXR.Communication.PhysicalTransport):
+        // 0 = USB serial (default, the project's link), 1 = UDP. Port "AUTO"
+        // finds the station by its PHYS-XR lines; or a name such as "COM5".
+        public int Transport { get; set; }
+        public string SerialPort { get; set; } = AutoSerialPort;
+        public int SerialBaud { get; set; } = DefaultSerialBaud;
+
         public static GameSettings Load()
         {
             var s = new GameSettings();
@@ -42,6 +55,13 @@ namespace PHYSXR.Game.Settings
                 s.HeadBob = PlayerPrefs.GetInt(KeyHeadBob, 1) == 1;
                 s.LastCondition = PlayerPrefs.GetInt(KeyCondition, 0);
                 s.DevOverlay = PlayerPrefs.GetInt(KeyDevOverlay, 0) == 1;
+                s.Transport = Mathf.Clamp(PlayerPrefs.GetInt(KeyTransport, 0), 0, 1);
+                s.SerialPort = PlayerPrefs.GetString(KeySerialPort, AutoSerialPort);
+                if (string.IsNullOrWhiteSpace(s.SerialPort))
+                    s.SerialPort = AutoSerialPort;
+                s.SerialBaud = PlayerPrefs.GetInt(KeySerialBaud, DefaultSerialBaud);
+                if (s.SerialBaud <= 0)
+                    s.SerialBaud = DefaultSerialBaud;
             }
             catch (System.Exception)
             {
@@ -61,6 +81,9 @@ namespace PHYSXR.Game.Settings
                 PlayerPrefs.SetInt(KeyHeadBob, HeadBob ? 1 : 0);
                 PlayerPrefs.SetInt(KeyCondition, LastCondition);
                 PlayerPrefs.SetInt(KeyDevOverlay, DevOverlay ? 1 : 0);
+                PlayerPrefs.SetInt(KeyTransport, Transport);
+                PlayerPrefs.SetString(KeySerialPort, SerialPort ?? AutoSerialPort);
+                PlayerPrefs.SetInt(KeySerialBaud, SerialBaud);
                 PlayerPrefs.Save();
             }
             catch (System.Exception)

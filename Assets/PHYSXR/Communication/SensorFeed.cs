@@ -3,7 +3,7 @@ using PHYSXR.Core.Enums;
 
 namespace PHYSXR.Communication
 {
-    // Main-thread pump between the receiver's queue and the pipeline (spec
+    // Main-thread pump between a transport's queue and the pipeline (spec
     // section B, step 3). Once per frame, Pump(now) drains every queued
     // datagram (bounded per frame), runs each through
     // PhysicalCommunicationPipeline.Process with its socket-thread arrival
@@ -16,20 +16,29 @@ namespace PHYSXR.Communication
     {
         public const int DefaultMaxPerFrame = 256;
 
-        private readonly UDPReceiver receiver;
+        private readonly IDatagramSource source;
         private readonly PhysicalCommunicationPipeline pipeline;
         private readonly List<PacketOutcome> outcomes = new List<PacketOutcome>();
         private readonly int maxPerFrame;
 
         public SensorFeed(UDPReceiver receiver, PhysicalCommunicationPipeline pipeline, int maxPerFrame = DefaultMaxPerFrame)
+            : this((IDatagramSource)receiver, pipeline, maxPerFrame)
         {
-            this.receiver = receiver;
-            this.pipeline = pipeline;
-            this.maxPerFrame = maxPerFrame;
             receiver.QueueOnReceive = true;
         }
 
-        public UDPReceiver Receiver => receiver;
+        // Any transport: UDPReceiver, SerialLineReceiver, or a test source.
+        public SensorFeed(IDatagramSource source, PhysicalCommunicationPipeline pipeline, int maxPerFrame = DefaultMaxPerFrame)
+        {
+            this.source = source;
+            this.pipeline = pipeline;
+            this.maxPerFrame = maxPerFrame;
+        }
+
+        // The UDP receiver when that is the source, otherwise null.
+        public UDPReceiver Receiver => source as UDPReceiver;
+
+        public IDatagramSource Source => source;
         public PhysicalCommunicationPipeline Pipeline => pipeline;
 
         public PhysicalSourceStatus Status { get; private set; } = PhysicalSourceStatus.UNAVAILABLE;
@@ -43,7 +52,7 @@ namespace PHYSXR.Communication
             outcomes.Clear();
 
             int handled = 0;
-            while (handled < maxPerFrame && receiver.TryDequeue(out UDPReceiver.Datagram datagram))
+            while (handled < maxPerFrame && source.TryDequeue(out UDPReceiver.Datagram datagram))
             {
                 outcomes.Add(pipeline.Process(datagram.data, datagram.arrivalMs));
                 handled++;
