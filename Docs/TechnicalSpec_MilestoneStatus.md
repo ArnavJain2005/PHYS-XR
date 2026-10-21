@@ -2,104 +2,109 @@
 
 This file records milestone status against the **Technical Implementation Specification**
 (`Technical Spec Doc.pdf`, consistency-reviewed 20 Oct 2026, review commit `5aa9642`) and
-**GDD v1.1**. The spec PDF lives outside this repository and has no editable source here, so its
-status tables (section G, "Status" columns; section H, milestones) are updated by this addendum
-rather than in the PDF itself. Statuses below are only claimed where there is evidence.
+**GDD v1.1**. The spec PDF lives outside this repository, so its status tables (section G
+"Status" columns, section H milestones) are updated here. A status is claimed only where
+there is evidence, and the evidence is named.
 
 Branch: `demo/warning-beat-arbitration`. Unity `6000.5.8f1`, URP 17.5.0, Input System 1.20.0.
+Last updated 21 Oct 2026 (game implementation pass on top of `d9ef09d`).
 
 ## Milestone summary
 
 | Milestone | Status | Evidence / what is missing |
 |---|---|---|
-| M0 Baseline | Partial | Feature branch exists. `Tools/TestHarness` is now committed (spec recommendation). Not done: Git LFS rules, asset register, Haunted Jaunt / ghost import (art import deliberately deferred). |
-| M1 Repo + fixes | Partial | Done earlier on this branch: `EncounterDecisionLayer`, `GhostPhase`, `IExplainableDecisionProvider`, terminal gate. **Not done: P1–P5 (all unresolved), asmdefs, `GhostExecutionState` move to Core, `TestRunnerBridge`.** |
-| **M2 Desktop loop** | **Implemented; automated checks pass; manual Editor play-through pending** | See below. |
-| M3–M11 | Not started | — |
+| M0 Baseline | Partial | Harness committed; asset register `Docs/ASSETS.md`. **Not done:** Git LFS rules. The Haunted Jaunt kit and Mixamo character were deliberately not imported (licences unconfirmed, no LFS); all art and audio are procedural. |
+| M1 Repo + fixes | **Done, except asmdefs** | P1–P5 fixed, each with regression tests (`DefectRegressionTests`, 26). Main-thread hand-off (`UDPReceiver` queue mode, `SensorFeed`). Encounter layer complete (`EncounterRuleTests`, 21). **Not done:** asmdefs, the `GhostExecutionState` move to Core, `TestRunnerBridge`. |
+| M2 Desktop loop | Done (automated) | `M2RouteSelfTest` 23/23 in the final build. |
+| M3 Ghost, virtual-only | Done (automated) | `GhostMotionController` + `HollowVisual` on a runtime NavMesh; FOLLOW/WARN/surge RETREAT; DECISION/BEHAVIOUR telemetry; dev overlay (F1). |
+| M4 Attack, lantern, death, checkpoint | Done (automated) | `EncounterSelfTest` 21/21 (T14, T15, T17, T18, T20). |
+| M5 Simulated physical input | Done in software | `SimulatedSensorStation` → real validator/pipeline; hotkeys; `SensorScenarioTests` 11/11; encounter self-test under SIMULATED 21/21. |
+| M6 Telemetry + analysis | Done in software | `JsonLinesTelemetrySink`, all section G record types, `Tools/analyze_telemetry.py`, T13 determinism test. |
+| M7 UDP + ESP32 on Windows | Blocked (I-1) | `Tools/esp32_sim.py` written; the real socket was not exercised against it in this session; no firmware. |
+| M8 / M9 Quest | Not started | Desktop only (I-2, I-3). |
+| M10 Art, audio, ending | Done with procedural assets | House dressing, lighting states, storm, post-processing, 39 synthesised cues, ending with window silhouette and subtitles. Reviewed from screenshots (capture tour), not in person. |
+| M11 Acceptance + evaluation | Not started | Needs people and hardware. |
 
-## M2 — Desktop greybox loop, no ghost
+## What was built (this pass)
 
-### What was built
+| Spec item | Implementation |
+|---|---|
+| P1 decision clock | `RuleBasedDecisionProvider(decisionClock:)`, `EncounterDecisionLayer(inner, clock)`, `GhostRuntimePipeline.CreateRuntimeChain(clock, …)`. The game passes accumulated scaled play time. |
+| P2 neutral physical state | `WorldStateManager(physical, clock)`: neutral unless FRESH and not virtual-only; 3 s disturbance pulse from accepted events. |
+| P3 boot identity | `PacketValidator`: per-boot ordering, `OLD_BOOT`, `isNewBoot`; contract v1 keys `v`, `dev`, `boot`, `tEvent`. |
+| P4 dedup key | `PhysicalEventManager`: `(boot, eventId)`, plus `OLD_EVENT`. |
+| P5 arrival-time freshness | `PhysicalCommunicationPipeline.Process(raw, arrivalMs)` and `GetSourceStatus(now)`; resync, max event age, restart blackout, masking. |
+| Encounter rules E0–E4 | `EncounterDecisionLayer` (see README table). |
+| `GhostMotionController` | `Ghost/Presentation/GhostMotionController.cs` |
+| Checkpoint, death | `GameFlow.ReportDeath`, `GameFlow(ObjectiveStage)`, `GameSession` checkpoint/attempts, `GameFlowController.RestartFromCheckpoint`. |
+| Lantern | `Game/Gameplay/DefensiveAbility.cs` (4 m, 45°, line of sight, 10 s / 3 s cooldowns). |
+| Encounter trigger | `GameTriggerVolume` on both utility-room exits; commits only after power. |
+| JSON Lines sink | `Telemetry/JsonLinesTelemetrySink.cs`, `App/TelemetryService.cs` |
+| Bootstrap wiring | `App/AppBootstrap.cs`, `App/SensorService.cs`, `App/MainMenu.cs` |
+| ScreenFader, GameUI | `Game/UI/GameUI.cs` (uGUI) |
+| Ending | `Game/Gameplay/EndingSequence.cs` |
+| `PlatformRigSpawner`, `XRInputAdapter`, `PhysxrSettings` assets | Not built (desktop only; settings are code constants and `GameSettings`). |
 
-| Spec item | Implementation | Notes / deviation |
-|---|---|---|
-| Bootstrap + Game scenes | `Assets/PHYSXR/Scenes/Bootstrap.unity` (index 0), `Game_BlackthornHouse.unity` (index 1) | Created with Unity's scene API (`PHYS-XR > M2 > Create Or Repair Scenes`). `SampleScene` stays in the project as a dev scene, out of the build. |
-| `AppBootstrap`, `GameSession` | `App/AppBootstrap.cs`, `Game/Flow/GameSession.cs` | Session only. UDP/pipeline/telemetry wiring is M5–M7. `GameSession` sits in `Game/Flow` (plain C#, so the harness can test it), not `App/`. |
-| `PlatformRigSpawner` (desktop path) | Not built | `BlackthornGreybox` builds the desktop rig directly. A spawner arrives with the Quest rig (M8). |
-| `IPlayerInput`, `DesktopInputAdapter`, `DesktopMotor`, `PlayerController` | `Game/Input`, `Game/Player` | Move, Look, Interact come from the unmodified project-wide `InputSystem_Actions` (Player map); Pause is a local Esc action, because the asset has none. |
-| `PlayerInteractor`, `Interactable`, `FusePickup`, `FuseBox`, `ExitDoor` | `Game/Player`, `Game/Gameplay` | Centre-of-camera ray, 2 m range, walls block. Interactables never read devices. |
-| `PowerSystem` | `Game/Gameplay/PowerSystem.cs` | Two placeholder lighting states and a 0.8 s flicker. No hum audio: no suitable asset in this repo. Emissive change is best-effort (the URP variant may be stripped from builds); the light changes are the real cue. |
-| `GameFlowController` | `Game/Gameplay/GameFlowController.cs` over plain-C# `Game/Flow/GameFlow.cs` | Explicit `RunState` (Playing/Paused/Succeeded) and ordered `ObjectiveStage` (FindFuse → InstallFuse → RestoringPower → ReachExit → Completed); invalid transitions are refused with a reason. |
-| `GameUI`, `ScreenFader` | `Game/UI/GameUI.cs` (IMGUI) | IMGUI placeholder HUD, pause menu and success screen. No ScreenFader or ending Timeline (M10). Quest needs world-space UI (M8). |
-| Greybox from Haunted Jaunt rooms | `Game/Level/BlackthornGreybox.cs` (primitives) | Primitives by instruction; no art import in M2. Five-room loop per spec section C; critical path about 60 m. |
-| NavMesh bake | Deferred to M3 | No ghost in M2. |
-| Restart | Full restart reloads `Game_BlackthornHouse` | This is not a checkpoint system. Death, checkpoint save/restore and respawn are M4. |
+Deviations, recorded:
+- **Dev hotkeys.** The spec's letter keys (D, S, R, X) collide with WASD, so the number row is used (1–9).
+- **Walk speed** is 1.8 m/s (spec 1.5) and encounter WARN approach 1.9 m/s (spec 1.6). This keeps the M2 route short while the ghost still out-paces a walking player.
+- **Outer dwell.** The encounter layer adds a 1.5 s dwell for E4 WARN → FOLLOW (T11). A scripted beat still ends immediately (RT-11).
+- **Deferred ATTACK vs beat question.** An attack in progress continues through a beat; no new attack starts during one.
+- **Legacy APIs kept.** `PhysicalCommunicationPipeline.HandleRawPacket` and the one-argument `WorldStateManager` keep their original behaviour for their existing tests; the game uses the fixed paths.
 
-### Controls (Windows)
-
-WASD move · mouse look (pitch clamped ±80°) · E interact · Esc pause/resume. Pause menu: Resume / Restart run / Quit. Success screen: Restart run / Quit.
-
-### Test evidence
+## Test evidence
 
 | Kind | What ran | Result |
 |---|---|---|
-| Standalone .NET (`Tools/TestHarness`, C# 9, net9.0) | All 16 `RunAll()` suites: the 170 existing tests plus `GameFlowTests` FLOW-01..16 | **186 passed, 0 failed** |
-| Unity batch compile (copy of this project, 6000.5.8f1) | Import + script compilation | 0 compiler errors, 0 compiler warnings in PHYS-XR code |
-| Unity Windows player build (same copy) | `M2SceneSetup.BuildWindows`, StandaloneWindows64 | Build **Succeeded**, 0 errors |
-| In-player automated route (`-physxr-m2-selftest`, headless) | `M2RouteSelfTest`: scripted input drives the real CharacterController, camera ray and interact path | **23 passed, 0 failed**; scripted walk-only route **27.1 s** |
+| Standalone .NET harness (`dotnet run -c Release --project Tools/TestHarness`, C# 9, net9.0) | 22 suites | **266 passed, 0 failed** (the original 186 unchanged and passing, plus 80 new) |
+| Unity compile (the open Editor, 6000.5.8f1) | Full script compile after the last change | 0 errors, 0 warnings in PHYS-XR code |
+| Windows player build (from the open Editor, `BuildPipeline` with explicit scene paths) | StandaloneWindows64, Bootstrap + Game_BlackthornHouse | **Build Finished, Result: Success** |
+| `-physxr-m2-selftest` (headless player) | Objective route | **23/23**, scripted route 33.5 s |
+| `-physxr-selftest` (headless player) | Encounter checks | **21/21**. Next attack 11.52 s after the lantern hit; 10 restarts: 1 camera/listener/EventSystem/flow/ghost; materials 53 → 53; managed heap 4.0 → 4.2 MB |
+| `-physxr-selftest -physxr-condition SIMULATED` (headless player) | Same, simulated packets through the validator | **21/21**; telemetry: 332 packets accepted, 0 rejected, source FRESH |
+| Player logs of those three runs | Scan for exceptions and errors | None |
+| `-physxr-capture` (windowed player) | 12 screenshots: menu, dark and powered rooms, first sighting, encounter, ending, end card | Reviewed; light levels and the ghost's materials tuned from them |
+| `Tools/analyze_telemetry.py` on self-test logs | CSV summary | Parses; 0 inappropriate attacks, 0 dropped records |
 
-The Unity checks ran on a scratch copy of the project, because the Editor had this checkout open.
-What matched the commit, and what did not:
+The Editor-side Play-mode self-test was attempted, but an unfocused Editor throttles Play mode
+to about 1.5 fps, so all in-engine checks were run in the Windows player instead.
 
-- **Identical to `bf7fb52`:** all of `Assets/PHYSXR` (byte-for-byte), `Packages/manifest.json`, and the
-  regenerated `Packages/packages-lock.json`. The copy's manifest is the committed one, because the
-  local `com.coplaydev.unity-mcp` line is uncommitted and was removed from the copy.
-- **Not identical:**
-  - The copy included the developer's uncommitted XR files: a modified `OpenXR Package Settings.asset`
-    and an untracked `Assets/XR/Loaders/OpenXRLoader.asset`. Unity then generated
-    `XRGeneralSettingsPerBuildTarget.asset` and `OpenXR Editor Settings.asset`.
-  - The copy's `EditorBuildSettings.asset` had an extra `xr.management.loader_settings` entry. Its
-    scene GUIDs were also stale, the same mismatch the commit had (fixed in the follow-up commit).
-    The build was not affected, because `BuildWindows` passes scene paths explicitly.
-  - The fresh import re-serialised `ProjectSettings.asset`, `UnityConnectSettings.asset`,
-    `Assets/Settings/PC_RPAsset.asset`, `UniversalRenderPipelineGlobalSettings.asset` and
-    `DefaultVolumeProfile.asset`. None of these changes was committed.
-- **Not covered:** the self-test ran headless (`-batchmode -nographics`), so nothing was rendered.
-  Cursor lock, the IMGUI HUD and menus, and real keyboard/mouse input through `DesktopInputAdapter`
-  were not exercised.
-
-### Spec test cases
+## Acceptance matrix (section G)
 
 | ID | Status | Evidence |
 |---|---|---|
-| T19 Fuse and exit progression | **Pass (automated), lights only** | Self-test C03–C07, C11; `OBJECTIVE` log lines arrive in order. The "hum changes" part is not implemented (no audio asset). |
-| T20 Full restart | **Pass (automated)** | C10a after success, C10c while paused mid-run: clean start state, run number increments, attempt back to 1. |
-| T21 Windows input | Not run | Needs a person at the keyboard (bindings, cursor lock, pause). |
-| T28 Repo regression suite | Pass | 186/186 (was 130 at review, 170 before M2). |
-| T29 Defect probes P1–P5 | **Fail (unchanged)** | P1–P5 are still unresolved. M2 does not touch them. |
+| T01 Virtual-only | **Pass (software)** | SENS-T01 |
+| T02 Physical + virtual (simulated) | **Pass (software)** | SENS-T02a/b |
+| T03 Real ESP32 | Not run | Blocked on firmware (I-1) |
+| T04 Duplicate events | **Pass (software)** | SENS-T04 |
+| T05 Old event ID | **Pass (software)** | SENS-T05 |
+| T06 Stale packets | **Pass (software)** | SENS-T06, P5-04 |
+| T07 Invalid packets | **Pass (software)** | SENS-T07 |
+| T08 Out-of-order | **Pass (software)** | SENS-T08 |
+| T09 Disconnection | **Pass (software)** | SENS-T09 (no real network) |
+| T10 ESP32 reboot | **Pass (software)** | SENS-T10, P3/P4 tests |
+| T11 Ghost state stability | **Pass (decision level)** | ENC-T11 |
+| T12 Rule priority | **Pass** | EncounterRuleTests, DEC/HYST suites |
+| T13 Determinism | **Pass** | TELJ-06 |
+| T14 Defensive interruption | **Pass (player)** | EncounterSelfTest T14a–c, ENC-T14 |
+| T15 Defensive miss | **Pass (player), partial** | Out-of-range miss, 3 s cooldown. Not run: outside-45° and blocked line-of-sight cases (the code paths exist in `DefensiveAbility.HitTest`) |
+| T16 Recovery soak (60 s) | Not run | Single-cycle recovery is covered by T14c |
+| T17 Death and checkpoint | **Pass (player)** | EncounterSelfTest T17a–c |
+| T18 Repeated restarts | **Pass (player)** | EncounterSelfTest T18a–d. "Socket still receiving" was not checked (virtual-only run) |
+| T19 Fuse and exit | **Pass (player)** | M2 C03–C07 (lights, hum loop and surge sound exist; audio not verified by ear) |
+| T20 Full restart | **Pass (player)** | M2 C10a/c, EncounterSelfTest T20 |
+| T21 Windows input | Not run | Needs a person |
+| T22–T24 Quest | Not run | No Quest build |
+| T25 Under five minutes | Not run | Scripted route 33.5 s; needs first-time players |
+| T26 Latency | Not run | Needs hardware and video |
+| T27 Telemetry correlation | Partial | The analyzer joins caused decisions to events and behaviours; no physical-event trial was logged yet |
+| T28 Repo regression | **Pass** | 266/266 |
+| T29 Defect probes P1–P5 | **Pass** | DefectRegressionTests: each "legacy" case still shows the original defect through the old API, each "fixed" case passes |
 
-### Manual Editor checklist (not yet run)
+## Manual checks still needed
 
-Open `Assets/PHYSXR/Scenes/Bootstrap.unity`, press Play, and check each item. `PHYS-XR > M2 > Run Route Self-Test (Play Mode)` runs the automated version in the Editor.
-
-| # | Check | Automated equivalent | Manual |
-|---|---|---|---|
-| 1 | Starts at the entry hall with power off | C01 | Not run |
-| 2 | Fuse can be picked up exactly once | C02, C11a | Not run |
-| 3 | Fuse box rejects use before pickup | C03 | Not run |
-| 4 | Fuse installs | C04 | Not run |
-| 5 | Lighting changes on power restoration | C05 | Not run |
-| 6 | Exit refuses before power | C06 | Not run |
-| 7 | Exit succeeds after power | C07 | Not run |
-| 8 | Success disables gameplay | C08 | Not run |
-| 9 | Pause and resume work | C09 | Not run |
-| 10 | Restart restores a clean run | C10a, C10c | Not run |
-| 11 | Repeated interactions cannot corrupt state | C11a, C11b, FLOW-02/10/15 | Not run |
-| 12 | Walk-only route < 2.5 min | C12 (27.1 s scripted) | Not run (time a first-time human run) |
-
-## Open items carried forward
-
-- **P1** (hysteresis dwell measured on a frozen sensor timestamp in virtual-only mode) **must be fixed before the ghost enters in M3.** P2–P5 are also still open. Sensor validation is not complete; no ESP32 firmware exists.
-- **Deferred decision:** whether a new ATTACK outranks a mandatory scripted warning beat. Leave it to the encounter milestone (M4); M2 does not settle it.
-- M2 runs with no ESP32, headset or external service. No raw sensor data reaches objectives.
-- No asmdefs yet, so the new `PHYSXR.Game.*`/`PHYSXR.App` code compiles into `Assembly-CSharp` like the rest of the repo.
+1. Play from the menu with keyboard and mouse: cursor lock, mouse feel, pause/resume, settings sliders (T21).
+2. A first-time player's run time and difficulty of the encounter (T25), and the lantern timing in practice.
+3. Audio balance and spatialisation by ear: ambience, footsteps, surge and hum, ghost voice, heartbeat, ending static.
+4. Physical sensors: `python Tools/esp32_sim.py --scenario near` against the build with "Physical sensors (UDP 47800)" selected. Windows Firewall may ask to allow the player on first listen.
+5. The in-Editor self-test menus with the Game view focused.
