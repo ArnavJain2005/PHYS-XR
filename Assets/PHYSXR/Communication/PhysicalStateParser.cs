@@ -46,7 +46,8 @@ namespace PHYSXR.Communication
             {
                 eventType = packet.eventType,
                 eventId = packet.eventId,
-                timestamp = packet.timestamp
+                timestamp = packet.timestamp,
+                boot = packet.boot
             };
 
             return true;

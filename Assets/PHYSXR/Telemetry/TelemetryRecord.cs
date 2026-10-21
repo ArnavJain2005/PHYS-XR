@@ -30,5 +30,19 @@ namespace PHYSXR.Telemetry
 
         // Short free-text context (e.g. "presence=NEAR"), not a WorldState dump.
         public string detail;
+
+        // Additive game-telemetry fields (spec section G). All optional; the
+        // original pipeline-stage records leave them null.
+        //
+        // type:         the record type written to the JSON Lines file
+        //               (DECISION, BEHAVIOUR, PKT_RX, OBJECTIVE, ...).
+        // decisionId:   "dec", increasing per emitted decision; carried into
+        //               the BEHAVIOUR/ATTACK/DEFENSE records it caused ("beh").
+        // ruleId:       the rule that produced the decision (E3, W, INNER, ...).
+        // causeEventId: "cause_evt", the accepted physical event behind it.
+        public string type;
+        public long? decisionId;
+        public string ruleId;
+        public long? causeEventId;
     }
 }

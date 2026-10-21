@@ -33,6 +33,10 @@ namespace PHYSXR.TestHarness
                 ("RuntimePipelineIntegrationTests", RuntimePipelineIntegrationTests.RunAll),
                 ("TerminalGateTests", TerminalGateTests.RunAll),
                 ("GameFlowTests", GameFlowTests.RunAll),
+                ("DefectRegressionTests", DefectRegressionTests.RunAll),
+                ("EncounterRuleTests", EncounterRuleTests.RunAll),
+                ("SensorScenarioTests", SensorScenarioTests.RunAll),
+                ("TelemetryJsonLinesTests", TelemetryJsonLinesTests.RunAll),
             };
 
             int totalFailed = 0;

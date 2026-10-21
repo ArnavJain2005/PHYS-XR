@@ -77,6 +77,7 @@ namespace PHYSXR.Ghost
             worldStateManager.UpdatePlayerState(new PlayerState());
             worldStateManager.UpdateVirtualState(new VirtualState());
             worldStateManager.UpdateGhostState(new GhostState());
+            worldStateManager.ClearDisturbancePulse();
 
             pipeline.RestartFromCheckpoint();
 

@@ -32,7 +32,7 @@
     <Compile Include="../../Assets/PHYSXR/Decision/**/*.cs" />
     <Compile Include="../../Assets/PHYSXR/Telemetry/**/*.cs" />
     <Compile Include="../../Assets/PHYSXR/Ghost/**/*.cs"
-             Exclude="../../Assets/PHYSXR/Ghost/GhostRuntime.cs;../../Assets/PHYSXR/Ghost/GhostVisual*.cs" />
+             Exclude="../../Assets/PHYSXR/Ghost/GhostRuntime.cs;../../Assets/PHYSXR/Ghost/GhostVisual*.cs;../../Assets/PHYSXR/Ghost/Presentation/**" />
     <Compile Include="../../Assets/PHYSXR/Game/Flow/**/*.cs" />
     <Compile Include="../../Assets/PHYSXR/Testing/**/*.cs" />
   </ItemGroup>

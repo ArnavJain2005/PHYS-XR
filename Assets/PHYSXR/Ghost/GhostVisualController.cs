@@ -70,6 +70,8 @@ namespace PHYSXR.Ghost
                     return (Color.cyan, 1f, 1.4f); // enlarged
                 case GhostExecutionState.Retreating:
                     return (Color.red, 0.5f, 0.7f); // lowered, shrunk
+                case GhostExecutionState.Attacking:
+                    return (new Color(0.5f, 0f, 0.6f), 1f, 1.2f); // violet, enlarged
                 default:
                     // GhostBehaviourController.ApplyState already rejects any
                     // undefined GhostExecutionState before this could ever be
