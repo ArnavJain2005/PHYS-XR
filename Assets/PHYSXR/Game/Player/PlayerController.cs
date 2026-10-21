@@ -6,10 +6,11 @@ using UnityEngine;
 namespace PHYSXR.Game.Player
 {
     // The player body. Each frame it polls the active IPlayerInput and routes
-    // intents: pause to GameFlowController, look/move to DesktopMotor,
-    // interact to PlayerInteractor and defend to the lantern. Movement and
-    // interaction only run while the flow accepts gameplay input (not
-    // paused, dead or finished). It also plays footsteps (wood or tile, from
+    // intents: pause to GameFlowController, look/move/sprint/jump to
+    // DesktopMotor, interact to PlayerInteractor and defend to the lantern.
+    // Movement and interaction only run while the flow accepts gameplay input
+    // (not paused, dead or finished) and no readable is open (a readable is
+    // a modal that E or Esc closes). It also plays footsteps (wood or tile, from
     // the floor under the player) and applies a small, optional head bob.
     //
     // The input source is swappable (SetInput), which is how the scripted
@@ -80,6 +81,18 @@ namespace PHYSXR.Game.Player
             if (input == null || flowController == null)
                 return;
 
+            // A readable (note or radio) is a modal: E or Esc closes it and
+            // nothing else reaches the world. One E action per frame, so the
+            // press that opened it can never also close it.
+            if (flowController.ReadableOpen && flowController.Flow.AcceptsGameplayInput)
+            {
+                if (input.InteractPressed || input.PausePressed)
+                    flowController.CloseNote();
+                motor.Move(Vector2.zero, Time.deltaTime);
+                UpdateFootsteps();
+                return;
+            }
+
             if (input.PausePressed)
                 flowController.TogglePause();
 
@@ -87,7 +100,7 @@ namespace PHYSXR.Game.Player
                 return;
 
             motor.Look(input.LookDegrees);
-            motor.Move(input.Move, Time.deltaTime);
+            motor.Move(input.Move, Time.deltaTime, input.SprintHeld, input.JumpPressed);
 
             if (input.InteractPressed)
                 interactor.TryInteract();
@@ -117,7 +130,15 @@ namespace PHYSXR.Game.Player
                 Head.localPosition = new Vector3(local.x, y, local.z);
             }
 
-            if (speed < 0.3f)
+            if (motor.LandedThisStep && audioPlayer != null)
+            {
+                AudioCue land = FloorIsTile(position) ? AudioCue.FootstepTile : AudioCue.FootstepWood;
+                audioPlayer.PlayRandomAt(land, position + Vector3.up * 0.05f, 1f, 0.06f);
+                strideAccumulator = 0f;
+            }
+
+            // No footsteps in the air.
+            if (speed < 0.3f || !motor.Grounded)
                 return;
 
             strideAccumulator += delta.magnitude;

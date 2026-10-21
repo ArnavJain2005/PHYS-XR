@@ -4,14 +4,17 @@ using UnityEngine.InputSystem;
 namespace PHYSXR.Game.Input
 {
     // Windows keyboard/mouse adapter (GDD 7.1): WASD move, mouse look,
-    // E interact, F lantern pulse (the designated defensive key), Esc
-    // pause/resume. Mouse sensitivity and invert-Y come from GameSettings.
+    // E interact, F lantern pulse (the designated defensive key), Left Shift
+    // sprint (hold), Space jump, Esc pause/resume. Mouse sensitivity and
+    // invert-Y come from GameSettings.
     //
-    // Move, Look and Interact come from the project-wide actions asset
-    // (Assets/InputSystem_Actions.inputactions, "Player" map), which is left
-    // unmodified. That asset has no pause action, so Pause is a local action
-    // bound to Escape. If the project-wide asset is missing, equivalent
-    // local bindings are created so the game is still playable.
+    // Move, Look, Interact, Sprint and Jump come from the project-wide actions
+    // asset (Assets/InputSystem_Actions.inputactions, "Player" map: Sprint is
+    // Left Shift / left-stick press, Jump is Space / gamepad south), which is
+    // left unmodified. That asset has no pause action, so Pause is a local
+    // action bound to Escape. If the project-wide asset or one of its actions
+    // is missing, equivalent local bindings are created so the game is still
+    // playable.
     public class DesktopInputAdapter : MonoBehaviour, IPlayerInput
     {
         [Tooltip("Degrees of rotation per pixel of mouse movement.")]
@@ -25,7 +28,10 @@ namespace PHYSXR.Game.Input
         private InputAction interactAction;
         private InputAction pauseAction;
         private InputAction defendAction;
+        private InputAction sprintAction;
+        private InputAction jumpAction;
         private bool ownsPlayerActions;
+        private bool ownsSprintJump;
 
         public Vector2 Move => moveAction != null ? Vector2.ClampMagnitude(moveAction.ReadValue<Vector2>(), 1f) : Vector2.zero;
 
@@ -57,6 +63,10 @@ namespace PHYSXR.Game.Input
 
         public bool DefendPressed => defendAction != null && defendAction.WasPressedThisFrame();
 
+        public bool SprintHeld => sprintAction != null && sprintAction.IsPressed();
+
+        public bool JumpPressed => jumpAction != null && jumpAction.WasPressedThisFrame();
+
         public bool InvertY { get; set; }
 
         // Degrees per pixel of mouse movement (from GameSettings).
@@ -74,6 +84,8 @@ namespace PHYSXR.Game.Input
                 moveAction = projectActions.FindAction("Player/Move");
                 lookAction = projectActions.FindAction("Player/Look");
                 interactAction = projectActions.FindAction("Player/Interact");
+                sprintAction = projectActions.FindAction("Player/Sprint");
+                jumpAction = projectActions.FindAction("Player/Jump");
             }
 
             if (moveAction == null || lookAction == null || interactAction == null)
@@ -91,6 +103,14 @@ namespace PHYSXR.Game.Input
                 interactAction = new InputAction("Interact", InputActionType.Button, "<Keyboard>/e");
             }
 
+            if (sprintAction == null || jumpAction == null)
+            {
+                Debug.LogWarning("[DesktopInputAdapter] Project-wide Player/Sprint or Jump not found; using built-in Left Shift / Space.");
+                ownsSprintJump = true;
+                sprintAction = new InputAction("Sprint", InputActionType.Button, "<Keyboard>/leftShift");
+                jumpAction = new InputAction("Jump", InputActionType.Button, "<Keyboard>/space");
+            }
+
             pauseAction = new InputAction("Pause", InputActionType.Button, "<Keyboard>/escape");
             defendAction = new InputAction("Defend", InputActionType.Button, "<Keyboard>/f");
             defendAction.AddBinding("<Mouse>/rightButton");
@@ -101,6 +121,8 @@ namespace PHYSXR.Game.Input
             moveAction?.Enable();
             lookAction?.Enable();
             interactAction?.Enable();
+            sprintAction?.Enable();
+            jumpAction?.Enable();
             pauseAction?.Enable();
             defendAction?.Enable();
         }
@@ -114,6 +136,11 @@ namespace PHYSXR.Game.Input
                 lookAction?.Disable();
                 interactAction?.Disable();
             }
+            if (ownsSprintJump)
+            {
+                sprintAction?.Disable();
+                jumpAction?.Disable();
+            }
             pauseAction?.Disable();
             defendAction?.Disable();
         }
@@ -125,6 +152,11 @@ namespace PHYSXR.Game.Input
                 moveAction?.Dispose();
                 lookAction?.Dispose();
                 interactAction?.Dispose();
+            }
+            if (ownsSprintJump)
+            {
+                sprintAction?.Dispose();
+                jumpAction?.Dispose();
             }
             pauseAction?.Dispose();
             defendAction?.Dispose();

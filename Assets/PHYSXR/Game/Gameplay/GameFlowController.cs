@@ -42,10 +42,18 @@ namespace PHYSXR.Game.Gameplay
         public const float CheckpointYaw = 205f;
         public const long EventBlackoutMs = 1000L;
 
+        // First sighting: The Hollow counts as seen when its chest is inside
+        // the player's view, within this distance, with no wall in between.
+        public const float SightingMaxDistance = 12f;
+        public const float SightingViewportMargin = 0.05f;
+
         private PowerSystem powerSystem;
         private GameServices services;
         private bool restarting;
         private bool firstSightingDone;
+        private bool sightingSeen;
+        private Camera playerView;
+        private ReadableNote openNote;
         private bool encounterHintShown;
         private bool runEndLogged;
         private float clockRemainder;
@@ -104,9 +112,21 @@ namespace PHYSXR.Game.Gameplay
 
         public float LastMessageTime { get; private set; } = -100f;
 
+        // The readable (note or radio) on screen, if any. While one is open
+        // the player is in a modal: look, move, sprint, jump, the lantern
+        // and world interaction are blocked, and E closes it.
+        public ReadableNote OpenNote => openNote;
+
+        public bool ReadableOpen => openNote != null;
+
+        // True once the player has actually seen The Hollow this attempt.
+        public bool SightingSeen => sightingSeen;
+
         public event Action<string> MessageRaised;
         public event Action<string> HintRaised;
         public event Action<ReadableNote> NoteOpened;
+        public event Action<ReadableNote> NoteClosed;
+        public event Action StrikeFeinted;
         public event Action DeathStarted;
         public event Action EndingStarted;
         public event Action<ObjectiveStage> ObjectiveChanged;
@@ -134,6 +154,7 @@ namespace PHYSXR.Game.Gameplay
             this.anchors = anchors;
             this.startPosition = startPosition;
             this.startYaw = startYaw;
+            playerView = player != null && player.Head != null ? player.Head.GetComponent<Camera>() : null;
         }
 
         // Called by AppBootstrap when the scene loads (before Start). If the
@@ -225,6 +246,9 @@ namespace PHYSXR.Game.Gameplay
                 fuse.gameObject.SetActive(false);
             player?.Respawn(new Vector3(checkpoint.x, checkpoint.y, checkpoint.z), checkpoint.yaw);
             firstSightingDone = true;
+            // The player met The Hollow before the checkpoint; the restart
+            // goes straight to the encounter without a second sighting lunge.
+            sightingSeen = true;
             if (ghost != null)
                 ghost.Manifest(anchors.CheckpointSpawn, false, false);
             director.BeginRestartGrace(GameClockMs);
@@ -263,6 +287,10 @@ namespace PHYSXR.Game.Gameplay
 
             ghostRuntime.Tick();
             ghost.Tick(dt);
+            UpdateFirstSighting();
+            // Never leave the player stuck reading while an attack winds up.
+            if (openNote != null && ghost.Phase == GhostPhase.WINDUP)
+                CloseNote();
 
             if (Flow.EncounterCommitted && !encounterHintShown && ghost.StraightDistanceToPlayer < 7f)
             {
@@ -271,8 +299,73 @@ namespace PHYSXR.Game.Gameplay
             }
         }
 
+        // The first time the player actually sees The Hollow it lunges. This
+        // only raises VirtualState.firstSightingAttack (through the director);
+        // the decision layer turns it into ATTACK via rule E5, under the same
+        // grace, cooldown and terminal checks as every other attack, and the
+        // ghost's normal WINDUP/STRIKE/RECOVER phases (and the lantern
+        // interrupt) play it out. Sensors are not involved. Once per attempt.
+        private void UpdateFirstSighting()
+        {
+            if (sightingSeen)
+            {
+                // The request is spent once the attack phases start.
+                if (director.FirstSightingAttackPending(GameClockMs) && ghost.Phase != GhostPhase.NORMAL)
+                    director.ConsumeFirstSightingAttack();
+                return;
+            }
+
+            if (!firstSightingDone || ghost.Dormant || Flow.EncounterCommitted || !PlayerCanSeeGhost())
+                return;
+
+            sightingSeen = true;
+            if (!director.BeginFirstSightingAttack(GameClockMs))
+                return;
+            Telemetry.Emit("FLOW", string.Format(CultureInfo.InvariantCulture,
+                "event=SIGHTING distance={0:F2}", ghost.StraightDistanceToPlayer));
+            Hint("Press F to raise the lantern when it comes close.");
+            encounterHintShown = true;
+        }
+
+        public bool PlayerCanSeeGhost()
+        {
+            if (ghost == null || ghost.Dormant || ghost.Visual == null || ghost.Visual.Visibility < 0.5f || player == null)
+                return false;
+
+            Transform eye = playerView != null ? playerView.transform : player.Head;
+            if (eye == null)
+                return false;
+
+            Vector3 chest = ghost.ChestPosition;
+            Vector3 toChest = chest - eye.position;
+            if (toChest.magnitude > SightingMaxDistance)
+                return false;
+
+            if (playerView != null)
+            {
+                Vector3 vp = playerView.WorldToViewportPoint(chest);
+                float m = SightingViewportMargin;
+                if (vp.z <= 0f || vp.x < m || vp.x > 1f - m || vp.y < m || vp.y > 1f - m)
+                    return false;
+            }
+            else if (Vector3.Angle(eye.forward, toChest) > 35f)
+            {
+                return false;
+            }
+
+            // Walls block the view. The ghost's own body is on Ignore Raycast,
+            // which DefaultRaycastLayers already leaves out.
+            if (Physics.Linecast(eye.position, chest, out RaycastHit block, Physics.DefaultRaycastLayers, QueryTriggerInteraction.Ignore)
+                && !block.collider.transform.IsChildOf(ghost.transform) && !block.collider.transform.IsChildOf(player.transform))
+                return false;
+
+            return true;
+        }
+
         // Sensing reaches the WorldStateManager every frame, paused or not, so
-        // freshness and the event pulse are never stale when play resumes.
+        // freshness is never stale when play resumes. Events are different: the
+        // pulse runs on the game clock, which stops while paused, so an event
+        // that arrives then is dropped (and logged) rather than played on resume.
         private void BridgeSensing()
         {
             if (World == null || services == null)
@@ -281,9 +374,15 @@ namespace PHYSXR.Game.Gameplay
             IPhysicalInputSource sensors = services.Sensors;
             World.UpdateSourceStatus(sensors.Status);
             World.PhysicalInputMasked = sensors.PhysicalInputMasked;
+            World.EventsSuspended = Flow.RunState != RunState.Playing;
             var events = sensors.FrameAcceptedEvents;
             for (int i = 0; i < events.Count; i++)
-                World.NotifyAcceptedEvent(events[i]);
+            {
+                if (!World.NotifyAcceptedEvent(events[i]) && World.EventsSuspended)
+                    Telemetry.Emit("PHYS_EVENT_DROPPED", string.Format(CultureInfo.InvariantCulture,
+                        "evt={0} boot={1} reason=NOT_PLAYING run_state={2}", events[i].eventId, events[i].boot, Flow.RunState),
+                        relatedId: events[i].eventId);
+            }
         }
 
         private void OnDestroy()
@@ -334,6 +433,10 @@ namespace PHYSXR.Game.Gameplay
         {
             if (firstSightingDone || ghost == null || Flow.RunState != RunState.Playing)
                 return;
+            // The scripted M2 route runs with the encounter off; the ghost
+            // stays dormant there so it can neither block nor lunge.
+            if (services != null && services.EncounterDisabled)
+                return;
 
             firstSightingDone = true;
             ghost.Manifest(anchor, false, true);
@@ -361,10 +464,32 @@ namespace PHYSXR.Game.Gameplay
 
         public void ShowNote(ReadableNote note, bool firstTime)
         {
+            if (note == null || Flow.RunState != RunState.Playing)
+                return;
+            if (openNote == note)
+            {
+                CloseNote();
+                return;
+            }
+            if (openNote != null)
+                CloseNote();
+
+            openNote = note;
             audioPlayer?.Play2D(AudioCue.NoteRustle);
             if (firstTime)
                 Telemetry.Emit("CLUE", "id=" + note.name);
             NoteOpened?.Invoke(note);
+        }
+
+        // Closes the open readable (E, Esc, pause, death, the ending, or an
+        // attack wind-up). Safe to call when nothing is open.
+        public void CloseNote()
+        {
+            if (openNote == null)
+                return;
+            ReadableNote closed = openNote;
+            openNote = null;
+            NoteClosed?.Invoke(closed);
         }
 
         // Shows a refusal or remark from scenery (locked doors).
@@ -480,6 +605,22 @@ namespace PHYSXR.Game.Gameplay
 
         private void OnStrikeHit()
         {
+            // Before the encounter is committed (the first-sighting lunge) a
+            // strike that lands is a feint: it knocks the breath out of the
+            // player but does not kill. The GDD's early ghost is an ambiguous
+            // threat; death belongs to the committed encounter (Technical Spec
+            // section D, E3).
+            if (!Flow.EncounterCommitted)
+            {
+                if (Flow.RunState != RunState.Playing)
+                    return;
+                Telemetry.Emit("ATTACK", string.Format(CultureInfo.InvariantCulture,
+                    "event=STRIKE_FEINT distance={0:F2}", ghost.StraightDistanceToPlayer));
+                audioPlayer?.Play2D(AudioCue.DeathSting, 0.5f);
+                StrikeFeinted?.Invoke();
+                return;
+            }
+
             InteractionResult death = Flow.ReportDeath();
             if (!death.Accepted)
                 return;
@@ -500,6 +641,8 @@ namespace PHYSXR.Game.Gameplay
             Time.timeScale = state == RunState.Paused ? 0f : 1f;
             AudioListener.pause = state == RunState.Paused;
             ApplyCursor(state);
+            if (state != RunState.Playing)
+                CloseNote();
 
             switch (state)
             {

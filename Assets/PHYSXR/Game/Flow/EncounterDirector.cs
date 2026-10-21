@@ -17,6 +17,11 @@ namespace PHYSXR.Game.Flow
     //                 presence cannot turn the beat into FOLLOW (I-6).
     //   encounterCommitted  from GameFlow.
     //   attackGraceActive   3 s after a checkpoint restart.
+    //   firstSightingAttack one-shot: raised when the game confirms the
+    //                 player's first clear view of the ghost, for at most
+    //                 FirstSightingWindowMs, cleared as soon as the attack
+    //                 starts. It also ends any warning beat (W outranks E5).
+    //                 Never raised twice in one director (one run attempt).
     //   inThreatZone  enter <= 3.5 m, exit > 4.5 m.
     //   inWarnBand    enter <= 6.0 m, exit > 7.5 m.
     //   movement      player speed > 0.2 m/s.
@@ -31,6 +36,7 @@ namespace PHYSXR.Game.Flow
         public const long BeatMs = 4000L;
         public const long SurgeMs = 3000L;
         public const long RestartGraceMs = 3000L;
+        public const long FirstSightingWindowMs = 3000L;
         public const float ThreatZoneEnter = 3.5f, ThreatZoneExit = 4.5f;
         public const float WarnBandEnter = 6.0f, WarnBandExit = 7.5f;
         public const float NearThreatEnter = 6.0f, NearThreatExit = 7.5f;
@@ -39,6 +45,8 @@ namespace PHYSXR.Game.Flow
         private long beatUntil = long.MinValue;
         private long surgeUntil = long.MinValue;
         private long graceUntil = long.MinValue;
+        private long sightingUntil = long.MinValue;
+        private bool sightingUsed;
         private bool inThreatZone;
         private bool inWarnBand;
         private bool nearThreat;
@@ -48,11 +56,31 @@ namespace PHYSXR.Game.Flow
         public bool BeatActive(long now) => now < beatUntil;
         public bool SurgeActive(long now) => now < surgeUntil;
         public bool GraceActive(long now) => now < graceUntil;
+        public bool FirstSightingAttackPending(long now) => now < sightingUntil;
+        public bool FirstSightingUsed => sightingUsed;
 
         public void BeginBeat(long now, string id)
         {
             beatUntil = now + BeatMs;
             LastBeat = id ?? string.Empty;
+        }
+
+        // The player has seen the ghost clearly for the first time. Returns
+        // false (and does nothing) if the beat was already raised this run.
+        public bool BeginFirstSightingAttack(long now)
+        {
+            if (sightingUsed)
+                return false;
+            sightingUsed = true;
+            sightingUntil = now + FirstSightingWindowMs;
+            beatUntil = long.MinValue;
+            return true;
+        }
+
+        // The ghost's attack has started (or the beat no longer applies).
+        public void ConsumeFirstSightingAttack()
+        {
+            sightingUntil = long.MinValue;
         }
 
         public void BeginSurge(long now)
@@ -90,6 +118,7 @@ namespace PHYSXR.Game.Flow
             virtualWorld.mandatoryWarningBeat = beat;
             virtualWorld.encounterCommitted = encounterCommitted;
             virtualWorld.attackGraceActive = GraceActive(now);
+            virtualWorld.firstSightingAttack = FirstSightingAttackPending(now);
             virtualWorld.gameplayTerminal = false;
         }
 

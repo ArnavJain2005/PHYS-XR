@@ -27,7 +27,7 @@ namespace PHYSXR.Communication
     //
     // Socket errors close the client and retry the bind every RebindDelayMs
     // until Stop(); gameplay never sees an exception from here.
-    public class UDPReceiver
+    public class UDPReceiver : IDatagramSource
     {
         public const int DefaultQueueCapacity = 1024;
         public const int RebindDelayMs = 2000;

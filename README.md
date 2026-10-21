@@ -20,17 +20,17 @@ Each stage is a small, independently tested contract, so the sensing source, the
 | Area | Status | Notes |
 |---|---|---|
 | Core data contracts | ✅ Complete | `PhysicalState`, `WorldState`, `GhostAction`, … Additive, versioned extension fields for the encounter (see [Core Data Model](#core-data-model)) |
-| Communication layer | ✅ Complete (software) | Validation, parsing, per-boot ordering (P3), boot-aware dedup (P4), arrival-time freshness (P5), main-thread queue. Wire contract v1 is a **proposal**, not verified against firmware |
+| Communication layer | ✅ Complete (software) | Validation, parsing, per-boot ordering (P3), boot-aware dedup (P4), arrival-time freshness (P5), main-thread queue. USB-serial and UDP transports feed the same pipeline. Contract v1 is now what `Firmware/physxr_station` emits, but **has not been run on the physical station** |
 | `WorldStateManager` | ✅ Complete | Freshness/masking gate (P2) and a 3 s disturbance pulse from accepted events |
 | Decision layer R1–R8 + hysteresis | ✅ Complete | Rules unchanged; injectable monotonic decision clock fixes P1 |
-| `EncounterDecisionLayer` | ✅ Complete | G0, E0, E1, E2, S, W, E3, E4 and an outer dwell (spec section D) |
+| `EncounterDecisionLayer` | ✅ Complete | G0, E0, E1, E2, S, W, E5, E3, E4 and an outer dwell (spec section D) |
 | Ghost execution + runtime pipeline | ✅ Complete | `ATTACK` → `Attacking`; change-only DECISION telemetry with decision IDs |
 | Telemetry | ✅ Complete | JSON Lines file per trial (bounded queue, writer thread); `Tools/analyze_telemetry.py` |
 | Desktop game (Windows) | ✅ Implemented, automated checks pass | Menu, five-room house, fuse → power → encounter → exit → ending, lantern, attack/death, checkpoint, pause/settings, restart. **Manual play-through by a person not yet done** |
 | Sensor simulation | ✅ Complete | In-game simulated station (number-row hotkeys) and `Tools/esp32_sim.py` over real UDP |
 | Known defects P1–P5 | ✅ Fixed with regression tests | `DefectRegressionTests` (26) |
 | XR / Quest | ⛔ Not implemented | Desktop only. The repo's OpenXR packages are untouched |
-| ESP32 firmware / hardware-in-loop | ⛔ Not in this repo | Only the Unity side and a Python simulator exist |
+| ESP32 firmware + USB-serial link | 🟡 Written and tested in software; **not yet run on hardware** | [`Firmware/`](Firmware) (ToF + ultrasonic fusion, MPU6050 disturbance, contract v1 at 115200 baud) and `SerialLineReceiver`; menu mode *Physical - USB serial*. Guide: [`Docs/HARDWARE_SERIAL.md`](Docs/HARDWARE_SERIAL.md); live acceptance checklist: [`Docs/HARDWARE_ACCEPTANCE.md`](Docs/HARDWARE_ACCEPTANCE.md) |
 | RL decision provider | ⛔ Not implemented | `IDecisionProvider` allows one |
 
 Verification evidence and what remains manual: [`Docs/TechnicalSpec_MilestoneStatus.md`](Docs/TechnicalSpec_MilestoneStatus.md).
@@ -130,9 +130,9 @@ Plain-field data contracts in `PHYSXR.Core.*`. Fields marked *additive* were add
 | `PhysicalState` | `presence`, `confidence`, `disturbance`, `timestamp`; *additive* `causeEventId` (telemetry only) |
 | `PhysicalEvent` | `eventType`, `eventId`, `timestamp`; *additive* `boot` (P4) |
 | `PlayerState` | `distanceToGhost`, `movement`, `inThreatZone`; *additive* `inWarnBand` (E4) |
-| `VirtualState` | `threatLevel`, `eventActive`, `mandatoryWarningBeat`, `gameplayTerminal`; *additive* `encounterCommitted`, `attackGraceActive` |
+| `VirtualState` | `threatLevel`, `eventActive`, `mandatoryWarningBeat`, `gameplayTerminal`; *additive* `encounterCommitted`, `attackGraceActive`, `firstSightingAttack` (E5) |
 | `GhostState` | `currentState`, `phase`; *additive* `phaseElapsedMs`, `attackCooldownMs` |
-| `GhostAction` | `FOLLOW`, `WARN`, `INVESTIGATE`, `PROTECT`, `RETREAT`, and the versioned extension `ATTACK` (only E1/E3 produce it) |
+| `GhostAction` | `FOLLOW`, `WARN`, `INVESTIGATE`, `PROTECT`, `RETREAT`, and the versioned extension `ATTACK` (only E1/E3/E5 produce it) |
 | `PhysicalSourceStatus` | `UNAVAILABLE`, `STALE`, `FRESH` |
 | `RunCondition` | `VIRTUAL_ONLY`, `PHYSICAL_PLUS_VIRTUAL`, `SIMULATED` |
 | `IDecisionProvider`, `IExplainableDecisionProvider`, `IRuleIdentifiedDecisionProvider` | `Decide(WorldState)`, `LastDecisionReason`, `Reset()`, `LastRuleId` |
@@ -148,7 +148,8 @@ Files: [`Assets/PHYSXR/Communication/`](Assets/PHYSXR/Communication)
 - **`PhysicalEventManager`**: dedup on `(boot, eventId)` (P4), plus `OLD_EVENT` for IDs at or below the boot's highest.
 - **`PhysicalCommunicationPipeline.Process(raw, arrivalMs)`** (P5): freshness comes from Unity-side arrival time. Device time is used only for ordering and latency. Transit age is measured against the minimum offset over the last 50 packets; over 250 ms gives `STALE_PACKET`. The source is FRESH for 500 ms after the last good state line, then STALE, then UNAVAILABLE after 3 s. Events need resync (two in-order lines since the last UNAVAILABLE or reboot), must be ≤ 300 ms old, and are refused during a restart blackout or masked in virtual-only trials. The original `HandleRawPacket`/`GetStatus` API is kept unchanged for its tests.
 - **`UDPReceiver`**: in queue mode the socket thread stamps the arrival time and enqueues the datagram, with bounded capacity (oldest dropped and counted). It rebinds every 2 s on socket errors. `SensorFeed` drains the queue on the main thread.
-- **`SimulatedSensorStation`**: produces the same v1 bytes as the firmware proposal (10 Hz, events repeated on three lines) and can inject faults (resent event, stale line, reboot, outage).
+- **USB serial** (`SerialLineReceiver`, `SerialLineFramer`, `SerialPortIO`, `StationDiagnostics`): the ESP32 station's link. A reader thread opens the COM port through kernel32 (Windows desktop only; `System.IO.Ports` is not in the project's .NET Standard 2.1 profile), frames `\n`-terminated lines (partial reads, CRLF, oversized lines discarded), stamps arrival time and queues contract lines for `SensorFeed` exactly like UDP datagrams (`IDatagramSource`). `#HELLO/#DIAG/#CAL/#ERR` lines go to `StationDiagnostics` for the menu, F1 overlay and telemetry only, never into `PhysicalState`. States `DISCONNECTED/CONNECTING/CONNECTED/FAULTED`, automatic reconnect after unplug/replug or an ESP32 reset, `AUTO` port detection by PHYS-XR lines (Bluetooth ports skipped). On this link the validator requires `v=1`. Details: [`Docs/HARDWARE_SERIAL.md`](Docs/HARDWARE_SERIAL.md).
+- **`SimulatedSensorStation`**: produces the same v1 bytes as the firmware (10 Hz, events repeated on three lines) and can inject faults (resent event, stale line, reboot, outage).
 
 ## WorldState
 
@@ -173,15 +174,17 @@ The legacy one-argument constructor keeps the original pass-through for its test
 | E2 | inner PROTECT has run 6 s, or 10 s refractory active | inner treated as FOLLOW |
 | S | (effective) inner PROTECT/RETREAT | inner result |
 | W | mandatory scripted warning beat | WARN |
+| E5 | first sighting: the game saw the player's first clear view of the ghost (`firstSightingAttack`, once per attempt), no restart grace, cooldown 0 | ATTACK |
 | E3 | committed encounter, no restart grace, distance ≤ 2.0 m, WARN held ≥ 1.5 s, cooldown 0 | ATTACK |
 | E4 | committed encounter, player in the warn band, inner FOLLOW/WARN | WARN |
 | DWELL | an E4 WARN is held ≥ 1.5 s before dropping to FOLLOW | WARN |
 
-  Decisions on deferred questions: a beat does not stop an attack already in progress (E1 > W), but no new attack starts during a beat (W > E3). No sensor value appears in E1–E4; physical input can only **prevent** an attack (R1 through S).
+  Decisions on deferred questions: a beat does not stop an attack already in progress (E1 > W), but no new attack starts during a beat (W > E3). No sensor value appears in E1–E5; physical input can only **prevent** an attack (R1 through S). E5 is raised by a game-side view check (ghost chest in the camera view, ≤ 12 m, clear line of sight), and the director ends the manifest beat when it raises it.
 
 - **`EncounterDirector`** (game side, plain C#) fills the inputs those rules read.
   - Threat: 0.2 baseline; 0.5 near the ghost (6 m in / 7.5 m out) after the fuse is picked up; 0.8 for 3 s from the power surge.
   - Beats: 4 s (first sighting, fuse pickup).
+  - First-sighting attack: a 3 s one-shot window, consumed when the attack starts.
   - Bands: threat zone 3.5/4.5 m, warn band 6.0/7.5 m.
   - Restart grace: 3 s.
 
@@ -208,7 +211,9 @@ The legacy one-argument constructor keeps the original pass-through for its test
 
   A runtime NavMesh is baked for the ghost. The edit-time gizmo preview still works (select the `BlackthornHouse` object).
 - **Objective**: find the fuse (kitchen table) → install it (utility room fuse box) → the power surge and the checkpoint → leave through the front door. All transitions go through `GameFlow` (idempotent, ordered).
-- **Encounter**: crossing out of the utility room after power commits the encounter (`GameFlow.CommitEncounter`). The Hollow then appears between the player and the door. The lantern (F or right mouse) drives it back briefly. A strike kills, and "Continue" restores the checkpoint.
+- **First sighting**: the first time the player actually sees The Hollow (in view, within 12 m, no wall between), it lunges once through rule E5 and the normal WINDUP/STRIKE/RECOVER phases; the lantern can interrupt it. Before the encounter is committed a strike that lands is a non-lethal feint (red pulse, `ATTACK event=STRIKE_FEINT`).
+- **Encounter**: crossing out of the utility room after power commits the encounter (`GameFlow.CommitEncounter`). The Hollow then appears between the player and the door. The lantern (F or right mouse) drives it back briefly. A strike kills, and "Continue" restores the checkpoint. The ghost has a solid body (a 0.35 m capsule on the Ignore Raycast layer), so the player cannot walk through it.
+- **Readables** (notes, the radio): E opens one as a modal (look, movement, sprint, jump and the lantern are blocked); E or Esc closes it, and pause, death, the ending and an attack wind-up close it too.
 - **Ending**: a fade to the front yard in the rain, lightning showing a figure in the upper window, Elias's recording as subtitles, then the end card with time, deaths and lantern use.
 - **Presentation**: all art and sound are generated in code. URP post-processing (ACES, grade, vignette, grain, bloom, fringing) tightens as the ghost approaches; a heartbeat rises; there are reverb zones per room and footsteps on wood or tile. See [`Docs/ASSETS.md`](Docs/ASSETS.md).
 
@@ -229,17 +234,22 @@ The legacy one-argument constructor keeps the original pass-through for its test
 dotnet run -c Release --project Tools/TestHarness
 ```
 
-It compiles the Unity-independent sources under `Assets/PHYSXR` directly (C# 9) and runs every `RunAll()` suite. The exit code is the failure count. **Current result: 22 suites, 266 tests, 0 failed.**
+It compiles the Unity-independent sources under `Assets/PHYSXR` directly (C# 9) and runs every `RunAll()` suite. The exit code is the failure count. **Current result: 24 suites, 314 tests, 0 failed** (after `dotnet build -c Release --no-incremental Tools/TestHarness`).
 
 | Suite | IDs | Count |
 |---|---|---|
 | Original suites (communication, world state, R1–R8, history, hysteresis, executor, controller, telemetry, pipeline, E2E, warning beat, runtime integration, terminal gate, M2 game flow) | COMM, WORLD, DEC, DH, PDC, HYST, GHOSTEXEC, GHOSTCTRL, TEL, GHOSTPIPE, E2E, WB, RT, TERM, FLOW-01..16 | 186 (unchanged and passing) |
 | `DefectRegressionTests` | P1-01..05, P2-01..07, P3-01..04, P4-01..03, P5-01..04, Q-01..03 | 26 |
-| `EncounterRuleTests` | ENC-E0..E4 fires / does not fire / priority, DWELL, RESET, T11, T14, attack flow | 21 |
+| `EncounterRuleTests` | ENC-E0..E5 fires / does not fire / priority, DWELL, RESET, T11, T14, attack flow | 25 |
 | `SensorScenarioTests` | SENS-T01, T02a/b, T04–T10, BLACKOUT | 11 |
 | `TelemetryJsonLinesTests` | TELJ-01..06 (incl. T13 determinism with sink vs null sink) | 6 |
 | `GameFlowEncounterTests` | FLOW-17..26 (death, checkpoint, commit, session) | 10 |
-| `EncounterDirectorTests` | DIR-01..06 | 6 |
+| `EncounterDirectorTests` | DIR-01..08 (incl. the one-shot first-sighting window and E5 chain) | 8 |
+| `PlayerLocomotionTests` | LOCO-01..08: sprint stamina, exhaustion and regen, grounded-only jump, jump height | 8 |
+| `SerialTransportTests` | SER-01..22: framing, routing, validator hardening (incl. `v` and `dev` required on the serial link), diagnostics, link lifecycle (unplug, replug, reboot, start/stop leaks), AUTO probing, kernel32 backend, serial → R1–R8 end to end incl. serial/simulator parity, raw-line capture for the monitor | 29 |
+
+Firmware semantic core (no ESP32 needed): `g++ -std=c++17 -I Firmware/physxr_station Firmware/tests/semantics_test.cpp -o semantics_test` then run it (47 checks).
+Live station check without Unity: `dotnet run -c Release --project Tools/TestHarness -- --serial-monitor AUTO 30`.
 
 ### In-player self-tests (Unity)
 
@@ -258,7 +268,7 @@ Builds/PHYSXR_Windows/PHYS-XR.exe -batchmode -nographics -physxr-selftest -physx
 ```
 
 - `M2RouteSelfTest`: the objective route through the real controller (23 checks).
-- `EncounterSelfTest`: beat, surge, telegraphed attack, lantern interrupt and timing, miss cooldown, strike death, checkpoint restore and grace, 10 restarts with duplicate/leak checks, and a clean full restart (21 checks).
+- `EncounterSelfTest`: readable modal (E opens/closes, controls blocked, Esc/pause close), sprint and jump, first-sighting E5 lunge (non-lethal, once), surge, telegraphed attack, lantern interrupt and timing, miss cooldown, strike death, the ghost's solid body, checkpoint restore and grace, 10 restarts with duplicate/leak checks, and a clean full restart (34 checks).
 
 The player exits with the failure count. The same tests are in the Editor under `PHYS-XR > M2 > Run Route Self-Test` and `PHYS-XR > Run Encounter Self-Test`. In the Editor they need the Game view focused; an unfocused Editor throttles Play mode.
 
@@ -273,8 +283,9 @@ The player exits with the failure count. The same tests are in the Editor under 
 3. On the menu choose **Sensors**:
    - *Virtual only*: physical input received and logged but masked.
    - *Simulated sensors*: number-row hotkeys `1 2 3` presence, `4` confidence, `5` disturbance, `6` resend event, `7` stale packet, `8` reboot, `9` stop/resume.
-   - *Physical sensors (UDP 47800)*: for a station, or `python Tools/esp32_sim.py --scenario near`.
-4. **Controls**: WASD move, mouse look, E interact, F / right mouse lantern, Esc pause, F1 developer overlay (condition, freshness, decision, rule, reason, ghost phase).
+   - *Physical - USB serial*: the ESP32 station on a COM port (`AUTO` or pick the port). The menu shows the link and live readings before Begin. Close the Arduino Serial Monitor first. Setup and checklist: [`Docs/HARDWARE_SERIAL.md`](Docs/HARDWARE_SERIAL.md).
+   - *Physical - UDP 47800*: for a Wi-Fi station, or `python Tools/esp32_sim.py --scenario near`.
+4. **Controls**: WASD move, mouse look, Left Shift sprint (hold; 3.2 m/s vs 1.8 m/s walk, 4 s stamina, refills after 0.8 s), Space jump (0.9 m, from the ground only), E interact (and close a note), F / right mouse lantern, Esc pause (or close a note), F1 developer overlay (condition, freshness, decision, rule, reason, ghost phase).
 
 Setup utilities:
 - `PHYS-XR > Art > Create Material Templates` re-creates `Resources/PHYSXR/Mat_*.mat`.
@@ -288,7 +299,7 @@ Setup utilities:
 ```
 Assets/PHYSXR/
 ├── App/              AppBootstrap, MainMenu, SensorService, TelemetryService
-├── Communication/    validator, parser, pipeline, UDP receiver, SensorFeed, simulator, wire format
+├── Communication/    validator, parser, pipeline, USB-serial + UDP receivers, SensorFeed, simulator, wire format
 ├── Core/             data contracts, enums, interfaces
 ├── Decision/         RuleBasedDecisionProvider (R1–R8), DecisionHistory, EncounterDecisionLayer
 ├── Editor/           M2SceneSetup, PhysxrArtSetup, GhostPrototypeSceneSetup
@@ -310,8 +321,9 @@ Assets/PHYSXR/
 ├── Telemetry/        records, sinks (in-memory, JSON Lines), TelemetryChannel
 ├── Testing/          all *Tests.cs suites + test helpers
 └── WorldState/       WorldStateManager
-Tools/  TestHarness/, esp32_sim.py, analyze_telemetry.py
-Docs/   TechnicalSpec_MilestoneStatus.md, ASSETS.md
+Firmware/ physxr_station/ (ESP32 sketch + semantic core), tests/ (host test), README.md
+Tools/  TestHarness/ (incl. --serial-monitor), esp32_sim.py, analyze_telemetry.py
+Docs/   TechnicalSpec_MilestoneStatus.md, HARDWARE_SERIAL.md, HARDWARE_ACCEPTANCE.md, F1_PauseEventFix.md, ASSETS.md
 ```
 
 ---
@@ -320,7 +332,7 @@ Docs/   TechnicalSpec_MilestoneStatus.md, ASSETS.md
 
 - **No manual play-through by a person yet.** Everything above is verified by the harness, compile checks, Windows builds, headless player self-tests and a screenshot tour. The feel, difficulty and five-minute target (T25), the real keyboard, mouse and cursor (T21), and audio balance still need human playtests.
 - **No Quest/XR build.** Desktop only; the UI is screen-space. The installed OpenXR packages and the developer's local XR settings are untouched.
-- **No firmware or hardware test.** Contract v1 is the spec's proposal. The real-socket path was not exercised against the station or `esp32_sim.py` in this session (only the in-process queue path and the simulator); T03 and T26 need hardware.
+- **Firmware not yet run on the physical station.** The firmware and the USB-serial link are tested in software (host test, ESP32 compile against the real Pololu VL53L0X 1.3.1, `SerialTransportTests`). The station's board is connected as COM6 but still runs an old bench sketch (its ultrasonic printed `SONAR No echo` throughout). Unresolved hardware facts: SCL on GPIO 22 or 23 (the firmware probes both), TRIG/ECHO 25/26 vs the poster's 5/18, the HC-SR04 ECHO voltage divider (reported, not measured), and uncalibrated thresholds. T03 and T26 need hardware; see [`Docs/HARDWARE_ACCEPTANCE.md`](Docs/HARDWARE_ACCEPTANCE.md).
 - **Art is procedural**: boxes, cylinders and generated textures. It is deliberately lit, but it is not photoreal and has no baked GI, reflection probes or SSAO tuning. Haunted Jaunt and Mixamo assets were not imported (licences unconfirmed, no LFS); see `Docs/ASSETS.md`.
 - **No asmdefs or Test Runner bridge**: boundaries are by folder convention, and NUnit is not used.
 - `WorldState` carries events as the 3 s disturbance pulse (`causeEventId` for correlation), not as an event list.

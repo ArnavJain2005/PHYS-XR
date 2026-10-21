@@ -1,4 +1,6 @@
 using System;
+using System.Collections.Generic;
+using PHYSXR.Communication;
 using PHYSXR.Core.Enums;
 using PHYSXR.Game.Art;
 using PHYSXR.Game.Audio;
@@ -14,8 +16,14 @@ namespace PHYSXR.App
     // object and is shown whenever no game scene is loaded.
     //
     //   Begin              starts a trial with the chosen condition and ID
-    //   Sensor mode        Virtual only / Simulated sensors / Physical sensors (UDP)
+    //   Sensor mode        Virtual only / Simulated sensors /
+    //                      Physical sensors - USB serial / Physical sensors - UDP
+    //   Serial port        AUTO or a COM port (USB serial mode only)
     //   Trial ID           free text, pre-filled with a timestamp
+    //
+    // In USB serial mode the link is opened as soon as the mode is selected,
+    // and the panel on the right shows its state and the station's live
+    // readings, so the hardware can be checked before Begin.
     //   Settings, Controls, Quit
     //
     // The backdrop is the generated coast-and-house image with a slow drift,
@@ -25,11 +33,16 @@ namespace PHYSXR.App
         private Canvas canvas;
         private RectTransform root, mainPanel, settingsPanel, controlsPanel;
         private Image backdrop, flash;
-        private Text modeLabel, footer;
+        private Text modeLabel, portLabel, statusText, footer;
         private InputField trialField;
-        private Button beginButton, modeButton, settingsBack, controlsBack;
+        private Button beginButton, modeButton, portButton, settingsBack, controlsBack;
+        private RectTransform statusPanel;
         private GameSettings settings;
+        private SensorService sensors;
         private RunCondition condition;
+        private PhysicalTransport transport;
+        private float nextStatusAt;
+        private bool previewDirty;
         private float nextFlash;
         private float flashAt = -10f;
         private AudioSource ui;
@@ -39,10 +52,12 @@ namespace PHYSXR.App
 
         public bool Visible => root != null && root.gameObject.activeSelf;
 
-        public void Initialize(GameSettings settings)
+        public void Initialize(GameSettings settings, SensorService sensors)
         {
             this.settings = settings;
+            this.sensors = sensors;
             condition = (RunCondition)Mathf.Clamp(settings.LastCondition, 0, 2);
+            transport = (PhysicalTransport)Mathf.Clamp(settings.Transport, 0, 1);
 
             ui = gameObject.AddComponent<AudioSource>();
             ui.playOnAwake = false;
@@ -82,6 +97,8 @@ namespace PHYSXR.App
             beginButton = UIKit.Button(v.transform, "Begin", Begin, 460f, 60f);
             modeButton = UIKit.Button(v.transform, "Sensors", CycleMode, 460f, 54f);
             modeLabel = modeButton.GetComponentInChildren<Text>();
+            portButton = UIKit.Button(v.transform, "Port", CyclePort, 460f, 54f);
+            portLabel = portButton.GetComponentInChildren<Text>();
 
             RectTransform field = UIKit.Rect(v.transform, "TrialField", new Vector2(0.5f, 0.5f), new Vector2(0.5f, 0.5f), new Vector2(0.5f, 0.5f), Vector2.zero, new Vector2(460f, 54f));
             Image fieldBg = field.gameObject.AddComponent<Image>();
@@ -103,6 +120,15 @@ namespace PHYSXR.App
 
             RectTransform foot = UIKit.Rect(mainPanel, "Footer", new Vector2(0f, 0f), new Vector2(1f, 0f), new Vector2(0.5f, 0f), new Vector2(0f, 28f), new Vector2(-280f, 60f));
             footer = UIKit.Label(foot, "Text", string.Empty, 18, UIKit.Dim, TextAnchor.LowerLeft);
+
+            statusPanel = UIKit.Rect(mainPanel, "SensorStatus", new Vector2(1f, 0.5f), new Vector2(1f, 0.5f), new Vector2(1f, 0.5f),
+                new Vector2(-60f, 20f), new Vector2(820f, 520f));
+            Image statusBg = statusPanel.gameObject.AddComponent<Image>();
+            statusBg.sprite = UIKit.Square;
+            statusBg.color = new Color(0.02f, 0.02f, 0.025f, 0.8f);
+            statusText = UIKit.Label(statusPanel, "Text", string.Empty, 19, UIKit.Ink, TextAnchor.UpperLeft);
+            ((RectTransform)statusText.transform).offsetMin = new Vector2(22f, 18f);
+            ((RectTransform)statusText.transform).offsetMax = new Vector2(-18f, -18f);
             UpdateModeLabel();
         }
 
@@ -165,6 +191,7 @@ namespace PHYSXR.App
             Open(mainPanel, beginButton);
             Cursor.lockState = CursorLockMode.None;
             Cursor.visible = true;
+            previewDirty = true;
         }
 
         public void SetFooter(string text)
@@ -173,24 +200,115 @@ namespace PHYSXR.App
                 footer.text = text;
         }
 
+        // Mode order: Virtual only -> Simulated -> Physical USB serial -> Physical UDP.
+        private int ModeIndex
+        {
+            get
+            {
+                if (condition == RunCondition.VIRTUAL_ONLY) return 0;
+                if (condition == RunCondition.SIMULATED) return 1;
+                return transport == PhysicalTransport.USB_SERIAL ? 2 : 3;
+            }
+        }
+
+        private bool SerialSelected => ModeIndex == 2;
+
         private void CycleMode()
         {
-            condition = (RunCondition)(((int)condition + 1) % 3);
+            switch ((ModeIndex + 1) % 4)
+            {
+                case 0: condition = RunCondition.VIRTUAL_ONLY; break;
+                case 1: condition = RunCondition.SIMULATED; break;
+                case 2: condition = RunCondition.PHYSICAL_PLUS_VIRTUAL; transport = PhysicalTransport.USB_SERIAL; break;
+                default: condition = RunCondition.PHYSICAL_PLUS_VIRTUAL; transport = PhysicalTransport.UDP; break;
+            }
             settings.LastCondition = (int)condition;
+            settings.Transport = (int)transport;
             UpdateModeLabel();
+            previewDirty = true;
+            Click();
+        }
+
+        // AUTO, then every COM port present right now.
+        private void CyclePort()
+        {
+            var options = new List<string> { GameSettings.AutoSerialPort };
+            if (sensors != null)
+                foreach (SerialPortInfo p in sensors.ListSerialPorts())
+                    options.Add(p.Name);
+
+            int current = options.FindIndex(o => string.Equals(o, settings.SerialPort, StringComparison.OrdinalIgnoreCase));
+            settings.SerialPort = options[(current + 1) % options.Count];
+            UpdateModeLabel();
+            previewDirty = true;
             Click();
         }
 
         private void UpdateModeLabel()
         {
             string mode;
-            switch (condition)
+            switch (ModeIndex)
             {
-                case RunCondition.SIMULATED: mode = "Simulated sensors"; break;
-                case RunCondition.PHYSICAL_PLUS_VIRTUAL: mode = "Physical sensors (UDP " + SensorService.DefaultPort + ")"; break;
+                case 1: mode = "Simulated sensors"; break;
+                case 2: mode = "Physical - USB serial"; break;
+                case 3: mode = "Physical - UDP " + SensorService.DefaultPort; break;
                 default: mode = "Virtual only"; break;
             }
             modeLabel.text = "Sensors:  " + mode;
+            portLabel.text = "Serial port:  " + settings.SerialPort + "  (" + settings.SerialBaud + ")";
+            portButton.gameObject.SetActive(SerialSelected);
+            nextStatusAt = 0f;
+        }
+
+        public SerialLinkSettings SerialSettings()
+        {
+            return new SerialLinkSettings { PortName = settings.SerialPort, BaudRate = settings.SerialBaud };
+        }
+
+        // Opens the link while USB serial is selected so the readings can be
+        // checked before Begin; releases it otherwise (unless a trial uses it).
+        // Applied from Update, so a self-test that hides the menu before the
+        // first frame never opens a COM port.
+        private void ApplyLinkPreview()
+        {
+            if (sensors == null || !Visible)
+                return;
+            if (SerialSelected)
+                sensors.UseSerialLink(SerialSettings());
+            else if (!sensors.Configured || sensors.Condition == RunCondition.SIMULATED || sensors.Transport != PhysicalTransport.USB_SERIAL)
+                sensors.ReleaseSerialLink();
+        }
+
+        private void UpdateStatus()
+        {
+            if (sensors == null || statusText == null)
+                return;
+
+            string body;
+            switch (ModeIndex)
+            {
+                case 2:
+                    body = "PHYSICAL SENSORS - USB SERIAL\n\n" + sensors.DiagnosticsText
+                        + "\n1  Plug the ESP32 in by USB; close the Arduino Serial Monitor.\n"
+                        + "2  Keep the station still for 2 s after power-up (IMU calibration).\n"
+                        + "3  Port AUTO finds the station, or pick its COM port\n"
+                        + "    (Device Manager > Ports (COM & LPT), e.g. Silicon Labs CP210x (COM5)).\n"
+                        + "4  Begin once the link says CONNECTED and the readings move.";
+                    break;
+                case 1:
+                    body = "SIMULATED SENSORS\n\nNo hardware is read. In game, keys 1-9 drive a simulated station\n"
+                        + "through the same validator and pipeline as the real one.";
+                    break;
+                case 3:
+                    body = "PHYSICAL SENSORS - UDP " + SensorService.DefaultPort + "\n\nListens after Begin for contract lines over UDP\n"
+                        + "(Wi-Fi firmware, or Tools/esp32_sim.py). Windows Firewall may ask once.";
+                    break;
+                default:
+                    body = "VIRTUAL ONLY\n\nThe ghost ignores physical input (baseline condition).\n"
+                        + "The selected physical link is still opened and logged for comparison.";
+                    break;
+            }
+            statusText.text = body;
         }
 
         private void Begin()
@@ -211,6 +329,18 @@ namespace PHYSXR.App
         {
             if (!Visible)
                 return;
+
+            if (previewDirty)
+            {
+                previewDirty = false;
+                ApplyLinkPreview();
+            }
+
+            if (Time.unscaledTime >= nextStatusAt)
+            {
+                nextStatusAt = Time.unscaledTime + 0.25f;
+                UpdateStatus();
+            }
 
             float t = Time.unscaledTime;
             float zoom = 1.08f + Mathf.Sin(t * 0.05f) * 0.04f;

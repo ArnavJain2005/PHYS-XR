@@ -20,7 +20,10 @@ namespace PHYSXR.Game.UI
     //            lantern charge ring, sensor-status chip, controls hint.
     //   Pause    Resume / Restart from checkpoint / Restart run / Settings /
     //            Main menu / Quit, and the settings panel.
-    //   Note     an optional clue's text (E again, moving away or pausing closes it).
+    //   Note     an optional clue's text. A modal owned by GameFlowController:
+    //            E or Esc closes it (PlayerController), as do pause, death,
+    //            the ending and an attack wind-up. This panel only follows the
+    //            NoteOpened / NoteClosed events.
     //   Death    red flash, fade, then Continue from checkpoint / Restart / Menu.
     //   Ending   subtitles over the fade, then the end card with run stats.
     //   Dev      F1: condition, freshness, decision, rule, reason, ghost phase.
@@ -41,7 +44,8 @@ namespace PHYSXR.Game.UI
         private Canvas canvas;
         private RectTransform hud;
         private Text objective, objectiveHeader, prompt, message, hint, controls, sensorChip, lanternKey, devText, subtitle;
-        private Image crosshair, lanternRing, lanternBack, fader, flash;
+        private Image crosshair, lanternRing, lanternBack, fader, flash, staminaFill;
+        private RectTransform staminaBar;
         private RectTransform pausePanel, settingsPanel, notePanel, deathPanel, endPanel, devPanel, subtitlePanel;
         private Text noteTitle, noteBody, deathSub, endStats;
         private Button resumeButton, checkpointButton, deathContinue, endAgain, settingsBack;
@@ -51,9 +55,9 @@ namespace PHYSXR.Game.UI
         private float objectiveFlash;
         private float hintUntil;
         private float deathStartedAt = -1f;
-        private ReadableNote openNote;
-        private Vector3 noteOpenedAt;
-        private float noteOpenedTime;
+        private bool noteShown;
+        private float feintAt = -100f;
+        private DesktopMotor motor;
         private bool devVisible;
         private bool devInitialized;
         private float devRefreshAt;
@@ -68,6 +72,7 @@ namespace PHYSXR.Game.UI
             this.lantern = lantern;
             this.ending = ending;
             this.audioPlayer = audioPlayer;
+            motor = interactor != null ? interactor.GetComponent<DesktopMotor>() : null;
 
             UIKit.EnsureEventSystem(transform);
             canvas = UIKit.Canvas(transform, "GameCanvas", 10);
@@ -87,6 +92,8 @@ namespace PHYSXR.Game.UI
             flow.MessageRaised += OnMessage;
             flow.HintRaised += OnHint;
             flow.NoteOpened += OnNote;
+            flow.NoteClosed += OnNoteClosed;
+            flow.StrikeFeinted += OnFeint;
             flow.DeathStarted += OnDeath;
             flow.ObjectiveChanged += OnObjective;
         }
@@ -98,6 +105,8 @@ namespace PHYSXR.Game.UI
             flow.MessageRaised -= OnMessage;
             flow.HintRaised -= OnHint;
             flow.NoteOpened -= OnNote;
+            flow.NoteClosed -= OnNoteClosed;
+            flow.StrikeFeinted -= OnFeint;
             flow.DeathStarted -= OnDeath;
             flow.ObjectiveChanged -= OnObjective;
         }
@@ -128,7 +137,7 @@ namespace PHYSXR.Game.UI
             hint = CenteredLabel(hud, "Hint", new Vector2(0f, 220f), 26, UIKit.Accent);
 
             RectTransform ctl = UIKit.Rect(hud, "Controls", new Vector2(0f, 0f), new Vector2(0f, 0f), new Vector2(0f, 0f), new Vector2(48f, 40f), new Vector2(1100f, 40f));
-            controls = UIKit.Label(ctl, "Text", "WASD move    Mouse look    E interact    F lantern    Esc pause", 22, UIKit.Dim, TextAnchor.LowerLeft);
+            controls = UIKit.Label(ctl, "Text", "WASD move    Mouse look    Shift sprint    Space jump    E interact    F lantern    Esc pause", 22, UIKit.Dim, TextAnchor.LowerLeft);
             UIKit.Soften(controls);
 
             RectTransform chip = UIKit.Rect(hud, "Sensors", new Vector2(1f, 1f), new Vector2(1f, 1f), new Vector2(1f, 1f), new Vector2(-40f, -36f), new Vector2(620f, 34f));
@@ -142,6 +151,12 @@ namespace PHYSXR.Game.UI
             lanternRing.fillMethod = Image.FillMethod.Radial360;
             lanternRing.fillOrigin = (int)Image.Origin360.Top;
             lanternKey = UIKit.Label(lamp, "Key", "F", 30, UIKit.Ink, TextAnchor.MiddleCenter, true);
+
+            // Stamina: a thin bar left of the lantern, shown only when not full.
+            staminaBar = UIKit.Rect(hud, "Stamina", new Vector2(1f, 0f), new Vector2(1f, 0f), new Vector2(1f, 0f), new Vector2(-160f, 86f), new Vector2(180f, 8f));
+            UIKit.Image(staminaBar, "Back", new Color(1f, 1f, 1f, 0.14f));
+            staminaFill = UIKit.Image(staminaBar, "Fill", new Color(0.85f, 0.85f, 0.8f, 0.8f));
+            staminaFill.rectTransform.pivot = new Vector2(0f, 0.5f);
         }
 
         private static Text CenteredLabel(Transform parent, string name, Vector2 position, int size, Color color)
@@ -265,7 +280,7 @@ namespace PHYSXR.Game.UI
 
         private void BuildDev()
         {
-            devPanel = UIKit.Rect(canvas.transform, "Dev", new Vector2(1f, 1f), new Vector2(1f, 1f), new Vector2(1f, 1f), new Vector2(-30f, -80f), new Vector2(720f, 440f));
+            devPanel = UIKit.Rect(canvas.transform, "Dev", new Vector2(1f, 1f), new Vector2(1f, 1f), new Vector2(1f, 1f), new Vector2(-30f, -80f), new Vector2(760f, 700f));
             Image bg = devPanel.gameObject.AddComponent<Image>();
             bg.sprite = UIKit.Square;
             bg.color = new Color(0f, 0f, 0f, 0.7f);
@@ -297,29 +312,27 @@ namespace PHYSXR.Game.UI
 
         private void OnNote(ReadableNote note)
         {
-            if (openNote == note && notePanel.gameObject.activeSelf)
-            {
-                CloseNote();
-                return;
-            }
-            openNote = note;
             noteTitle.text = note.Title;
             noteBody.text = note.Body;
-            noteOpenedAt = interactor.transform.position;
-            noteOpenedTime = Time.unscaledTime;
+            noteShown = true;
             notePanel.gameObject.SetActive(true);
         }
 
-        private void CloseNote()
+        private void OnNoteClosed(ReadableNote note)
         {
-            openNote = null;
+            noteShown = false;
             notePanel.gameObject.SetActive(false);
+        }
+
+        private void OnFeint()
+        {
+            feintAt = Time.unscaledTime;
         }
 
         private void OnDeath()
         {
             deathStartedAt = Time.unscaledTime;
-            CloseNote();
+            flow.CloseNote();
         }
 
         private void OpenSettings()
@@ -380,7 +393,7 @@ namespace PHYSXR.Game.UI
                 {
                     checkpointButton.interactable = flow.Session != null && flow.Session.HasCheckpoint;
                     UIKit.Select(resumeButton);
-                    CloseNote();
+                    flow.CloseNote();
                 }
                 else
                 {
@@ -394,22 +407,19 @@ namespace PHYSXR.Game.UI
             if (showHud || paused)
                 UpdateHud(now, f);
 
-            // Note.
-            if (openNote != null)
-            {
-                bool moved = (interactor.transform.position - noteOpenedAt).sqrMagnitude > 1.4f;
-                bool closeKey = Keyboard.current != null && Keyboard.current.escapeKey.wasPressedThisFrame;
-                if (moved || state != RunState.Playing || closeKey || now - noteOpenedTime > 20f)
-                    CloseNote();
-            }
+            // Note: the panel follows the flow's modal state (safety net only;
+            // the flow raises NoteClosed itself).
+            if (noteShown && !flow.ReadableOpen)
+                OnNoteClosed(null);
 
             // Death: red flash, fade to black, then the card.
             float fade = 0f;
-            float red = 0f;
+            // A first-sighting feint: a short red pulse, no death.
+            float red = Mathf.Clamp01(1f - (now - feintAt) / 0.6f) * 0.35f;
             if (dead && deathStartedAt > 0f)
             {
                 float t = now - deathStartedAt;
-                red = Mathf.Clamp01(1f - t / 1.2f) * 0.7f;
+                red = Mathf.Max(red, Mathf.Clamp01(1f - t / 1.2f) * 0.7f);
                 fade = Mathf.Clamp01((t - 0.4f) / 1.8f) * 0.92f;
                 bool showCard = t > 2.4f;
                 if (showCard != deathPanel.gameObject.activeSelf)
@@ -479,7 +489,7 @@ namespace PHYSXR.Game.UI
             objective.color = Color.Lerp(UIKit.Ink, UIKit.Accent, objectiveFlash);
 
             Interactable target = interactor != null ? interactor.CurrentTarget : null;
-            prompt.text = target != null && openNote == null ? "[E]  " + target.Prompt : string.Empty;
+            prompt.text = target != null && !flow.ReadableOpen ? "[E]  " + target.Prompt : string.Empty;
             float size = target != null ? 18f : 8f;
             crosshair.rectTransform.sizeDelta = Vector2.Lerp(crosshair.rectTransform.sizeDelta, new Vector2(size, size), 0.3f);
             crosshair.color = target != null ? new Color(1f, 0.8f, 0.5f, 0.85f) : new Color(1f, 1f, 1f, 0.45f);
@@ -498,12 +508,26 @@ namespace PHYSXR.Game.UI
                 lanternKey.color = lantern.Ready ? UIKit.Ink : UIKit.Dim;
             }
 
+            if (motor != null)
+            {
+                float s = motor.Stamina.Stamina01;
+                staminaBar.gameObject.SetActive(s < 0.999f);
+                staminaFill.rectTransform.anchorMin = new Vector2(0f, 0f);
+                staminaFill.rectTransform.anchorMax = new Vector2(s, 1f);
+                staminaFill.color = motor.Stamina.Exhausted ? new Color(0.8f, 0.35f, 0.3f, 0.8f) : new Color(0.85f, 0.85f, 0.8f, 0.8f);
+            }
+
             IPhysicalInputSource sensors = flow.Services?.Sensors;
             if (sensors != null)
             {
+                // SourceLabel names the mode and link ("USB COM5 CONNECTED",
+                // "SIMULATED", "UDP 47800"); the F1 overlay has the full reason.
+                string link = sensors.SourceLabel ?? string.Empty;
+                if (link.Length > 72)
+                    link = link.Substring(0, 69) + "...";
                 sensorChip.text = sensors.Condition == RunCondition.VIRTUAL_ONLY
-                    ? "SENSORS  OFF (virtual only)"
-                    : "SENSORS  " + (sensors.Condition == RunCondition.SIMULATED ? "SIMULATED" : "UDP") + "  -  " + sensors.Status;
+                    ? "SENSORS  " + link
+                    : "SENSORS  " + link + "  -  " + sensors.Status;
             }
         }
 
@@ -550,6 +574,8 @@ namespace PHYSXR.Game.UI
             b.Append("flow       ").Append(flow.Flow.Stage).Append(' ').Append(flow.Flow.RunState)
                 .Append(" t=").Append(flow.RunSeconds.ToString("F1", CultureInfo.InvariantCulture))
                 .Append(" attempt=").Append(flow.Session?.Attempt).Append('\n');
+            if (sensors != null)
+                b.Append('\n').Append(sensors.DiagnosticsText);
             if (sensors != null && sensors.Condition == RunCondition.SIMULATED)
                 b.Append("\nsim keys   1/2/3 presence  4 confidence  5 disturbance\n           6 resend event  7 stale line  8 reboot  9 stop/resume");
             return b.ToString();

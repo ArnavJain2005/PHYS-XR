@@ -1,5 +1,6 @@
 using System.Collections;
 using System.Globalization;
+using PHYSXR.Communication;
 using PHYSXR.Core.Enums;
 using PHYSXR.Game.Art;
 using PHYSXR.Game.Audio;
@@ -19,8 +20,8 @@ namespace PHYSXR.App
     // outlive one attempt (spec section C):
     //
     //   GameSession       run/attempt counters, checkpoint, trial condition
-    //   SensorService     UDP receiver, validator/pipeline, event-dedup memory,
-    //                     the packet simulator
+    //   SensorService     USB-serial link / UDP receiver, validator/pipeline,
+    //                     event-dedup memory, the packet simulator
     //   TelemetryService  the trial's JSON Lines file
     //   GameSettings      per-device player settings
     //   MainMenu          the start screen, with its own camera and listener
@@ -35,11 +36,22 @@ namespace PHYSXR.App
     //   -physxr-selftest      scripted encounter checks (attack, lantern, death,
     //                         checkpoint, repeated restarts)
     //   -physxr-capture <dir> screenshot tour of the menu, house and ending
+    //
+    // Sensor link overrides (also remembered as the menu's settings):
+    //   -physxr-condition VIRTUAL_ONLY|PHYSICAL_PLUS_VIRTUAL|SIMULATED   (self-tests)
+    //   -physxr-transport serial|udp
+    //   -physxr-serial-port AUTO|COM5
+    //   -physxr-serial-baud 115200
+    // Self-tests keep UDP unless -physxr-transport is given, so they never
+    // open or probe COM ports.
     public class AppBootstrap : MonoBehaviour
     {
         public const string SelfTestArgument = "-physxr-m2-selftest";
         public const string EncounterSelfTestArgument = "-physxr-selftest";
         public const string ConditionArgument = "-physxr-condition";
+        public const string TransportArgument = "-physxr-transport";
+        public const string SerialPortArgument = "-physxr-serial-port";
+        public const string SerialBaudArgument = "-physxr-serial-baud";
         private const float PerfInterval = 5f;
 
         private static bool exists;
@@ -89,6 +101,7 @@ namespace PHYSXR.App
             SceneManager.sceneLoaded += OnSceneLoaded;
 
             settings = GameSettings.Load();
+            ApplyLinkArguments(settings);
             settings.ApplyAudio();
             telemetry = new TelemetryService();
             sensors = gameObject.AddComponent<SensorService>();
@@ -97,7 +110,7 @@ namespace PHYSXR.App
             UIKit.EnsureEventSystem(transform);
             BuildMenuCamera();
             menu = gameObject.AddComponent<MainMenu>();
-            menu.Initialize(settings);
+            menu.Initialize(settings, sensors);
             menu.BeginRequested += BeginTrial;
             menu.QuitRequested += Quit;
             menu.SetFooter("PHYS-XR " + Application.version + "   -   telemetry: " + System.IO.Path.Combine(Application.persistentDataPath, "telemetry"));
@@ -192,10 +205,17 @@ namespace PHYSXR.App
             Session.RequestNewRun();
             settings.LastCondition = (int)condition;
 
-            sensors.Configure(condition);
-            string summary = string.Format(CultureInfo.InvariantCulture, "sens={0:F3};invert={1};vol={2:F2};bright={3:F2}",
-                settings.MouseSensitivity, settings.InvertY, settings.MasterVolume, settings.Brightness);
+            PhysicalTransport transport = trialId == "selftest" && !HasArgument(TransportArgument)
+                ? PhysicalTransport.UDP
+                : (PhysicalTransport)Mathf.Clamp(settings.Transport, 0, 1);
+            SerialLinkSettings serial = menu.SerialSettings();
+            string summary = string.Format(CultureInfo.InvariantCulture, "sens={0:F3};invert={1};vol={2:F2};bright={3:F2};transport={4};serial={5}",
+                settings.MouseSensitivity, settings.InvertY, settings.MasterVolume, settings.Brightness,
+                condition == RunCondition.SIMULATED ? "SIMULATED" : transport.ToString(), serial);
+            // The trial file must be open before sensing is configured, or the
+            // first SOURCE_STATUS record (condition, transport, port) is lost.
             telemetry.BeginTrial(trialId, condition.ToString(), summary);
+            sensors.Configure(condition, transport, serial);
             trialActive = true;
             ResetPerf();
 
@@ -329,6 +349,37 @@ namespace PHYSXR.App
             }
 #endif
             return false;
+        }
+
+        private static bool HasArgument(string name)
+        {
+            return System.Array.IndexOf(System.Environment.GetCommandLineArgs(), name) >= 0;
+        }
+
+        private static string ArgumentValue(string name)
+        {
+            string[] args = System.Environment.GetCommandLineArgs();
+            for (int i = 0; i < args.Length - 1; i++)
+                if (args[i] == name)
+                    return args[i + 1];
+            return null;
+        }
+
+        private static void ApplyLinkArguments(GameSettings s)
+        {
+            string transport = ArgumentValue(TransportArgument);
+            if (transport != null)
+                s.Transport = transport.Equals("udp", System.StringComparison.OrdinalIgnoreCase) ? (int)PhysicalTransport.UDP : (int)PhysicalTransport.USB_SERIAL;
+
+            string port = ArgumentValue(SerialPortArgument);
+            if (port != null && (port.Equals(GameSettings.AutoSerialPort, System.StringComparison.OrdinalIgnoreCase) || Win32SerialPorts.IsValidPortName(port)))
+                s.SerialPort = port.ToUpperInvariant();
+            else if (port != null)
+                Debug.LogWarning("[AppBootstrap] ignoring " + SerialPortArgument + " '" + port + "' (expected AUTO or COMn)");
+
+            string baud = ArgumentValue(SerialBaudArgument);
+            if (baud != null && int.TryParse(baud, out int b) && b > 0)
+                s.SerialBaud = b;
         }
 
         private static RunCondition ConditionFromArgs(RunCondition fallback)
