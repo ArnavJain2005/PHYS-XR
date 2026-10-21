@@ -209,11 +209,13 @@ namespace PHYSXR.App
                 ? PhysicalTransport.UDP
                 : (PhysicalTransport)Mathf.Clamp(settings.Transport, 0, 1);
             SerialLinkSettings serial = menu.SerialSettings();
-            sensors.Configure(condition, transport, serial);
             string summary = string.Format(CultureInfo.InvariantCulture, "sens={0:F3};invert={1};vol={2:F2};bright={3:F2};transport={4};serial={5}",
                 settings.MouseSensitivity, settings.InvertY, settings.MasterVolume, settings.Brightness,
                 condition == RunCondition.SIMULATED ? "SIMULATED" : transport.ToString(), serial);
+            // The trial file must be open before sensing is configured, or the
+            // first SOURCE_STATUS record (condition, transport, port) is lost.
             telemetry.BeginTrial(trialId, condition.ToString(), summary);
+            sensors.Configure(condition, transport, serial);
             trialActive = true;
             ResetPerf();
 
