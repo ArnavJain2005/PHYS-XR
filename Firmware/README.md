@@ -28,6 +28,69 @@ flashed. See "What has and has not been verified" at the end.
 >
 > The full ordered procedure is [`Docs/HARDWARE_ACCEPTANCE.md`](../Docs/HARDWARE_ACCEPTANCE.md).
 
+## Station overview
+
+The parts list, the design poster and the processing pipeline in one place (moved here from the main README on 22 Oct 2026). Pins and their evidence are in §1; the meter-first procedure is [`Docs/HARDWARE_ACCEPTANCE.md`](../Docs/HARDWARE_ACCEPTANCE.md).
+
+| Component | Purpose | Signal | Firmware responsibility | Semantic output | Status |
+|---|---|---|---|---|---|
+| ESP32 dev board (enumerates as Silicon Labs CP210x, COM6 on the dev PC) | Acquisition, filtering, fusion, serial output | USB serial 115200 8N1 | Cooperative scheduler, `#HELLO` identity, random per-boot `boot` ID | State line at 10 Hz + on change | Board **connected**, still runs an old bench sketch |
+| VL53L0X ToF (I²C 0x29) | **Primary** proximity | mm, continuous 25 Hz, read on data-ready | Range-status check; ≥ 8190 mm or > 1200 mm = valid "nothing in range"; median of 3; class with hysteresis | NONE / NEAR / VERY_NEAR | Breakout identity from the poster, **not physically confirmed**; old sketch read 42–52 mm with nothing intended in view |
+| HC-SR04 ultrasonic | **Secondary** proximity (confirms or contradicts the ToF) | Echo pulse µs, 15 Hz, timed by interrupt | 2–400 cm valid; 25 ms timeout = invalid; median of 3; class with hysteresis | Contributes to confidence | Old sketch printed `SONAR No echo` every cycle: **cause unknown** |
+| MPU6050 (I²C 0x68, 0x69 probed) | Local disturbance (knock, shake) | Accelerometer ±2 g at 100 Hz; gyro unused | 2 s still calibration; D = \| \|A\| − baseline \|; 3-sample median; event after 3 samples > ON; re-arm after D < ON/2 and 1.5 s | One `DISTURBANCE` event, repeated on 3 lines | Old sketch read ≈ 1.03 g at rest (plausible) |
+| Power | — | USB from the PC (the serial link) | — | — | The design poster shows a 5 V USB power bank on VIN; the actual supply arrangement is **TBD** |
+| Meta Quest | Planned XR display | — | — | — | **Not used** in the current build |
+
+
+
+### Firmware configuration vs. design poster
+
+| Signal | Firmware (`physxr_station.ino`) | Design poster (25 May 2025) | Resolution |
+|---|---|---|---|
+| HC-SR04 TRIG / ECHO | GPIO 25 / 26 (from the working bench prototype) | GPIO 5 / 18 | **Unresolved**: trace the wire; change `PIN_TRIG`/`PIN_ECHO` to match, do not re-wire (A5) |
+| I²C SDA | GPIO 21 | GPIO 21 | Agreed, continuity not yet confirmed (A3) |
+| I²C SCL | probes 23, then 22; reports `scl=` in `#HELLO` | GPIO 22 | **Unresolved** (A2) |
+| ECHO protection | required (10 kΩ / 20 kΩ divider or level shifter) | 10 kΩ / 20 kΩ divider shown | **Reported present, not measured** (A1) |
+| I²C clock | 100 kHz | — | Firmware value |
+
+<details>
+<summary><b>Design-time schematic poster</b> (team document, 25 May 2025; not a photograph, pins conflict with the firmware as shown above)</summary>
+
+<img src="../Docs/media/hardware_schematic_poster_2025-05-25.jpg" alt="Team hardware schematic poster: ESP32 with VL53L0X, HC-SR04 and MPU6050 wiring, voltage divider and power notes" width="900">
+
+<sub>Kept for traceability. It is a design intent, not evidence of the built station. A photograph of the real wiring is checklist step A7 and does not exist yet.</sub>
+</details>
+
+### Processing pipeline
+
+```mermaid
+flowchart TD
+    T["ToF sample"] --> TV["valid range status"] --> TM["median of 3"] --> TC["class + hysteresis"]
+    U["echo pulse"] --> UV["2 to 400 cm"] --> UM["median of 3"] --> UC["class + hysteresis"]
+    A["accel magnitude"] --> CAL["2 s baseline"] --> D["deviation, median 3"] --> Q["above ON for 3 samples"]
+    TC --> FU["fusion table"]
+    UC --> FU
+    FU --> PC["presence + confidence"]
+    Q --> EV["event id + tEvent"]
+    PC --> L["contract v1 line"]
+    EV --> L
+```
+
+<sub>Thresholds marked in the firmware as **uncalibrated starting values**: VERY_NEAR 30/35 cm, NEAR 80/90 cm (enter/exit), disturbance ON = max(0.08 g, 6 × noise), 3 qualifying samples, 1.5 s re-arm. Calibration procedure: §5 below.</sub>
+
+**Fusion table** (raw distances are never averaged; an invalid sensor can never create presence):
+
+| ToF | Ultrasonic | presence | confidence |
+|---|---|---|---|
+| X | X (same class) | X | HIGH |
+| X | Y (different) | the lower of X, Y | LOW |
+| valid X | invalid | X | LOW |
+| invalid | valid Y | Y | LOW |
+| invalid | invalid | NONE | LOW |
+
+Practical consequence: while the ultrasonic stays invalid, confidence is always LOW, so **R1 PROTECT and R3 INVESTIGATE can never fire**. Only the LOW-confidence WARNs can. Fixing the ultrasonic is therefore on the critical path for a three-behaviour demonstration on hardware.
+
+
 ## 1. Pins and bus
 
 | Signal | ESP32 | Evidence | Status |
