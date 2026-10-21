@@ -20,7 +20,7 @@ Last updated 21 Oct 2026 (game implementation pass on top of `d9ef09d`).
 | M4 Attack, lantern, death, checkpoint | Done (automated) | `EncounterSelfTest` 34/34 (T14, T15, T17, T18, T20, plus the bug-fix pass: readable modal, sprint/jump, first-sighting E5, solid ghost body). |
 | M5 Simulated physical input | Done in software | `SimulatedSensorStation` → real validator/pipeline; hotkeys; `SensorScenarioTests` 11/11; encounter self-test under SIMULATED 34/34. |
 | M6 Telemetry + analysis | Done in software | `JsonLinesTelemetrySink`, all section G record types, `Tools/analyze_telemetry.py`, T13 determinism test. |
-| M7 UDP + ESP32 on Windows | Blocked (I-1) | `Tools/esp32_sim.py` written; the real socket was not exercised against it in this session; no firmware. |
+| M7 ESP32 on Windows | **Software done; hardware run pending** | Transport is USB serial (the project's link; final report §3.3), UDP kept. I-1 addressed in software: `Firmware/physxr_station` emits contract v1 at 115200 baud (host test 47/47; ESP32 compile clean against a VL53L0X API stub). `SerialLineReceiver` → same `SensorFeed`/validator/pipeline; `SerialTransportTests` 25/25. **Not run on the physical station** (no ESP32 connected). Checklist: `Docs/HARDWARE_SERIAL.md` §7. |
 | M8 / M9 Quest | Not started | Desktop only (I-2, I-3). |
 | M10 Art, audio, ending | Done with procedural assets | House dressing, lighting states, storm, post-processing, 39 synthesised cues, ending with window silhouette and subtitles. Reviewed from screenshots (capture tour), not in person. |
 | M11 Acceptance + evaluation | Not started | Needs people and hardware. |
@@ -77,7 +77,7 @@ to about 1.5 fps, so all in-engine checks were run in the Windows player instead
 |---|---|---|
 | T01 Virtual-only | **Pass (software)** | SENS-T01 |
 | T02 Physical + virtual (simulated) | **Pass (software)** | SENS-T02a/b |
-| T03 Real ESP32 | Not run | Blocked on firmware (I-1) |
+| T03 Real ESP32 | Not run | Firmware and serial link exist and pass software tests (SER-04, SER-18a–h); needs the station (`Docs/HARDWARE_SERIAL.md` §7, steps 1–27) |
 | T04 Duplicate events | **Pass (software)** | SENS-T04 |
 | T05 Old event ID | **Pass (software)** | SENS-T05 |
 | T06 Stale packets | **Pass (software)** | SENS-T06, P5-04 |
@@ -98,7 +98,7 @@ to about 1.5 fps, so all in-engine checks were run in the Windows player instead
 | T21 Windows input | Not run | Needs a person |
 | T22–T24 Quest | Not run | No Quest build |
 | T25 Under five minutes | Not run | Scripted route 33.5 s; needs first-time players |
-| T26 Latency | Not run | Needs hardware and video |
+| T26 Latency | Not run | Needs hardware and video. `ts`/`tEvent` (T0/T1) and arrival `t2` are logged per line (`PKT_RX`, `PHYS_EVENT`) |
 | T27 Telemetry correlation | Partial | The analyzer joins caused decisions to events and behaviours; no physical-event trial was logged yet |
 | T28 Repo regression | **Pass** | 305/305 |
 | T29 Defect probes P1–P5 | **Pass** | DefectRegressionTests: each "legacy" case still shows the original defect through the old API, each "fixed" case passes |
@@ -108,5 +108,5 @@ to about 1.5 fps, so all in-engine checks were run in the Windows player instead
 1. Play from the menu with keyboard and mouse: cursor lock, mouse feel, pause/resume, settings sliders (T21).
 2. A first-time player's run time and difficulty of the encounter (T25), and the lantern timing in practice.
 3. Audio balance and spatialisation by ear: ambience, footsteps, surge and hum, ghost voice, heartbeat, ending static.
-4. Physical sensors: `python Tools/esp32_sim.py --scenario near` against the build with "Physical sensors (UDP 47800)" selected. Windows Firewall may ask to allow the player on first listen.
+4. Physical sensors: the ESP32 station over USB serial — the ordered checklist in `Docs/HARDWARE_SERIAL.md` §7 (wiring, SCL pin, firmware flash, `--serial-monitor`, in-game reactions, unplug/replug, reset, calibration). UDP path: `python Tools/esp32_sim.py --scenario near` with "Physical - UDP 47800" selected; Windows Firewall may ask on first listen.
 5. The in-Editor self-test menus with the Game view focused.

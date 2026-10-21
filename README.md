@@ -20,7 +20,7 @@ Each stage is a small, independently tested contract, so the sensing source, the
 | Area | Status | Notes |
 |---|---|---|
 | Core data contracts | ✅ Complete | `PhysicalState`, `WorldState`, `GhostAction`, … Additive, versioned extension fields for the encounter (see [Core Data Model](#core-data-model)) |
-| Communication layer | ✅ Complete (software) | Validation, parsing, per-boot ordering (P3), boot-aware dedup (P4), arrival-time freshness (P5), main-thread queue. Wire contract v1 is a **proposal**, not verified against firmware |
+| Communication layer | ✅ Complete (software) | Validation, parsing, per-boot ordering (P3), boot-aware dedup (P4), arrival-time freshness (P5), main-thread queue. USB-serial and UDP transports feed the same pipeline. Contract v1 is now what `Firmware/physxr_station` emits, but **has not been run on the physical station** |
 | `WorldStateManager` | ✅ Complete | Freshness/masking gate (P2) and a 3 s disturbance pulse from accepted events |
 | Decision layer R1–R8 + hysteresis | ✅ Complete | Rules unchanged; injectable monotonic decision clock fixes P1 |
 | `EncounterDecisionLayer` | ✅ Complete | G0, E0, E1, E2, S, W, E5, E3, E4 and an outer dwell (spec section D) |
@@ -30,7 +30,7 @@ Each stage is a small, independently tested contract, so the sensing source, the
 | Sensor simulation | ✅ Complete | In-game simulated station (number-row hotkeys) and `Tools/esp32_sim.py` over real UDP |
 | Known defects P1–P5 | ✅ Fixed with regression tests | `DefectRegressionTests` (26) |
 | XR / Quest | ⛔ Not implemented | Desktop only. The repo's OpenXR packages are untouched |
-| ESP32 firmware / hardware-in-loop | ⛔ Not in this repo | Only the Unity side and a Python simulator exist |
+| ESP32 firmware + USB-serial link | 🟡 Written and tested in software; **not yet run on hardware** | [`Firmware/`](Firmware) (ToF + ultrasonic fusion, MPU6050 disturbance, contract v1 at 115200 baud) and `SerialLineReceiver`; menu mode *Physical - USB serial*. Hardware checklist: [`Docs/HARDWARE_SERIAL.md`](Docs/HARDWARE_SERIAL.md) |
 | RL decision provider | ⛔ Not implemented | `IDecisionProvider` allows one |
 
 Verification evidence and what remains manual: [`Docs/TechnicalSpec_MilestoneStatus.md`](Docs/TechnicalSpec_MilestoneStatus.md).
@@ -148,7 +148,8 @@ Files: [`Assets/PHYSXR/Communication/`](Assets/PHYSXR/Communication)
 - **`PhysicalEventManager`**: dedup on `(boot, eventId)` (P4), plus `OLD_EVENT` for IDs at or below the boot's highest.
 - **`PhysicalCommunicationPipeline.Process(raw, arrivalMs)`** (P5): freshness comes from Unity-side arrival time. Device time is used only for ordering and latency. Transit age is measured against the minimum offset over the last 50 packets; over 250 ms gives `STALE_PACKET`. The source is FRESH for 500 ms after the last good state line, then STALE, then UNAVAILABLE after 3 s. Events need resync (two in-order lines since the last UNAVAILABLE or reboot), must be ≤ 300 ms old, and are refused during a restart blackout or masked in virtual-only trials. The original `HandleRawPacket`/`GetStatus` API is kept unchanged for its tests.
 - **`UDPReceiver`**: in queue mode the socket thread stamps the arrival time and enqueues the datagram, with bounded capacity (oldest dropped and counted). It rebinds every 2 s on socket errors. `SensorFeed` drains the queue on the main thread.
-- **`SimulatedSensorStation`**: produces the same v1 bytes as the firmware proposal (10 Hz, events repeated on three lines) and can inject faults (resent event, stale line, reboot, outage).
+- **USB serial** (`SerialLineReceiver`, `SerialLineFramer`, `SerialPortIO`, `StationDiagnostics`): the ESP32 station's link. A reader thread opens the COM port through kernel32 (Windows desktop only; `System.IO.Ports` is not in the project's .NET Standard 2.1 profile), frames `\n`-terminated lines (partial reads, CRLF, oversized lines discarded), stamps arrival time and queues contract lines for `SensorFeed` exactly like UDP datagrams (`IDatagramSource`). `#HELLO/#DIAG/#CAL/#ERR` lines go to `StationDiagnostics` for the menu, F1 overlay and telemetry only, never into `PhysicalState`. States `DISCONNECTED/CONNECTING/CONNECTED/FAULTED`, automatic reconnect after unplug/replug or an ESP32 reset, `AUTO` port detection by PHYS-XR lines (Bluetooth ports skipped). On this link the validator requires `v=1`. Details: [`Docs/HARDWARE_SERIAL.md`](Docs/HARDWARE_SERIAL.md).
+- **`SimulatedSensorStation`**: produces the same v1 bytes as the firmware (10 Hz, events repeated on three lines) and can inject faults (resent event, stale line, reboot, outage).
 
 ## WorldState
 
@@ -245,6 +246,10 @@ It compiles the Unity-independent sources under `Assets/PHYSXR` directly (C# 9) 
 | `GameFlowEncounterTests` | FLOW-17..26 (death, checkpoint, commit, session) | 10 |
 | `EncounterDirectorTests` | DIR-01..08 (incl. the one-shot first-sighting window and E5 chain) | 8 |
 | `PlayerLocomotionTests` | LOCO-01..08: sprint stamina, exhaustion and regen, grounded-only jump, jump height | 8 |
+| `SerialTransportTests` | SER-01..18h: framing, routing, validator hardening, diagnostics, link lifecycle (unplug, replug, reboot, start/stop leaks), AUTO probing, kernel32 backend, serial → R1–R8 end to end incl. serial/simulator parity | 25 |
+
+Firmware semantic core (no ESP32 needed): `g++ -std=c++17 -I Firmware/physxr_station Firmware/tests/semantics_test.cpp -o semantics_test` then run it (47 checks).
+Live station check without Unity: `dotnet run -c Release --project Tools/TestHarness -- --serial-monitor AUTO 30`.
 
 ### In-player self-tests (Unity)
 
@@ -278,7 +283,8 @@ The player exits with the failure count. The same tests are in the Editor under 
 3. On the menu choose **Sensors**:
    - *Virtual only*: physical input received and logged but masked.
    - *Simulated sensors*: number-row hotkeys `1 2 3` presence, `4` confidence, `5` disturbance, `6` resend event, `7` stale packet, `8` reboot, `9` stop/resume.
-   - *Physical sensors (UDP 47800)*: for a station, or `python Tools/esp32_sim.py --scenario near`.
+   - *Physical - USB serial*: the ESP32 station on a COM port (`AUTO` or pick the port). The menu shows the link and live readings before Begin. Close the Arduino Serial Monitor first. Setup and checklist: [`Docs/HARDWARE_SERIAL.md`](Docs/HARDWARE_SERIAL.md).
+   - *Physical - UDP 47800*: for a Wi-Fi station, or `python Tools/esp32_sim.py --scenario near`.
 4. **Controls**: WASD move, mouse look, Left Shift sprint (hold; 3.2 m/s vs 1.8 m/s walk, 4 s stamina, refills after 0.8 s), Space jump (0.9 m, from the ground only), E interact (and close a note), F / right mouse lantern, Esc pause (or close a note), F1 developer overlay (condition, freshness, decision, rule, reason, ghost phase).
 
 Setup utilities:
@@ -293,7 +299,7 @@ Setup utilities:
 ```
 Assets/PHYSXR/
 ├── App/              AppBootstrap, MainMenu, SensorService, TelemetryService
-├── Communication/    validator, parser, pipeline, UDP receiver, SensorFeed, simulator, wire format
+├── Communication/    validator, parser, pipeline, USB-serial + UDP receivers, SensorFeed, simulator, wire format
 ├── Core/             data contracts, enums, interfaces
 ├── Decision/         RuleBasedDecisionProvider (R1–R8), DecisionHistory, EncounterDecisionLayer
 ├── Editor/           M2SceneSetup, PhysxrArtSetup, GhostPrototypeSceneSetup
@@ -315,8 +321,9 @@ Assets/PHYSXR/
 ├── Telemetry/        records, sinks (in-memory, JSON Lines), TelemetryChannel
 ├── Testing/          all *Tests.cs suites + test helpers
 └── WorldState/       WorldStateManager
-Tools/  TestHarness/, esp32_sim.py, analyze_telemetry.py
-Docs/   TechnicalSpec_MilestoneStatus.md, ASSETS.md
+Firmware/ physxr_station/ (ESP32 sketch + semantic core), tests/ (host test), README.md
+Tools/  TestHarness/ (incl. --serial-monitor), esp32_sim.py, analyze_telemetry.py
+Docs/   TechnicalSpec_MilestoneStatus.md, HARDWARE_SERIAL.md, ASSETS.md
 ```
 
 ---
@@ -325,7 +332,7 @@ Docs/   TechnicalSpec_MilestoneStatus.md, ASSETS.md
 
 - **No manual play-through by a person yet.** Everything above is verified by the harness, compile checks, Windows builds, headless player self-tests and a screenshot tour. The feel, difficulty and five-minute target (T25), the real keyboard, mouse and cursor (T21), and audio balance still need human playtests.
 - **No Quest/XR build.** Desktop only; the UI is screen-space. The installed OpenXR packages and the developer's local XR settings are untouched.
-- **No firmware or hardware test.** Contract v1 is the spec's proposal. The real-socket path was not exercised against the station or `esp32_sim.py` in this session (only the in-process queue path and the simulator); T03 and T26 need hardware.
+- **Firmware not yet run on the physical station.** The firmware and the USB-serial link are tested in software (host test, ESP32 compile, `SerialTransportTests`), but no ESP32 was connected. Unresolved hardware facts: SCL on GPIO 22 or 23 (the firmware probes both), TRIG/ECHO 25/26 vs the poster's 5/18, the HC-SR04 ECHO divider, and uncalibrated thresholds. T03 and T26 need hardware; see [`Docs/HARDWARE_SERIAL.md`](Docs/HARDWARE_SERIAL.md) §7.
 - **Art is procedural**: boxes, cylinders and generated textures. It is deliberately lit, but it is not photoreal and has no baked GI, reflection probes or SSAO tuning. Haunted Jaunt and Mixamo assets were not imported (licences unconfirmed, no LFS); see `Docs/ASSETS.md`.
 - **No asmdefs or Test Runner bridge**: boundaries are by folder convention, and NUnit is not used.
 - `WorldState` carries events as the 3 s disturbance pulse (`causeEventId` for correlation), not as an event list.
