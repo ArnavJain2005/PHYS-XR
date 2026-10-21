@@ -20,8 +20,12 @@ namespace PHYSXR.Game.Flow
     //    for this GameFlow instance. A restart builds a fresh GameFlow (the
     //    game scene is reloaded), so there is no in-place reset path that
     //    could leave stale state behind.
-    //
-    // Death, checkpoints and the ghost are out of scope here (M3/M4).
+    //  - ReportDeath moves a Playing run to Dead, also terminal for this
+    //    instance. A checkpoint restart reloads the scene and builds a new
+    //    GameFlow at the checkpoint's stage (GameFlow(ObjectiveStage)).
+    //  - CommitEncounter marks the final encounter as started: only once,
+    //    only after power is restored, only while Playing. A checkpoint
+    //    restores it uncommitted, so the player crosses the trigger again.
     public class GameFlow
     {
         public const string MsgFuseCollected = "Picked up a fuse.";
@@ -35,12 +39,38 @@ namespace PHYSXR.Game.Flow
         public const string MsgEscaped = "You escaped Blackthorn House.";
         public const string MsgAlreadyEscaped = "You have already escaped.";
         public const string MsgGameplayInactive = "";
+        public const string MsgDied = "The Hollow took you.";
 
         private readonly List<ObjectiveStage> stageHistory = new List<ObjectiveStage> { ObjectiveStage.FindFuse };
 
         public RunState RunState { get; private set; } = RunState.Playing;
 
         public ObjectiveStage Stage { get; private set; } = ObjectiveStage.FindFuse;
+
+        public GameFlow()
+        {
+        }
+
+        // Checkpoint restore: a fresh flow that starts at resumeStage, with the
+        // history of an ordinary run that reached it. Only a stable stage
+        // between FindFuse and ReachExit can be resumed.
+        public GameFlow(ObjectiveStage resumeStage)
+        {
+            if (resumeStage == ObjectiveStage.RestoringPower || resumeStage == ObjectiveStage.Completed
+                || !Enum.IsDefined(typeof(ObjectiveStage), resumeStage))
+                throw new ArgumentOutOfRangeException(nameof(resumeStage), resumeStage, "Cannot resume a run at this stage");
+
+            for (ObjectiveStage s = ObjectiveStage.InstallFuse; s <= resumeStage; s++)
+                stageHistory.Add(s);
+            Stage = resumeStage;
+        }
+
+        public bool IsDead => RunState == RunState.Dead;
+
+        // Final encounter started (power restored and the trigger crossed).
+        public bool EncounterCommitted { get; private set; }
+
+        public event Action EncounterCommittedChanged;
 
         // Every stage this run has entered, in order, starting with FindFuse.
         public IReadOnlyList<ObjectiveStage> StageHistory => stageHistory;
@@ -70,7 +100,10 @@ namespace PHYSXR.Game.Flow
                     case ObjectiveStage.FindFuse: return "Find a fuse to restore the power.";
                     case ObjectiveStage.InstallFuse: return "Install the fuse in the fuse box.";
                     case ObjectiveStage.RestoringPower: return "Restoring power...";
-                    case ObjectiveStage.ReachExit: return "Power is back. Leave through the front door.";
+                    case ObjectiveStage.ReachExit:
+                        return EncounterCommitted
+                            ? "It is between you and the door. Get out."
+                            : "Power is back. Leave through the front door.";
                     default: return "You escaped.";
                 }
             }
@@ -126,6 +159,27 @@ namespace PHYSXR.Game.Flow
             Advance(ObjectiveStage.Completed);
             SetRunState(RunState.Succeeded);
             return InteractionResult.Accept(MsgEscaped);
+        }
+
+        // The ghost's strike connected. Only a Playing run can end this way.
+        public InteractionResult ReportDeath()
+        {
+            if (RunState != RunState.Playing)
+                return Inactive();
+
+            SetRunState(RunState.Dead);
+            return InteractionResult.Accept(MsgDied);
+        }
+
+        // Returns true only if the state changed.
+        public bool CommitEncounter()
+        {
+            if (EncounterCommitted || RunState != RunState.Playing || Stage != ObjectiveStage.ReachExit)
+                return false;
+
+            EncounterCommitted = true;
+            EncounterCommittedChanged?.Invoke();
+            return true;
         }
 
         // Returns true only if the state changed.

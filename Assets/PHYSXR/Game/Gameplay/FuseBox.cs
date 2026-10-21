@@ -1,3 +1,4 @@
+using PHYSXR.Game.Audio;
 using PHYSXR.Game.Flow;
 using UnityEngine;
 
@@ -11,11 +12,17 @@ namespace PHYSXR.Game.Gameplay
     {
         private GameFlowController flowController;
         private GameObject installedFuseVisual;
+        private GameAudio audioPlayer;
+        private Transform lever;
+        private float leverAngle;
+        private float leverTarget;
 
-        public void Initialize(GameFlowController flowController, GameObject installedFuseVisual)
+        public void Initialize(GameFlowController flowController, GameObject installedFuseVisual, GameAudio audioPlayer = null, Transform lever = null)
         {
             this.flowController = flowController;
             this.installedFuseVisual = installedFuseVisual;
+            this.audioPlayer = audioPlayer;
+            this.lever = lever;
             if (installedFuseVisual != null)
                 installedFuseVisual.SetActive(false);
         }
@@ -35,12 +42,44 @@ namespace PHYSXR.Game.Gameplay
             }
         }
 
+        // Checkpoint restore: the fuse is already in and the lever is up.
+        public void ShowInstalled()
+        {
+            if (installedFuseVisual != null)
+                installedFuseVisual.SetActive(true);
+            leverAngle = leverTarget = -70f;
+            ApplyLever();
+        }
+
         public override InteractionResult Interact()
         {
             InteractionResult result = flowController.InstallFuse();
-            if (result.Accepted && installedFuseVisual != null)
-                installedFuseVisual.SetActive(true);
+            if (result.Accepted)
+            {
+                if (installedFuseVisual != null)
+                    installedFuseVisual.SetActive(true);
+                leverTarget = -70f;
+                audioPlayer?.PlayAt(AudioCue.FuseInsert, transform.position);
+            }
+            else if (result.Refusal == InteractionRefusal.FuseRequired)
+            {
+                audioPlayer?.PlayAt(AudioCue.Invalid, transform.position);
+            }
             return result;
+        }
+
+        private void Update()
+        {
+            if (lever == null || Mathf.Approximately(leverAngle, leverTarget))
+                return;
+            leverAngle = Mathf.MoveTowards(leverAngle, leverTarget, 220f * Time.deltaTime);
+            ApplyLever();
+        }
+
+        private void ApplyLever()
+        {
+            if (lever != null)
+                lever.localRotation = Quaternion.Euler(0f, 0f, leverAngle);
         }
     }
 }

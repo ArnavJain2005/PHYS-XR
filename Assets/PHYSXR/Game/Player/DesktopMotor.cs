@@ -9,7 +9,7 @@ namespace PHYSXR.Game.Player
     [RequireComponent(typeof(CharacterController))]
     public class DesktopMotor : MonoBehaviour
     {
-        [SerializeField] private float walkSpeed = 2.2f;
+        [SerializeField] private float walkSpeed = 1.8f;
         [SerializeField] private float gravity = -9.81f;
         [SerializeField] private float minPitch = -80f;
         [SerializeField] private float maxPitch = 80f;

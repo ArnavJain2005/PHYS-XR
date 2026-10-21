@@ -19,5 +19,8 @@ namespace PHYSXR.Game.Input
 
         // True only on the frame the pause/resume intent starts.
         bool PausePressed { get; }
+
+        // True only on the frame the defensive (lantern pulse) intent starts.
+        bool DefendPressed { get; }
     }
 }

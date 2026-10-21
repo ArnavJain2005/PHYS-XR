@@ -1,3 +1,4 @@
+using PHYSXR.Game.Audio;
 using PHYSXR.Game.Flow;
 using UnityEngine;
 
@@ -9,10 +10,12 @@ namespace PHYSXR.Game.Gameplay
     public class FusePickup : Interactable
     {
         private GameFlowController flowController;
+        private GameAudio audioPlayer;
 
-        public void Initialize(GameFlowController flowController)
+        public void Initialize(GameFlowController flowController, GameAudio audioPlayer = null)
         {
             this.flowController = flowController;
+            this.audioPlayer = audioPlayer;
         }
 
         public override bool IsAvailable => flowController != null && flowController.Flow.Stage == ObjectiveStage.FindFuse;
@@ -23,7 +26,10 @@ namespace PHYSXR.Game.Gameplay
         {
             InteractionResult result = flowController.CollectFuse();
             if (result.Accepted)
+            {
+                audioPlayer?.PlayAt(AudioCue.FusePickup, transform.position);
                 gameObject.SetActive(false);
+            }
             return result;
         }
     }

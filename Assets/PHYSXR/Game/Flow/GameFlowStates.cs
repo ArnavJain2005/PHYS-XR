@@ -1,13 +1,15 @@
 namespace PHYSXR.Game.Flow
 {
     // Run-level state. Only Playing accepts ordinary gameplay input
-    // (movement, look, interaction). Death/checkpoint states are not part
-    // of M2; they are added with the encounter milestone (M4).
+    // (movement, look, interaction). Succeeded and Dead are terminal for one
+    // GameFlow instance; both are left only by reloading the game scene
+    // (full restart, or checkpoint restart after Dead).
     public enum RunState
     {
         Playing = 0,
         Paused,
-        Succeeded
+        Succeeded,
+        Dead
     }
 
     // Objective progression, strictly ordered. Each stage can only be left
@@ -39,6 +41,10 @@ namespace PHYSXR.Game.Flow
         FuseAlreadyInstalled,
         NotAwaitingPower,
         ExitLocked,
-        AlreadyEscaped
+        AlreadyEscaped,
+
+        // Scenery that can be examined but never opens (locked doors). Not
+        // part of the objective flow.
+        Locked
     }
 }

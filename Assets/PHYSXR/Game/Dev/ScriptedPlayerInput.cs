@@ -11,6 +11,7 @@ namespace PHYSXR.Game.Dev
     {
         private int interactFrame = -1;
         private int pauseFrame = -1;
+        private int defendFrame = -1;
 
         public Vector2 Move { get; set; }
 
@@ -20,6 +21,8 @@ namespace PHYSXR.Game.Dev
 
         public bool PausePressed => Time.frameCount == pauseFrame;
 
+        public bool DefendPressed => Time.frameCount == defendFrame;
+
         public void PressInteractNextFrame()
         {
             interactFrame = Time.frameCount + 1;
@@ -28,6 +31,11 @@ namespace PHYSXR.Game.Dev
         public void PressPauseNextFrame()
         {
             pauseFrame = Time.frameCount + 1;
+        }
+
+        public void PressDefendNextFrame()
+        {
+            defendFrame = Time.frameCount + 1;
         }
 
         public void Stop()

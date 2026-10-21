@@ -4,7 +4,8 @@ using UnityEngine.InputSystem;
 namespace PHYSXR.Game.Input
 {
     // Windows keyboard/mouse adapter (GDD 7.1): WASD move, mouse look,
-    // E interact, Esc pause/resume.
+    // E interact, F lantern pulse (the designated defensive key), Esc
+    // pause/resume. Mouse sensitivity and invert-Y come from GameSettings.
     //
     // Move, Look and Interact come from the project-wide actions asset
     // (Assets/InputSystem_Actions.inputactions, "Player" map), which is left
@@ -23,6 +24,7 @@ namespace PHYSXR.Game.Input
         private InputAction lookAction;
         private InputAction interactAction;
         private InputAction pauseAction;
+        private InputAction defendAction;
         private bool ownsPlayerActions;
 
         public Vector2 Move => moveAction != null ? Vector2.ClampMagnitude(moveAction.ReadValue<Vector2>(), 1f) : Vector2.zero;
@@ -36,17 +38,33 @@ namespace PHYSXR.Game.Input
 
                 Vector2 raw = lookAction.ReadValue<Vector2>();
                 InputControl control = lookAction.activeControl;
+                Vector2 degrees;
                 if (control != null && control.device is Pointer)
-                    return raw * mouseDegreesPerPixel;
+                    degrees = raw * mouseDegreesPerPixel;
+                else
+                    // Sticks report deflection, not a per-frame delta.
+                    degrees = raw * (stickDegreesPerSecond * Time.unscaledDeltaTime);
 
-                // Sticks report deflection, not a per-frame delta.
-                return raw * (stickDegreesPerSecond * Time.unscaledDeltaTime);
+                if (InvertY)
+                    degrees.y = -degrees.y;
+                return degrees;
             }
         }
 
         public bool InteractPressed => interactAction != null && interactAction.WasPressedThisFrame();
 
         public bool PausePressed => pauseAction != null && pauseAction.WasPressedThisFrame();
+
+        public bool DefendPressed => defendAction != null && defendAction.WasPressedThisFrame();
+
+        public bool InvertY { get; set; }
+
+        // Degrees per pixel of mouse movement (from GameSettings).
+        public float MouseSensitivity
+        {
+            get => mouseDegreesPerPixel;
+            set => mouseDegreesPerPixel = Mathf.Clamp(value, 0.01f, 1f);
+        }
 
         private void Awake()
         {
@@ -74,6 +92,8 @@ namespace PHYSXR.Game.Input
             }
 
             pauseAction = new InputAction("Pause", InputActionType.Button, "<Keyboard>/escape");
+            defendAction = new InputAction("Defend", InputActionType.Button, "<Keyboard>/f");
+            defendAction.AddBinding("<Mouse>/rightButton");
         }
 
         private void OnEnable()
@@ -82,6 +102,7 @@ namespace PHYSXR.Game.Input
             lookAction?.Enable();
             interactAction?.Enable();
             pauseAction?.Enable();
+            defendAction?.Enable();
         }
 
         private void OnDisable()
@@ -94,6 +115,7 @@ namespace PHYSXR.Game.Input
                 interactAction?.Disable();
             }
             pauseAction?.Disable();
+            defendAction?.Disable();
         }
 
         private void OnDestroy()
@@ -105,6 +127,7 @@ namespace PHYSXR.Game.Input
                 interactAction?.Dispose();
             }
             pauseAction?.Dispose();
+            defendAction?.Dispose();
         }
     }
 }

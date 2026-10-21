@@ -39,6 +39,7 @@ namespace PHYSXR.EditorTools
             EditorSceneManager.SaveScene(bootstrap, BootstrapScenePath);
 
             Scene game = EditorSceneManager.NewScene(NewSceneSetup.EmptyScene, NewSceneMode.Single);
+            PhysxrArtSetup.ApplyLighting();
             var house = new GameObject("BlackthornHouse");
             house.AddComponent<BlackthornGreybox>();
             EditorSceneManager.SaveScene(game, GameScenePath);
@@ -65,6 +66,16 @@ namespace PHYSXR.EditorTools
             if (!EditorSceneManager.SaveCurrentModifiedScenesIfUserWantsTo())
                 return;
             SessionState.SetBool(M2RouteSelfTest.EditorSessionKey, true);
+            EditorSceneManager.OpenScene(BootstrapScenePath, OpenSceneMode.Single);
+            EditorApplication.EnterPlaymode();
+        }
+
+        [MenuItem("PHYS-XR/Run Encounter Self-Test (Play Mode)")]
+        public static void RunEncounterSelfTest()
+        {
+            if (!EditorSceneManager.SaveCurrentModifiedScenesIfUserWantsTo())
+                return;
+            SessionState.SetBool(EncounterSelfTest.EditorSessionKey, true);
             EditorSceneManager.OpenScene(BootstrapScenePath, OpenSceneMode.Single);
             EditorApplication.EnterPlaymode();
         }
