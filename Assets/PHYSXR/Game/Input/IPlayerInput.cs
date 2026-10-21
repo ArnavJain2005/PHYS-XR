@@ -22,5 +22,11 @@ namespace PHYSXR.Game.Input
 
         // True only on the frame the defensive (lantern pulse) intent starts.
         bool DefendPressed { get; }
+
+        // True while the sprint intent is held (desktop: Left Shift).
+        bool SprintHeld { get; }
+
+        // True only on the frame the jump intent starts (desktop: Space).
+        bool JumpPressed { get; }
     }
 }

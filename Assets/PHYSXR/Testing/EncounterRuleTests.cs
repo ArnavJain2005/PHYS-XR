@@ -6,7 +6,7 @@ using PHYSXR.Decision;
 namespace PHYSXR.Testing
 {
     // ENC suite (Technical Spec section D, test T12): for each encounter rule
-    // E0-E4 a fires case, a does-not-fire case and a priority case, plus the
+    // E0-E5 a fires case, a does-not-fire case and a priority case, plus the
     // outer dwell, Reset, decision-level versions of T11 (stability) and T14
     // (lantern interruption timing), and the invariant that no physical input
     // can cause an ATTACK. Runs on an injected clock, like the game.
@@ -45,6 +45,10 @@ namespace PHYSXR.Testing
             Run("ENC-E3b_EachConditionMissing_NoAttack", E3b);
             Run("ENC-E3c_ProtectAndBeat_PreventAttack", E3c);
             Run("ENC-E3d_NoPhysicalInputCanCauseAttack", E3d);
+            Run("ENC-E5a_FirstSighting_AttacksBeforeCommit", E5a);
+            Run("ENC-E5b_GraceCooldownOrNoFlag_NoAttack", E5b);
+            Run("ENC-E5c_ProtectBeatTerminalInterrupt_Outrank", E5c);
+            Run("ENC-E5d_PhysicalInputWithoutFlag_NeverAttacks", E5d);
             Run("ENC-E4a_CommittedInBand_Warns", E4a);
             Run("ENC-E4b_NotCommittedOrOutOfBand_NoE4", E4b);
             Run("ENC-E4c_YieldsToInvestigateAndRetreat", E4c);
@@ -79,13 +83,13 @@ namespace PHYSXR.Testing
             float distance = 10f, bool committed = false, bool band = false, bool threatZone = false,
             PresenceLevel presence = PresenceLevel.NONE, ConfidenceLevel confidence = ConfidenceLevel.LOW, bool disturbance = false,
             float threat = 0.2f, bool beat = false, bool terminal = false, bool grace = false,
-            GhostPhase phase = GhostPhase.NORMAL, long cooldown = 0)
+            GhostPhase phase = GhostPhase.NORMAL, long cooldown = 0, bool sighting = false)
         {
             return new WorldState
             {
                 physical = new PhysicalState { presence = presence, confidence = confidence, disturbance = disturbance, timestamp = 1 },
                 player = new PlayerState { distanceToGhost = distance, inThreatZone = threatZone, inWarnBand = band, movement = true },
-                virtualWorld = new VirtualState { threatLevel = threat, mandatoryWarningBeat = beat, gameplayTerminal = terminal, encounterCommitted = committed, attackGraceActive = grace },
+                virtualWorld = new VirtualState { threatLevel = threat, mandatoryWarningBeat = beat, gameplayTerminal = terminal, encounterCommitted = committed, attackGraceActive = grace, firstSightingAttack = sighting },
                 ghost = new GhostState { phase = phase, attackCooldownMs = cooldown }
             };
         }
@@ -262,6 +266,63 @@ namespace PHYSXR.Testing
                     GhostAction a = rig.Step(W(distance: distance, committed: committed, band: true,
                         presence: presence, confidence: confidence, disturbance: disturbance));
                     AssertTrue(a != GhostAction.ATTACK, "ATTACK from " + presence + "/" + confidence + "/" + disturbance + " committed=" + committed);
+                }
+            }
+        }
+
+        // ------------------------------------------------------------------ E5
+
+        private static void E5a()
+        {
+            // Not committed, far away, no telegraph: the sighting flag alone
+            // (a game-side view check) starts the attack.
+            var rig = new Rig();
+            AssertEq(GhostAction.ATTACK, rig.Step(W(distance: 8f, sighting: true)), "E5 attack");
+            AssertEq("E5", rig.Layer.LastRuleId, "rule");
+            AssertTrue(rig.Layer.LastDecisionReason.Contains("first sighting"), "reason names the sighting");
+        }
+
+        private static void E5b()
+        {
+            AssertTrue(new Rig().Step(W(distance: 6f, sighting: true, grace: true)) != GhostAction.ATTACK, "restart grace blocks E5");
+            AssertTrue(new Rig().Step(W(distance: 6f, sighting: true, cooldown: 3000)) != GhostAction.ATTACK, "cooldown blocks E5");
+            AssertTrue(new Rig().Step(W(distance: 6f, sighting: false)) != GhostAction.ATTACK, "no flag, no E5");
+        }
+
+        private static void E5c()
+        {
+            var protect = new Rig();
+            WorldState p = ProtectWorld(distance: 3f);
+            p.virtualWorld.firstSightingAttack = true;
+            AssertEq(GhostAction.PROTECT, protect.Step(p), "R1 PROTECT outranks E5");
+
+            var beat = new Rig();
+            AssertEq(GhostAction.WARN, beat.Step(W(distance: 6f, sighting: true, beat: true)), "the beat outranks E5");
+            AssertEq("W", beat.Layer.LastRuleId, "beat rule");
+
+            AssertTrue(new Rig().Step(W(distance: 6f, sighting: true, terminal: true)) != GhostAction.ATTACK, "terminal outranks E5");
+
+            var interrupted = new Rig();
+            AssertEq(GhostAction.RETREAT, interrupted.Step(W(distance: 3f, sighting: true, phase: GhostPhase.INTERRUPTED)), "E0 outranks E5");
+            AssertEq("E0", interrupted.Layer.LastRuleId, "interrupt rule");
+
+            var retreat = new Rig();
+            AssertEq(GhostAction.RETREAT, retreat.Step(W(distance: 6f, sighting: true, threat: 0.8f)), "R2 RETREAT outranks E5");
+        }
+
+        private static void E5d()
+        {
+            // The flag is the only way in: uncommitted, every physical input
+            // combination over a long run never yields ATTACK without it.
+            foreach (PresenceLevel presence in Enum.GetValues(typeof(PresenceLevel)))
+            foreach (ConfidenceLevel confidence in Enum.GetValues(typeof(ConfidenceLevel)))
+            foreach (bool disturbance in new[] { false, true })
+            {
+                var rig = new Rig();
+                for (int i = 0; i < 60; i++)
+                {
+                    GhostAction a = rig.Step(W(distance: 4f, presence: presence, confidence: confidence, disturbance: disturbance));
+                    AssertTrue(a != GhostAction.ATTACK, "ATTACK from " + presence + "/" + confidence + "/" + disturbance);
                 }
             }
         }

@@ -26,5 +26,11 @@ namespace PHYSXR.Core.Data
         // attackGraceActive: true for a short time after a checkpoint restart,
         // during which no attack may start (E3).
         public bool attackGraceActive;
+
+        // firstSightingAttack: true while the one-shot first-sighting attack
+        // beat is pending - the player has just seen the ghost clearly for the
+        // first time this run (a game-side view-cone and line-of-sight check,
+        // never a sensor reading). Read only by the encounter layer (E5).
+        public bool firstSightingAttack;
     }
 }

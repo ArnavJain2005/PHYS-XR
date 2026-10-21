@@ -9,7 +9,8 @@ namespace PHYSXR.Testing
     // DIR suite: the game-side WorldState inputs (EncounterDirector), and that
     // fed through the real decision chain they produce the beats the spec
     // describes (R7 WARN near the ghost after the fuse, R2 RETREAT for the
-    // surge, the beat WARN, no attack during the restart grace).
+    // surge, the beat WARN, no attack during the restart grace, and the
+    // one-shot first-sighting attack through rule E5).
     public static class EncounterDirectorTests
     {
         public static int RunAll()
@@ -38,6 +39,8 @@ namespace PHYSXR.Testing
             Run("DIR-04_RestartGrace_3s", DIR04);
             Run("DIR-05_Chain_NearAfterFuse_R7Warn_SurgeRetreat", DIR05);
             Run("DIR-06_Chain_GraceBlocksAttackThenAllows", DIR06);
+            Run("DIR-07_FirstSighting_OneShotWindow_EndsBeat", DIR07);
+            Run("DIR-08_Chain_SightingAttacksOnce_E5", DIR08);
 
             Console.WriteLine("EncounterDirectorTests: " + passed + " passed, " + failed + " failed");
             return failed;
@@ -127,7 +130,8 @@ namespace PHYSXR.Testing
                 virtualWorld = new VirtualState
                 {
                     threatLevel = v.threatLevel, eventActive = v.eventActive, mandatoryWarningBeat = v.mandatoryWarningBeat,
-                    encounterCommitted = v.encounterCommitted, attackGraceActive = v.attackGraceActive
+                    encounterCommitted = v.encounterCommitted, attackGraceActive = v.attackGraceActive,
+                    firstSightingAttack = v.firstSightingAttack
                 },
                 ghost = new GhostState { attackCooldownMs = cooldown }
             };
@@ -175,6 +179,67 @@ namespace PHYSXR.Testing
             }
             AssertTrue(!attackedDuringGrace, "no attack in the first 3 s after a restart");
             AssertTrue(firstAttack >= 3000, "attack possible after the grace (first at " + firstAttack + " ms)");
+        }
+
+        private static void DIR07()
+        {
+            var d = new EncounterDirector();
+            var p = new PlayerState();
+            var v = new VirtualState();
+            d.BeginBeat(0, "FIRST_SIGHTING");
+            d.Update(500, 8f, 0f, false, false, p, v);
+            AssertTrue(v.mandatoryWarningBeat && !v.firstSightingAttack, "beat first, no sighting yet");
+
+            AssertTrue(d.BeginFirstSightingAttack(600), "first sighting accepted");
+            d.Update(700, 8f, 0f, false, false, p, v);
+            AssertTrue(v.firstSightingAttack, "sighting flag raised");
+            AssertTrue(!v.mandatoryWarningBeat, "sighting ends the manifest beat (W would outrank E5)");
+
+            d.Update(600 + EncounterDirector.FirstSightingWindowMs, 8f, 0f, false, false, p, v);
+            AssertTrue(!v.firstSightingAttack, "window closes after 3 s");
+
+            AssertTrue(!d.BeginFirstSightingAttack(10000), "once per attempt");
+            d.Update(10100, 8f, 0f, false, false, p, v);
+            AssertTrue(!v.firstSightingAttack && d.FirstSightingUsed, "no second sighting");
+
+            var c = new EncounterDirector();
+            c.BeginFirstSightingAttack(0);
+            c.ConsumeFirstSightingAttack();
+            c.Update(100, 8f, 0f, false, false, p, v);
+            AssertTrue(!v.firstSightingAttack, "consumed when the attack starts");
+        }
+
+        private static void DIR08()
+        {
+            long now = 0;
+            var layer = new EncounterDecisionLayer(new RuleBasedDecisionProvider(decisionClock: () => now), () => now);
+            var d = new EncounterDirector();
+            var p = new PlayerState();
+            var v = new VirtualState();
+
+            d.BeginBeat(now, "FIRST_SIGHTING");
+            now += 100;
+            d.Update(now, 7f, 0f, false, false, p, v);
+            AssertEq(GhostAction.WARN, layer.Decide(Snapshot(p, v)), "manifest beat");
+
+            d.BeginFirstSightingAttack(now);
+            now += 100;
+            d.Update(now, 7f, 0f, false, false, p, v);
+            AssertEq(GhostAction.ATTACK, layer.Decide(Snapshot(p, v)), "first sighting: ATTACK");
+            AssertEq("E5", layer.LastRuleId, "rule");
+
+            // The ghost enters WINDUP; the game consumes the flag. After the
+            // attack the uncommitted encounter never attacks again on its own.
+            d.ConsumeFirstSightingAttack();
+            int attacks = 0;
+            for (int i = 0; i < 200; i++)
+            {
+                now += 100;
+                d.Update(now, 1.5f, 0f, false, false, p, v);
+                if (layer.Decide(Snapshot(p, v)) == GhostAction.ATTACK)
+                    attacks++;
+            }
+            AssertEq(0, attacks, "no repeat attacks outside the committed encounter");
         }
     }
 }

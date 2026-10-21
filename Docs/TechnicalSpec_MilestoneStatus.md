@@ -17,8 +17,8 @@ Last updated 21 Oct 2026 (game implementation pass on top of `d9ef09d`).
 | M1 Repo + fixes | **Done, except asmdefs** | P1–P5 fixed, each with regression tests (`DefectRegressionTests`, 26). Main-thread hand-off (`UDPReceiver` queue mode, `SensorFeed`). Encounter layer complete (`EncounterRuleTests`, 21). **Not done:** asmdefs, the `GhostExecutionState` move to Core, `TestRunnerBridge`. |
 | M2 Desktop loop | Done (automated) | `M2RouteSelfTest` 23/23 in the final build. |
 | M3 Ghost, virtual-only | Done (automated) | `GhostMotionController` + `HollowVisual` on a runtime NavMesh; FOLLOW/WARN/surge RETREAT; DECISION/BEHAVIOUR telemetry; dev overlay (F1). |
-| M4 Attack, lantern, death, checkpoint | Done (automated) | `EncounterSelfTest` 21/21 (T14, T15, T17, T18, T20). |
-| M5 Simulated physical input | Done in software | `SimulatedSensorStation` → real validator/pipeline; hotkeys; `SensorScenarioTests` 11/11; encounter self-test under SIMULATED 21/21. |
+| M4 Attack, lantern, death, checkpoint | Done (automated) | `EncounterSelfTest` 34/34 (T14, T15, T17, T18, T20, plus the bug-fix pass: readable modal, sprint/jump, first-sighting E5, solid ghost body). |
+| M5 Simulated physical input | Done in software | `SimulatedSensorStation` → real validator/pipeline; hotkeys; `SensorScenarioTests` 11/11; encounter self-test under SIMULATED 34/34. |
 | M6 Telemetry + analysis | Done in software | `JsonLinesTelemetrySink`, all section G record types, `Tools/analyze_telemetry.py`, T13 determinism test. |
 | M7 UDP + ESP32 on Windows | Blocked (I-1) | `Tools/esp32_sim.py` written; the real socket was not exercised against it in this session; no firmware. |
 | M8 / M9 Quest | Not started | Desktop only (I-2, I-3). |
@@ -34,7 +34,7 @@ Last updated 21 Oct 2026 (game implementation pass on top of `d9ef09d`).
 | P3 boot identity | `PacketValidator`: per-boot ordering, `OLD_BOOT`, `isNewBoot`; contract v1 keys `v`, `dev`, `boot`, `tEvent`. |
 | P4 dedup key | `PhysicalEventManager`: `(boot, eventId)`, plus `OLD_EVENT`. |
 | P5 arrival-time freshness | `PhysicalCommunicationPipeline.Process(raw, arrivalMs)` and `GetSourceStatus(now)`; resync, max event age, restart blackout, masking. |
-| Encounter rules E0–E4 | `EncounterDecisionLayer` (see README table). |
+| Encounter rules E0–E5 | `EncounterDecisionLayer` (see README table). E5 = one-shot first-sighting attack (gameplay bug-fix pass). |
 | `GhostMotionController` | `Ghost/Presentation/GhostMotionController.cs` |
 | Checkpoint, death | `GameFlow.ReportDeath`, `GameFlow(ObjectiveStage)`, `GameSession` checkpoint/attempts, `GameFlowController.RestartFromCheckpoint`. |
 | Lantern | `Game/Gameplay/DefensiveAbility.cs` (4 m, 45°, line of sight, 10 s / 3 s cooldowns). |
@@ -47,6 +47,8 @@ Last updated 21 Oct 2026 (game implementation pass on top of `d9ef09d`).
 
 Deviations, recorded:
 - **Dev hotkeys.** The spec's letter keys (D, S, R, X) collide with WASD, so the number row is used (1–9).
+- **First-sighting attack (E5)**, added in the gameplay bug-fix pass: the first clear view of The Hollow triggers one attack before the encounter is committed. A strike that lands then is a non-lethal feint; death stays in the committed encounter (E3).
+- **Sprint and jump** (desktop only): Left Shift 3.2 m/s with a 4 s stamina bar, Space 0.9 m jump. Not in the spec; added at the user's request.
 - **Walk speed** is 1.8 m/s (spec 1.5) and encounter WARN approach 1.9 m/s (spec 1.6). This keeps the M2 route short while the ghost still out-paces a walking player.
 - **Outer dwell.** The encounter layer adds a 1.5 s dwell for E4 WARN → FOLLOW (T11). A scripted beat still ends immediately (RT-11).
 - **Deferred ATTACK vs beat question.** An attack in progress continues through a beat; no new attack starts during one.
@@ -56,12 +58,12 @@ Deviations, recorded:
 
 | Kind | What ran | Result |
 |---|---|---|
-| Standalone .NET harness (`dotnet run -c Release --project Tools/TestHarness`, C# 9, net9.0) | 22 suites | **266 passed, 0 failed** (the original 186 unchanged and passing, plus 80 new) |
+| Standalone .NET harness (`dotnet run -c Release --project Tools/TestHarness`, C# 9, net9.0) | 24 suites | **305 passed, 0 failed** (gameplay bug-fix pass, 21 Oct 2026; includes the serial suite) |
 | Unity compile (the open Editor, 6000.5.8f1) | Full script compile after the last change | 0 errors, 0 warnings in PHYS-XR code |
 | Windows player build (from the open Editor, `BuildPipeline` with explicit scene paths) | StandaloneWindows64, Bootstrap + Game_BlackthornHouse | **Build Finished, Result: Success** |
 | `-physxr-m2-selftest` (headless player) | Objective route | **23/23**, scripted route 33.5 s |
-| `-physxr-selftest` (headless player) | Encounter checks | **21/21**. Next attack 11.52 s after the lantern hit; 10 restarts: 1 camera/listener/EventSystem/flow/ghost; materials 53 → 53; managed heap 4.0 → 4.2 MB |
-| `-physxr-selftest -physxr-condition SIMULATED` (headless player) | Same, simulated packets through the validator | **21/21**; telemetry: 332 packets accepted, 0 rejected, source FRESH |
+| `-physxr-selftest` (headless player) | Encounter checks | **34/34**. Next attack 11.53 s after the lantern hit; ghost body stops the player at 0.73 m (contact 0.65 m); 10 restarts: 1 camera/listener/EventSystem/flow/ghost; materials 53 → 53; managed heap 4.2 → 4.3 MB |
+| `-physxr-selftest -physxr-condition SIMULATED` (headless player) | Same, simulated packets through the validator | **34/34** (three runs; one earlier run exited early with a truncated log and no failed check, not reproduced); telemetry: 459 packets accepted, 0 rejected; 0 inappropriate attacks |
 | Player logs of those three runs | Scan for exceptions and errors | None |
 | `-physxr-capture` (windowed player) | 12 screenshots: menu, dark and powered rooms, first sighting, encounter, ending, end card | Reviewed; light levels and the ghost's materials tuned from them |
 | `Tools/analyze_telemetry.py` on self-test logs | CSV summary | Parses; 0 inappropriate attacks, 0 dropped records |
@@ -98,7 +100,7 @@ to about 1.5 fps, so all in-engine checks were run in the Windows player instead
 | T25 Under five minutes | Not run | Scripted route 33.5 s; needs first-time players |
 | T26 Latency | Not run | Needs hardware and video |
 | T27 Telemetry correlation | Partial | The analyzer joins caused decisions to events and behaviours; no physical-event trial was logged yet |
-| T28 Repo regression | **Pass** | 266/266 |
+| T28 Repo regression | **Pass** | 305/305 |
 | T29 Defect probes P1–P5 | **Pass** | DefectRegressionTests: each "legacy" case still shows the original defect through the old API, each "fixed" case passes |
 
 ## Manual checks still needed

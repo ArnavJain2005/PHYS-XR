@@ -23,7 +23,7 @@ Each stage is a small, independently tested contract, so the sensing source, the
 | Communication layer | ✅ Complete (software) | Validation, parsing, per-boot ordering (P3), boot-aware dedup (P4), arrival-time freshness (P5), main-thread queue. Wire contract v1 is a **proposal**, not verified against firmware |
 | `WorldStateManager` | ✅ Complete | Freshness/masking gate (P2) and a 3 s disturbance pulse from accepted events |
 | Decision layer R1–R8 + hysteresis | ✅ Complete | Rules unchanged; injectable monotonic decision clock fixes P1 |
-| `EncounterDecisionLayer` | ✅ Complete | G0, E0, E1, E2, S, W, E3, E4 and an outer dwell (spec section D) |
+| `EncounterDecisionLayer` | ✅ Complete | G0, E0, E1, E2, S, W, E5, E3, E4 and an outer dwell (spec section D) |
 | Ghost execution + runtime pipeline | ✅ Complete | `ATTACK` → `Attacking`; change-only DECISION telemetry with decision IDs |
 | Telemetry | ✅ Complete | JSON Lines file per trial (bounded queue, writer thread); `Tools/analyze_telemetry.py` |
 | Desktop game (Windows) | ✅ Implemented, automated checks pass | Menu, five-room house, fuse → power → encounter → exit → ending, lantern, attack/death, checkpoint, pause/settings, restart. **Manual play-through by a person not yet done** |
@@ -130,9 +130,9 @@ Plain-field data contracts in `PHYSXR.Core.*`. Fields marked *additive* were add
 | `PhysicalState` | `presence`, `confidence`, `disturbance`, `timestamp`; *additive* `causeEventId` (telemetry only) |
 | `PhysicalEvent` | `eventType`, `eventId`, `timestamp`; *additive* `boot` (P4) |
 | `PlayerState` | `distanceToGhost`, `movement`, `inThreatZone`; *additive* `inWarnBand` (E4) |
-| `VirtualState` | `threatLevel`, `eventActive`, `mandatoryWarningBeat`, `gameplayTerminal`; *additive* `encounterCommitted`, `attackGraceActive` |
+| `VirtualState` | `threatLevel`, `eventActive`, `mandatoryWarningBeat`, `gameplayTerminal`; *additive* `encounterCommitted`, `attackGraceActive`, `firstSightingAttack` (E5) |
 | `GhostState` | `currentState`, `phase`; *additive* `phaseElapsedMs`, `attackCooldownMs` |
-| `GhostAction` | `FOLLOW`, `WARN`, `INVESTIGATE`, `PROTECT`, `RETREAT`, and the versioned extension `ATTACK` (only E1/E3 produce it) |
+| `GhostAction` | `FOLLOW`, `WARN`, `INVESTIGATE`, `PROTECT`, `RETREAT`, and the versioned extension `ATTACK` (only E1/E3/E5 produce it) |
 | `PhysicalSourceStatus` | `UNAVAILABLE`, `STALE`, `FRESH` |
 | `RunCondition` | `VIRTUAL_ONLY`, `PHYSICAL_PLUS_VIRTUAL`, `SIMULATED` |
 | `IDecisionProvider`, `IExplainableDecisionProvider`, `IRuleIdentifiedDecisionProvider` | `Decide(WorldState)`, `LastDecisionReason`, `Reset()`, `LastRuleId` |
@@ -173,15 +173,17 @@ The legacy one-argument constructor keeps the original pass-through for its test
 | E2 | inner PROTECT has run 6 s, or 10 s refractory active | inner treated as FOLLOW |
 | S | (effective) inner PROTECT/RETREAT | inner result |
 | W | mandatory scripted warning beat | WARN |
+| E5 | first sighting: the game saw the player's first clear view of the ghost (`firstSightingAttack`, once per attempt), no restart grace, cooldown 0 | ATTACK |
 | E3 | committed encounter, no restart grace, distance ≤ 2.0 m, WARN held ≥ 1.5 s, cooldown 0 | ATTACK |
 | E4 | committed encounter, player in the warn band, inner FOLLOW/WARN | WARN |
 | DWELL | an E4 WARN is held ≥ 1.5 s before dropping to FOLLOW | WARN |
 
-  Decisions on deferred questions: a beat does not stop an attack already in progress (E1 > W), but no new attack starts during a beat (W > E3). No sensor value appears in E1–E4; physical input can only **prevent** an attack (R1 through S).
+  Decisions on deferred questions: a beat does not stop an attack already in progress (E1 > W), but no new attack starts during a beat (W > E3). No sensor value appears in E1–E5; physical input can only **prevent** an attack (R1 through S). E5 is raised by a game-side view check (ghost chest in the camera view, ≤ 12 m, clear line of sight), and the director ends the manifest beat when it raises it.
 
 - **`EncounterDirector`** (game side, plain C#) fills the inputs those rules read.
   - Threat: 0.2 baseline; 0.5 near the ghost (6 m in / 7.5 m out) after the fuse is picked up; 0.8 for 3 s from the power surge.
   - Beats: 4 s (first sighting, fuse pickup).
+  - First-sighting attack: a 3 s one-shot window, consumed when the attack starts.
   - Bands: threat zone 3.5/4.5 m, warn band 6.0/7.5 m.
   - Restart grace: 3 s.
 
@@ -208,7 +210,9 @@ The legacy one-argument constructor keeps the original pass-through for its test
 
   A runtime NavMesh is baked for the ghost. The edit-time gizmo preview still works (select the `BlackthornHouse` object).
 - **Objective**: find the fuse (kitchen table) → install it (utility room fuse box) → the power surge and the checkpoint → leave through the front door. All transitions go through `GameFlow` (idempotent, ordered).
-- **Encounter**: crossing out of the utility room after power commits the encounter (`GameFlow.CommitEncounter`). The Hollow then appears between the player and the door. The lantern (F or right mouse) drives it back briefly. A strike kills, and "Continue" restores the checkpoint.
+- **First sighting**: the first time the player actually sees The Hollow (in view, within 12 m, no wall between), it lunges once through rule E5 and the normal WINDUP/STRIKE/RECOVER phases; the lantern can interrupt it. Before the encounter is committed a strike that lands is a non-lethal feint (red pulse, `ATTACK event=STRIKE_FEINT`).
+- **Encounter**: crossing out of the utility room after power commits the encounter (`GameFlow.CommitEncounter`). The Hollow then appears between the player and the door. The lantern (F or right mouse) drives it back briefly. A strike kills, and "Continue" restores the checkpoint. The ghost has a solid body (a 0.35 m capsule on the Ignore Raycast layer), so the player cannot walk through it.
+- **Readables** (notes, the radio): E opens one as a modal (look, movement, sprint, jump and the lantern are blocked); E or Esc closes it, and pause, death, the ending and an attack wind-up close it too.
 - **Ending**: a fade to the front yard in the rain, lightning showing a figure in the upper window, Elias's recording as subtitles, then the end card with time, deaths and lantern use.
 - **Presentation**: all art and sound are generated in code. URP post-processing (ACES, grade, vignette, grain, bloom, fringing) tightens as the ghost approaches; a heartbeat rises; there are reverb zones per room and footsteps on wood or tile. See [`Docs/ASSETS.md`](Docs/ASSETS.md).
 
@@ -229,17 +233,18 @@ The legacy one-argument constructor keeps the original pass-through for its test
 dotnet run -c Release --project Tools/TestHarness
 ```
 
-It compiles the Unity-independent sources under `Assets/PHYSXR` directly (C# 9) and runs every `RunAll()` suite. The exit code is the failure count. **Current result: 22 suites, 266 tests, 0 failed.**
+It compiles the Unity-independent sources under `Assets/PHYSXR` directly (C# 9) and runs every `RunAll()` suite. The exit code is the failure count. **Current result: 24 suites, 305 tests, 0 failed.**
 
 | Suite | IDs | Count |
 |---|---|---|
 | Original suites (communication, world state, R1–R8, history, hysteresis, executor, controller, telemetry, pipeline, E2E, warning beat, runtime integration, terminal gate, M2 game flow) | COMM, WORLD, DEC, DH, PDC, HYST, GHOSTEXEC, GHOSTCTRL, TEL, GHOSTPIPE, E2E, WB, RT, TERM, FLOW-01..16 | 186 (unchanged and passing) |
 | `DefectRegressionTests` | P1-01..05, P2-01..07, P3-01..04, P4-01..03, P5-01..04, Q-01..03 | 26 |
-| `EncounterRuleTests` | ENC-E0..E4 fires / does not fire / priority, DWELL, RESET, T11, T14, attack flow | 21 |
+| `EncounterRuleTests` | ENC-E0..E5 fires / does not fire / priority, DWELL, RESET, T11, T14, attack flow | 25 |
 | `SensorScenarioTests` | SENS-T01, T02a/b, T04–T10, BLACKOUT | 11 |
 | `TelemetryJsonLinesTests` | TELJ-01..06 (incl. T13 determinism with sink vs null sink) | 6 |
 | `GameFlowEncounterTests` | FLOW-17..26 (death, checkpoint, commit, session) | 10 |
-| `EncounterDirectorTests` | DIR-01..06 | 6 |
+| `EncounterDirectorTests` | DIR-01..08 (incl. the one-shot first-sighting window and E5 chain) | 8 |
+| `PlayerLocomotionTests` | LOCO-01..08: sprint stamina, exhaustion and regen, grounded-only jump, jump height | 8 |
 
 ### In-player self-tests (Unity)
 
@@ -258,7 +263,7 @@ Builds/PHYSXR_Windows/PHYS-XR.exe -batchmode -nographics -physxr-selftest -physx
 ```
 
 - `M2RouteSelfTest`: the objective route through the real controller (23 checks).
-- `EncounterSelfTest`: beat, surge, telegraphed attack, lantern interrupt and timing, miss cooldown, strike death, checkpoint restore and grace, 10 restarts with duplicate/leak checks, and a clean full restart (21 checks).
+- `EncounterSelfTest`: readable modal (E opens/closes, controls blocked, Esc/pause close), sprint and jump, first-sighting E5 lunge (non-lethal, once), surge, telegraphed attack, lantern interrupt and timing, miss cooldown, strike death, the ghost's solid body, checkpoint restore and grace, 10 restarts with duplicate/leak checks, and a clean full restart (34 checks).
 
 The player exits with the failure count. The same tests are in the Editor under `PHYS-XR > M2 > Run Route Self-Test` and `PHYS-XR > Run Encounter Self-Test`. In the Editor they need the Game view focused; an unfocused Editor throttles Play mode.
 
@@ -274,7 +279,7 @@ The player exits with the failure count. The same tests are in the Editor under 
    - *Virtual only*: physical input received and logged but masked.
    - *Simulated sensors*: number-row hotkeys `1 2 3` presence, `4` confidence, `5` disturbance, `6` resend event, `7` stale packet, `8` reboot, `9` stop/resume.
    - *Physical sensors (UDP 47800)*: for a station, or `python Tools/esp32_sim.py --scenario near`.
-4. **Controls**: WASD move, mouse look, E interact, F / right mouse lantern, Esc pause, F1 developer overlay (condition, freshness, decision, rule, reason, ghost phase).
+4. **Controls**: WASD move, mouse look, Left Shift sprint (hold; 3.2 m/s vs 1.8 m/s walk, 4 s stamina, refills after 0.8 s), Space jump (0.9 m, from the ground only), E interact (and close a note), F / right mouse lantern, Esc pause (or close a note), F1 developer overlay (condition, freshness, decision, rule, reason, ghost phase).
 
 Setup utilities:
 - `PHYS-XR > Art > Create Material Templates` re-creates `Resources/PHYSXR/Mat_*.mat`.

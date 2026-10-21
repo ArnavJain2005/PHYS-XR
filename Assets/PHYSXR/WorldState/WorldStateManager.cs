@@ -222,7 +222,8 @@ namespace PHYSXR.WorldStateSystem
                 mandatoryWarningBeat = source.mandatoryWarningBeat,
                 gameplayTerminal = source.gameplayTerminal,
                 encounterCommitted = source.encounterCommitted,
-                attackGraceActive = source.attackGraceActive
+                attackGraceActive = source.attackGraceActive,
+                firstSightingAttack = source.firstSightingAttack
             };
         }
 

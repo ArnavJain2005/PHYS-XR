@@ -46,6 +46,7 @@ namespace PHYSXR.TestHarness
                 ("TelemetryJsonLinesTests", TelemetryJsonLinesTests.RunAll),
                 ("GameFlowEncounterTests", GameFlowEncounterTests.RunAll),
                 ("EncounterDirectorTests", EncounterDirectorTests.RunAll),
+                ("PlayerLocomotionTests", PlayerLocomotionTests.RunAll),
             };
 
             int totalFailed = 0;

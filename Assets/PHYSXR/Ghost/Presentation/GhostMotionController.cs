@@ -26,6 +26,14 @@ namespace PHYSXR.Ghost
     //
     // GameFlowController calls Tick() once per frame after GhostRuntime.Tick(),
     // and only while the run is playing. Halt() freezes it for terminal states.
+    //
+    // The ghost has a solid body: a non-trigger capsule (radius 0.35 m, 2.0 m
+    // tall) on a kinematic Rigidbody, so the player's CharacterController
+    // cannot walk through it. The body sits on the Ignore Raycast layer, which
+    // keeps it out of the NavMesh bake, the interaction ray, the lantern's
+    // line-of-sight test and the first-sighting check (all of which use
+    // Physics.DefaultRaycastLayers). It is solid only while the ghost is
+    // manifested and visible: dormant, flickering or hidden, it is not there.
     [RequireComponent(typeof(NavMeshAgent))]
     public class GhostMotionController : MonoBehaviour
     {
@@ -36,6 +44,8 @@ namespace PHYSXR.Ghost
         public const float StrikeReach = 1.6f, StrikeHalfAngle = 60f, PersonalSpace = 1.3f;
         public const float SpeedTrail = 1.4f, SpeedEncounterFollow = 2.0f, SpeedWarn = 1.9f;
         public const float SpeedInvestigate = 2.0f, SpeedRetreat = 3.0f, SpeedLunge = 3.5f;
+        public const float BodyRadius = 0.35f, BodyHeight = 2.0f;
+        public const int BodyLayer = 2; // Ignore Raycast
         private const float ScreechMinInterval = 6f;
 
         public enum InterruptResult
@@ -52,6 +62,7 @@ namespace PHYSXR.Ghost
 
         private NavMeshAgent agent;
         private HollowVisual visual;
+        private CapsuleCollider body;
         private GhostRuntime runtime;
         private Transform player;
         private GhostAnchors anchors;
@@ -86,6 +97,8 @@ namespace PHYSXR.Ghost
         public float DistanceToPlayer { get; private set; } = 99f;
         public float StraightDistanceToPlayer { get; private set; } = 99f;
         public bool HasNavMesh => agent != null && agent.isOnNavMesh;
+        public bool BodySolid => body != null && body.enabled;
+        public CapsuleCollider Body => body;
         public HollowVisual Visual => visual;
         public Vector3 ChestPosition => visual != null ? visual.ChestPosition : transform.position + Vector3.up * 1.4f;
         public GhostExecutionState? Behaviour => behaviour;
@@ -126,12 +139,40 @@ namespace PHYSXR.Ghost
             visual = visualGo.AddComponent<HollowVisual>();
             visual.Build(assets);
             visual.SetVisible(false, true);
+            BuildBody();
 
             breath = MakeSource("Breath", GhostSound.Breath, true, 1f, 10f);
             hum = MakeSource("Hum", GhostSound.ProtectHum, true, 1.5f, 12f);
             hum.Stop();
             oneShot = MakeSource("Voice", GhostSound.Screech, false, 2f, 30f);
             breath.Stop();
+        }
+
+        private void BuildBody()
+        {
+            Rigidbody rb = gameObject.GetComponent<Rigidbody>();
+            if (rb == null)
+                rb = gameObject.AddComponent<Rigidbody>();
+            rb.isKinematic = true;
+            rb.useGravity = false;
+            rb.interpolation = RigidbodyInterpolation.None;
+
+            var bodyGo = new GameObject("Body");
+            bodyGo.layer = BodyLayer;
+            bodyGo.transform.SetParent(transform, false);
+            body = bodyGo.AddComponent<CapsuleCollider>();
+            body.isTrigger = false;
+            body.direction = 1;
+            body.radius = BodyRadius;
+            body.height = BodyHeight;
+            body.center = new Vector3(0f, BodyHeight * 0.5f, 0f);
+            body.enabled = false;
+        }
+
+        private void SetSolid(bool solid)
+        {
+            if (body != null)
+                body.enabled = solid;
         }
 
         private AudioSource MakeSource(string name, GhostSound sound, bool loop, float minDistance, float maxDistance)
@@ -176,6 +217,7 @@ namespace PHYSXR.Ghost
             if (flicker && visual.Visibility > 0.5f)
             {
                 visual.SetVisible(false);
+                SetSolid(false);
                 pendingManifestAt = Time.time + 0.45f;
                 pendingManifestPosition = position;
                 return;
@@ -183,11 +225,14 @@ namespace PHYSXR.Ghost
 
             Warp(position);
             visual.SetVisible(true);
+            SetSolid(true);
         }
 
         public void SetDormant(Vector3 position)
         {
             Dormant = true;
+            pendingManifestAt = -1f;
+            SetSolid(false);
             Warp(position);
             visual.SetVisible(false, true);
             breath.Stop();
@@ -207,6 +252,7 @@ namespace PHYSXR.Ghost
             if (hide)
             {
                 visual.SetVisible(false);
+                SetSolid(false);
                 breath.Stop();
             }
         }
@@ -276,6 +322,7 @@ namespace PHYSXR.Ghost
                 pendingManifestAt = -1f;
                 Warp(pendingManifestPosition);
                 visual.SetVisible(true);
+                SetSolid(true);
             }
 
             if (Dormant)

@@ -25,6 +25,10 @@ namespace PHYSXR.Decision
     //       active -> the inner result is treated as FOLLOW from here on
     //   S   (effective) inner PROTECT/RETREAT -> inner result (genuine safety response)
     //   W   mandatoryWarningBeat         -> WARN
+    //   E5  first-sighting attack: the game reports the player's first clear
+    //       view of the ghost (firstSightingAttack), no restart grace, attack
+    //       cooldown 0 -> ATTACK. A one-shot scripted beat: the game raises
+    //       the flag once per run and clears it when the attack starts.
     //   E3  attack starts: encounterCommitted, no restart grace, distance <=
     //       AttackDistance, previous decision WARN for >= WarnTelegraphMs,
     //       attack cooldown 0, inner result not PROTECT -> ATTACK
@@ -43,8 +47,10 @@ namespace PHYSXR.Decision
     //    (E1 outranks W), but no NEW attack can start during a beat (W
     //    outranks E3). The beat itself is a WARN, so it counts as the
     //    telegraph E3 requires.
-    //  - No sensor value appears in E1-E4. Physical input can only PREVENT an
+    //  - No sensor value appears in E1-E5. Physical input can only PREVENT an
     //    attack (R1 PROTECT through S), never cause one.
+    //  - The first-sighting attack (E5) ranks below the warning beat, so the
+    //    game ends the manifest beat when it raises the sighting flag.
     //
     // Deterministic: given the WorldState sequence and the injected clock,
     // the output is fixed. Without a clock, WorldState.physical.timestamp is
@@ -59,6 +65,7 @@ namespace PHYSXR.Decision
 
         private const string ReasonInterrupted = "RETREAT[E0]: ghost interrupted by defensive pulse";
         private const string ReasonAttackContinues = "ATTACK[E1]: attack in progress";
+        private const string ReasonFirstSighting = "ATTACK[E5]: first sighting of the player";
         private const string ReasonClosePressure = "WARN[E4]: committed encounter, player inside the warn band";
         private const string ReasonOuterDwell = "HYSTERESIS[outer]: retaining WARN; candidate FOLLOW suppressed until minimum dwell elapsed";
 
@@ -197,6 +204,13 @@ namespace PHYSXR.Decision
             if (virtualWorld != null && virtualWorld.mandatoryWarningBeat)
             {
                 Set(GhostAction.WARN, "W", BeatReasons[(int)innerAction], out action, out ruleId, out reason);
+                return;
+            }
+
+            if (virtualWorld != null && virtualWorld.firstSightingAttack && !virtualWorld.attackGraceActive
+                && ghost != null && ghost.attackCooldownMs <= 0L)
+            {
+                Set(GhostAction.ATTACK, "E5", ReasonFirstSighting, out action, out ruleId, out reason);
                 return;
             }
 
