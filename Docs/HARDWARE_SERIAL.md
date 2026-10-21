@@ -5,7 +5,8 @@ Unity, and what has been verified. Firmware details (pins, protocol, calibration
 
 **Status (21 Oct 2026, second pass): software complete; firmware compiles against the real Pololu
 VL53L0X 1.3.1; a fresh Windows player of `a6d976a` passes every self-test, including USB-serial mode with
-no ESP32 attached. Not yet run against the physical station** — no ESP32 was connected in either pass.
+no ESP32 attached; the `SOURCE_STATUS` telemetry fix (`0241e15`) is verified in a player of `8bf28a6`.
+Not yet run against the physical station** — no ESP32 was connected in any pass.
 No ESP32 was connected to the development PC (its only COM ports were Bluetooth). Every "Pass" below is
 an automated software test unless it says otherwise. Section 7 is the ordered checklist to run on the hardware.
 
@@ -191,6 +192,7 @@ link" are not the ESP32. The Arduino IDE's port menu shows the same name.
 | `-physxr-m2-selftest` (headless player) | see README | **23/23** |
 | `-physxr-selftest` (VIRTUAL_ONLY / SIMULATED) | see README | **34/34** each |
 | `-physxr-selftest -physxr-condition PHYSICAL_PLUS_VIRTUAL -physxr-transport serial -physxr-serial-port AUTO`, no ESP32 | — | **34/34**; link `DISCONNECTED: no USB COM ports, only Bluetooth ...`, 0 packets, 0 physical events, 0 of 33 decisions citing physical input, port released on exit |
+| Same run on a player of `8bf28a6` (includes the `0241e15` telemetry fix), 3 consecutive runs, telemetry file of each run inspected | — | **3/3**: 34/34 each; record 0 of each `.jsonl` (ts 18–19 ms, frame 0) is the single initial `SOURCE_STATUS`: `from=NONE to=UNAVAILABLE condition=PHYSICAL_PLUS_VIRTUAL transport=USB_SERIAL serial=AUTO @ 115200`, before `SERIAL_LINK` and every encounter record; 0 `PKT_RX`, 0 `PHYS_EVENT`, 0 decisions citing physical input; "USB serial link released" logged on exit. The pre-fix player (`a6d976a`) wrote 0 `SOURCE_STATUS` records in the same test |
 | Live hardware | — | **Not run** (no ESP32 connected) |
 
 `SerialTransportTests` covers: framing (partial lines, several per read, CRLF, empty, oversized), line
@@ -259,5 +261,10 @@ Record pass/fail, the date and observations for each. Stop at the first failure 
   station's ToF breakout is a VL53L0X comes from the schematic poster; it is not physically confirmed.
 - **USB adapter behaviour on open**: DTR/RTS are left de-asserted so opening should not reset the board;
   if a board resets anyway, the boot-ID handling covers it. Not observed on hardware.
-- **Telemetry**: until the fix after `a6d976a`, the first `SOURCE_STATUS` record (condition, transport,
-  port) was emitted before the trial file opened and was lost; the trial header holds only a settings hash.
+- **Telemetry**: fixed in `0241e15` and verified in a player (see section 6). Builds before it lose the
+  first `SOURCE_STATUS` record (condition, transport, port).
+- **Port release with a real port**: "link released" is verified only with no port open (AUTO found no USB
+  port). That a real COM port can be reopened by the Arduino IDE right after quitting is checklist step 25.
+- **Memory**: the intermittent self-test early exits were traced (by the gameplay session) to the PC running
+  out of commit memory while the Editor, its build workers and several players ran at once; with the Editor
+  closed, all runs passed. Run hardware tests with the Editor closed or with memory to spare.
