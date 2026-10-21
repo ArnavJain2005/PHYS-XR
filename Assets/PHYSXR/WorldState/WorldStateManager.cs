@@ -1,4 +1,6 @@
+using System;
 using PHYSXR.Core.Data;
+using PHYSXR.Core.Enums;
 using PHYSXR.PhysicalWorld;
 
 namespace PHYSXR.WorldStateSystem
@@ -24,9 +26,28 @@ namespace PHYSXR.WorldStateSystem
     // used like a type" compiler error - not just within this file. This
     // was discovered as a genuine compilation issue while wiring
     // RuleBasedDecisionProvider and fixed by renaming this namespace.
+    //
+    // PHYSICAL GATING (fix P2, spec sections D/E): the original manager kept
+    // the last accepted PhysicalState in every snapshot forever, so a sensor
+    // that had gone silent minutes ago could still trigger PROTECT. When the
+    // manager is built with a clock (the gated constructor), the physical part
+    // of each snapshot is:
+    //   - neutral (NONE / LOW / no disturbance) unless SourceStatus is FRESH,
+    //     and always neutral while PhysicalInputMasked (virtual-only trials);
+    //   - otherwise the live presence/confidence, with disturbance true only
+    //     during the DisturbancePulseMs pulse started by a newly accepted
+    //     physical event (NotifyAcceptedEvent). The raw per-line disturbance
+    //     flag is not used, so a repeated packet cannot restart the pulse.
+    // The legacy constructor keeps the original pass-through behaviour, which
+    // the WORLD suites document.
     public class WorldStateManager
     {
+        public const long DefaultDisturbancePulseMs = 3000L;
+
         private readonly PhysicalStateManager physicalStateManager;
+        private readonly Func<long> clock;
+        private long pulseUntil = long.MinValue;
+        private long pulseEventId;
 
         // Explicit default objects (not null) so a coherent snapshot can
         // always be produced, even before any Player/Virtual/Ghost state
@@ -42,6 +63,55 @@ namespace PHYSXR.WorldStateSystem
         public WorldStateManager(PhysicalStateManager physicalStateManager)
         {
             this.physicalStateManager = physicalStateManager;
+        }
+
+        // Gated constructor (P2). clock supplies "now" in milliseconds for the
+        // disturbance pulse; it must be monotonic. The source starts
+        // UNAVAILABLE until UpdateSourceStatus says otherwise.
+        public WorldStateManager(PhysicalStateManager physicalStateManager, Func<long> clock,
+            long disturbancePulseMs = DefaultDisturbancePulseMs)
+        {
+            this.physicalStateManager = physicalStateManager;
+            this.clock = clock ?? throw new ArgumentNullException(nameof(clock));
+            DisturbancePulseMs = disturbancePulseMs;
+        }
+
+        public bool IsGated => clock != null;
+
+        public long DisturbancePulseMs { get; } = DefaultDisturbancePulseMs;
+
+        // Freshness of the physical source, pushed each frame by the sensing
+        // service. Only FRESH lets physical state through (gated mode).
+        public PhysicalSourceStatus SourceStatus { get; private set; } = PhysicalSourceStatus.UNAVAILABLE;
+
+        // True for the VIRTUAL_ONLY condition: packets are still received and
+        // logged upstream, but the decision rules always see neutral physical state.
+        public bool PhysicalInputMasked { get; set; }
+
+        public bool DisturbancePulseActive => clock != null && clock() < pulseUntil;
+
+        public void UpdateSourceStatus(PhysicalSourceStatus status)
+        {
+            SourceStatus = status;
+        }
+
+        // A newly accepted (already deduplicated) physical event starts the
+        // disturbance pulse. Duplicates never reach here: PhysicalEventManager
+        // drops them first. Ignored in legacy mode.
+        public void NotifyAcceptedEvent(PhysicalEvent physicalEvent)
+        {
+            if (clock == null || physicalEvent == null)
+                return;
+
+            pulseUntil = clock() + DisturbancePulseMs;
+            pulseEventId = physicalEvent.eventId;
+        }
+
+        // Checkpoint restart: an old pulse must not carry into the new attempt.
+        public void ClearDisturbancePulse()
+        {
+            pulseUntil = long.MinValue;
+            pulseEventId = 0L;
         }
 
         public void UpdatePlayerState(PlayerState newState)
@@ -98,7 +168,7 @@ namespace PHYSXR.WorldStateSystem
 
             return new WorldState
             {
-                physical = ClonePhysicalState(physical),
+                physical = clock != null ? GatePhysicalState(physical) : ClonePhysicalState(physical),
                 player = ClonePlayerState(currentPlayerState),
                 virtualWorld = CloneVirtualState(currentVirtualState),
                 ghost = CloneGhostState(currentGhostState)
@@ -112,7 +182,23 @@ namespace PHYSXR.WorldStateSystem
                 presence = source.presence,
                 confidence = source.confidence,
                 disturbance = source.disturbance,
-                timestamp = source.timestamp
+                timestamp = source.timestamp,
+                causeEventId = source.causeEventId
+            };
+        }
+
+        private PhysicalState GatePhysicalState(PhysicalState source)
+        {
+            bool live = SourceStatus == PhysicalSourceStatus.FRESH && !PhysicalInputMasked;
+            bool pulse = live && clock() < pulseUntil;
+
+            return new PhysicalState
+            {
+                presence = live ? source.presence : PresenceLevel.NONE,
+                confidence = live ? source.confidence : ConfidenceLevel.LOW,
+                disturbance = pulse,
+                timestamp = source.timestamp,
+                causeEventId = pulse ? pulseEventId : 0L
             };
         }
 
@@ -122,7 +208,8 @@ namespace PHYSXR.WorldStateSystem
             {
                 distanceToGhost = source.distanceToGhost,
                 movement = source.movement,
-                inThreatZone = source.inThreatZone
+                inThreatZone = source.inThreatZone,
+                inWarnBand = source.inWarnBand
             };
         }
 
@@ -131,7 +218,11 @@ namespace PHYSXR.WorldStateSystem
             return new VirtualState
             {
                 threatLevel = source.threatLevel,
-                eventActive = source.eventActive
+                eventActive = source.eventActive,
+                mandatoryWarningBeat = source.mandatoryWarningBeat,
+                gameplayTerminal = source.gameplayTerminal,
+                encounterCommitted = source.encounterCommitted,
+                attackGraceActive = source.attackGraceActive
             };
         }
 
@@ -139,7 +230,10 @@ namespace PHYSXR.WorldStateSystem
         {
             return new GhostState
             {
-                currentState = source.currentState
+                currentState = source.currentState,
+                phase = source.phase,
+                phaseElapsedMs = source.phaseElapsedMs,
+                attackCooldownMs = source.attackCooldownMs
             };
         }
     }

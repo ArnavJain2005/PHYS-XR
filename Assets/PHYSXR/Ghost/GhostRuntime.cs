@@ -1,5 +1,6 @@
 using System;
 using PHYSXR.Core.Data;
+using PHYSXR.Core.Enums;
 using PHYSXR.Decision;
 using PHYSXR.Telemetry;
 using PHYSXR.WorldStateSystem;
@@ -9,60 +10,74 @@ namespace PHYSXR.Ghost
 {
     // Unity-facing runtime adapter. This is the ONLY class in the PHYSXR
     // Ghost pipeline that may depend on UnityEngine - everything it
-    // composes (RuleBasedDecisionProvider, GhostActionExecutor,
-    // GhostBehaviourController) remains plain C# and Unity-independent.
+    // composes (RuleBasedDecisionProvider, EncounterDecisionLayer,
+    // GhostActionExecutor, GhostBehaviourController) remains plain C# and
+    // Unity-independent.
     //
     // Ownership: GhostRuntime does NOT construct its own PhysicalStateManager
-    // or WorldStateManager. The eventual owner of WorldStateManager is the
-    // (not yet built) Communication bootstrap layer, so WorldStateManager
-    // must be supplied externally via Initialize(). No singleton, no
+    // or WorldStateManager. The game composition (GameFlowController) owns
+    // WorldStateManager and supplies it via Initialize(). No singleton, no
     // FindObjectOfType/FindFirstObjectByType, no static global state, and
     // no silent fallback WorldStateManager is ever constructed here.
     //
     // Lifecycle: intentionally has no Awake()/Update() driving the pipeline
-    // automatically. There is no scene bootstrap or ordering guarantee yet
-    // for when/whether Initialize() has been called relative to Unity's own
-    // lifecycle callbacks, so an automatic Update() could silently run (or
-    // silently skip) the pipeline in ways that mask real wiring bugs.
-    // Instead, Tick() is explicit: the caller controls both initialization
-    // ordering and ticking cadence, and Tick() fails loudly if called
-    // before Initialize().
+    // automatically. Tick() is explicit: GameFlowController calls it once per
+    // frame after pushing Player/Virtual/Ghost state, and only while the run
+    // is playing. Tick() fails loudly if called before Initialize().
+    //
+    // DECISION CLOCK (fix P1): Initialize(worldStateManager, clock) rebuilds
+    // the chain with that monotonic clock injected into both decision layers,
+    // and Tick() stamps telemetry with it. The game passes accumulated scaled
+    // game time, so hysteresis keeps counting while the sensor is silent and
+    // stops while the game is paused. Initialize(worldStateManager) keeps the
+    // original composition (sensor timestamps, wall-clock telemetry).
     public class GhostRuntime : MonoBehaviour
     {
         private WorldStateManager worldStateManager;
+        private Func<long> decisionClock;
 
-        private readonly RuleBasedDecisionProvider decisionProvider = new RuleBasedDecisionProvider();
-        private readonly IGhostActionExecutor actionExecutor = new GhostActionExecutor();
-        private readonly IGhostBehaviourController behaviourController = new GhostBehaviourController();
+        private IGhostActionExecutor actionExecutor = new GhostActionExecutor();
+        private IGhostBehaviourController behaviourController = new GhostBehaviourController();
 
         // Plain C#, Unity-independent orchestration of decide -> execute ->
-        // apply (+ optional telemetry), extracted so it stays directly
-        // testable outside Unity. See GhostRuntimePipeline for details.
-        private readonly GhostRuntimePipeline pipeline;
+        // apply (+ optional telemetry). See GhostRuntimePipeline.
+        private GhostRuntimePipeline pipeline;
 
         // A field initializer cannot reference another instance field
-        // (CS0236), so this composition happens in a constructor instead.
-        // This is safe for a MonoBehaviour here because it only wires
-        // together plain C# objects already created by field initializers
-        // above - it calls no UnityEngine API and touches no serialized
-        // field, which is what Unity's "avoid MonoBehaviour constructors"
-        // guidance actually warns against.
+        // (CS0236), so the default composition happens in a constructor.
+        // It only wires plain C# objects and calls no UnityEngine API, which
+        // is what Unity's "avoid MonoBehaviour constructors" guidance is about.
         public GhostRuntime()
         {
-            pipeline = new GhostRuntimePipeline(decisionProvider, actionExecutor, behaviourController);
+            pipeline = GhostRuntimePipeline.CreateRuntimeChain(new RuleBasedDecisionProvider(), actionExecutor, behaviourController);
         }
 
         public bool IsInitialized { get; private set; }
 
-        // Current execution-level behaviour state, read-only, for future
-        // Unity presentation code (Animator/NavMesh/audio/VFX - none of
-        // which are implemented yet).
+        // The run's terminal-state owner (EnterTerminal / RestartFromCheckpoint).
+        // Null until Initialize() has supplied the WorldStateManager it needs.
+        public GameplaySession Session { get; private set; }
+
+        // True once the run is terminal: the ghost's decision/execution/
+        // behaviour pipeline is gated off and presentation must not drive
+        // ordinary ghost movement or attacks.
+        public bool IsHalted => behaviourController.IsHalted;
+
+        // Current execution-level behaviour state, read-only, for the
+        // presentation layer (GhostMotionController).
         public GhostExecutionState CurrentState => behaviourController.CurrentState;
 
-        // Optional telemetry sink. Left null by default, so existing
-        // runtime behaviour is completely unaffected if no sink is ever
-        // supplied - telemetry is never required for initialization or
-        // for Tick() to function.
+        public GhostRuntimePipeline Pipeline => pipeline;
+
+        // Most recent decision outputs, for the motion controller's telemetry
+        // and the dev overlay.
+        public GhostAction? LastAction => pipeline.LastAction;
+        public string LastRuleId => pipeline.LastRuleId;
+        public string LastReason => pipeline.LastReason;
+        public long CurrentDecisionId => pipeline.CurrentDecisionId;
+
+        // Optional telemetry sink. Left null by default; telemetry is never
+        // required for initialization or for Tick() to function.
         public ITelemetrySink TelemetrySink
         {
             get => pipeline.TelemetrySink;
@@ -70,19 +85,30 @@ namespace PHYSXR.Ghost
         }
 
         // Explicit injection point for the externally-owned WorldStateManager.
-        // A future Unity-facing composition/bootstrap layer calls this once
-        // it exists; GhostRuntime never looks WorldStateManager up itself.
         public void Initialize(WorldStateManager worldStateManager)
         {
             this.worldStateManager = worldStateManager ?? throw new ArgumentNullException(nameof(worldStateManager));
+            Session = new GameplaySession(this.worldStateManager, pipeline);
             IsInitialized = true;
         }
 
-        // Runs one pass of the existing pipeline:
-        // WorldState -> GhostAction -> GhostExecutionState -> GhostBehaviourController
-        // (plus optional telemetry, see GhostRuntimePipeline). Contains no
-        // decision logic itself - it only fetches WorldState and hands it
-        // to the already Unity-independent, already-tested pipeline.
+        // Game composition: the clocked chain (P1) with change-only telemetry.
+        public void Initialize(WorldStateManager worldStateManager, Func<long> decisionClock, ITelemetrySink telemetrySink = null)
+        {
+            this.decisionClock = decisionClock ?? throw new ArgumentNullException(nameof(decisionClock));
+            actionExecutor = new GhostActionExecutor();
+            behaviourController = new GhostBehaviourController();
+            pipeline = GhostRuntimePipeline.CreateRuntimeChain(decisionClock, actionExecutor, behaviourController);
+            pipeline.ChangeOnlyTelemetry = true;
+            pipeline.TelemetrySink = telemetrySink;
+            Initialize(worldStateManager);
+        }
+
+        // Runs one pass of the pipeline:
+        // WorldState -> RuleBasedDecisionProvider -> EncounterDecisionLayer ->
+        // GhostAction -> GhostExecutionState -> GhostBehaviourController
+        // (plus optional telemetry). Once the run is terminal the pipeline's
+        // gate makes this a no-op for the ghost.
         public void Tick()
         {
             if (!IsInitialized)
@@ -90,7 +116,8 @@ namespace PHYSXR.Ghost
                     "GhostRuntime.Tick() was called before Initialize(WorldStateManager) - no WorldStateManager has been supplied.");
 
             WorldState worldState = worldStateManager.GetCurrentWorldState();
-            pipeline.Run(worldState, DateTimeOffset.UtcNow.ToUnixTimeMilliseconds());
+            long now = decisionClock != null ? decisionClock() : DateTimeOffset.UtcNow.ToUnixTimeMilliseconds();
+            pipeline.Run(worldState, now);
         }
     }
 }

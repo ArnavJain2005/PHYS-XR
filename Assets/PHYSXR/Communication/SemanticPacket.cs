@@ -24,5 +24,15 @@ namespace PHYSXR.Communication
         public bool hasEvent;
         public string eventType;
         public long eventId;
+
+        // Contract v1 additions (spec section E). All optional on the wire, so
+        // legacy packets without them still validate: version 0 and boot 0
+        // mean "not sent".
+        public int version;
+        public string deviceId;
+        public long boot;
+
+        // Device time at which the event qualified (T0); 0 when not sent.
+        public long eventTimestamp;
     }
 }

@@ -1,4 +1,5 @@
 using System;
+using System.Collections.Generic;
 using System.Text;
 using PHYSXR.Core.Enums;
 
@@ -11,24 +12,59 @@ namespace PHYSXR.Communication
     // Sequence tracking lives here (not in PhysicalStateManager) so that
     // "old sequence number can never overwrite newer state" is enforced at
     // the communication boundary, independent of the decision system.
+    //
+    // BOOT IDENTITY (fix P3): sequence numbers restart at 1 when the ESP32
+    // reboots. Ordering is therefore tracked per boot: a packet with a boot
+    // ID not seen before starts fresh sequence tracking (and is flagged
+    // isNewBoot), while a packet from an earlier boot is rejected OLD_BOOT.
+    // Packets in the legacy format carry no boot field and all count as boot
+    // 0, so the original single-sequence behaviour is unchanged for them.
+    //
+    // Contract v1 fields (spec section E) are optional on the wire: when "v"
+    // is present it must be a supported version, and when "dev" is present
+    // and a device ID is configured, it must match.
     public class PacketValidator
     {
+        public const int MaxDatagramBytes = 512;
+        public const int SupportedVersion = 1;
+
+        private readonly string expectedDeviceId;
+        private readonly HashSet<long> earlierBoots = new HashSet<long>();
+
         private long lastAcceptedSequenceNumber = long.MinValue;
         private bool hasAcceptedAny;
+        private long currentBoot;
+
+        public PacketValidator()
+            : this(null)
+        {
+        }
+
+        // expectedDeviceId: when set, a packet whose "dev" differs is rejected
+        // FOREIGN_DEVICE, so other stations on the network are ignored.
+        public PacketValidator(string expectedDeviceId)
+        {
+            this.expectedDeviceId = string.IsNullOrEmpty(expectedDeviceId) ? null : expectedDeviceId;
+        }
+
+        public long CurrentBoot => currentBoot;
 
         public ValidationResult Validate(byte[] rawData)
         {
             if (rawData == null || rawData.Length == 0)
-                return ValidationResult.Reject("empty packet");
+                return ValidationResult.Reject(PacketRejectCode.BAD_SIZE, "empty packet");
+
+            if (rawData.Length > MaxDatagramBytes)
+                return ValidationResult.Reject(PacketRejectCode.BAD_SIZE, "packet larger than " + MaxDatagramBytes + " bytes");
 
             string text;
             try
             {
-                text = Encoding.UTF8.GetString(rawData);
+                text = new UTF8Encoding(false, true).GetString(rawData);
             }
             catch (Exception)
             {
-                return ValidationResult.Reject("undecodable packet bytes");
+                return ValidationResult.Reject(PacketRejectCode.MALFORMED, "undecodable packet bytes");
             }
 
             return Validate(text);
@@ -37,11 +73,26 @@ namespace PHYSXR.Communication
         public ValidationResult Validate(string rawText)
         {
             if (string.IsNullOrWhiteSpace(rawText))
-                return ValidationResult.Reject("empty packet");
+                return ValidationResult.Reject(PacketRejectCode.BAD_SIZE, "empty packet");
 
             var fields = ProvisionalTextPacketFormat.ParseFields(rawText);
             if (fields == null)
-                return ValidationResult.Reject("malformed packet");
+                return ValidationResult.Reject(PacketRejectCode.MALFORMED, "malformed packet");
+
+            int version = 0;
+            if (fields.TryGetValue("v", out var versionText))
+            {
+                if (!int.TryParse(versionText, out version) || version != SupportedVersion)
+                    return ValidationResult.Reject(PacketRejectCode.VERSION_UNSUPPORTED, "unsupported packet version '" + versionText + "'");
+            }
+
+            fields.TryGetValue("dev", out var deviceId);
+            if (expectedDeviceId != null && !string.IsNullOrEmpty(deviceId) && deviceId != expectedDeviceId)
+                return ValidationResult.Reject(PacketRejectCode.FOREIGN_DEVICE, "packet from foreign device '" + deviceId + "'");
+
+            long boot = 0;
+            if (fields.TryGetValue("boot", out var bootText) && (!long.TryParse(bootText, out boot) || boot < 0))
+                return ValidationResult.Reject("invalid boot identity");
 
             if (!fields.TryGetValue("seq", out var seqText) || !long.TryParse(seqText, out long sequenceNumber))
                 return ValidationResult.Reject("missing or invalid sequence number");
@@ -58,8 +109,21 @@ namespace PHYSXR.Communication
             if (!fields.TryGetValue("disturbance", out var disturbanceText) || !bool.TryParse(disturbanceText, out bool disturbance))
                 return ValidationResult.Reject("missing or invalid disturbance flag");
 
-            if (hasAcceptedAny && sequenceNumber <= lastAcceptedSequenceNumber)
-                return ValidationResult.Reject("stale or duplicate sequence number");
+            long eventTimestamp = 0;
+            if (fields.TryGetValue("tEvent", out var tEventText) && tEventText.Length > 0
+                && (!long.TryParse(tEventText, out eventTimestamp) || eventTimestamp < 0))
+                return ValidationResult.Reject("invalid event timestamp");
+
+            bool isNewBoot = false;
+            if (hasAcceptedAny && boot != currentBoot)
+            {
+                if (earlierBoots.Contains(boot))
+                    return ValidationResult.Reject(PacketRejectCode.OLD_BOOT, "packet from an earlier boot");
+                isNewBoot = true;
+            }
+
+            if (hasAcceptedAny && !isNewBoot && sequenceNumber <= lastAcceptedSequenceNumber)
+                return ValidationResult.Reject(PacketRejectCode.OUT_OF_ORDER, "stale or duplicate sequence number");
 
             fields.TryGetValue("eventType", out var eventType);
             bool hasEvent = fields.TryGetValue("eventId", out var eventIdText)
@@ -75,13 +139,26 @@ namespace PHYSXR.Communication
                 disturbance = disturbance,
                 eventType = eventType ?? string.Empty,
                 eventId = hasEvent ? long.Parse(eventIdText) : 0,
-                hasEvent = hasEvent
+                hasEvent = hasEvent,
+                version = version,
+                deviceId = deviceId ?? string.Empty,
+                boot = boot,
+                eventTimestamp = eventTimestamp
             };
 
+            long gap = hasAcceptedAny && !isNewBoot ? Math.Max(0L, sequenceNumber - lastAcceptedSequenceNumber - 1) : 0L;
+
+            if (isNewBoot)
+                earlierBoots.Add(currentBoot);
+
+            currentBoot = boot;
             lastAcceptedSequenceNumber = sequenceNumber;
             hasAcceptedAny = true;
 
-            return ValidationResult.Accept(packet);
+            ValidationResult result = ValidationResult.Accept(packet);
+            result.isNewBoot = isNewBoot;
+            result.sequenceGap = gap;
+            return result;
         }
 
         public long LastAcceptedSequenceNumber => lastAcceptedSequenceNumber;

@@ -11,6 +11,9 @@ namespace PHYSXR.Ghost
         Warning,
         Investigating,
         Protecting,
-        Retreating
+        Retreating,
+
+        // Versioned extension paired with GhostAction.ATTACK.
+        Attacking
     }
 }

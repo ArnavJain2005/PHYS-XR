@@ -27,6 +27,8 @@ namespace PHYSXR.Ghost
                     return GhostExecutionState.Protecting;
                 case GhostAction.RETREAT:
                     return GhostExecutionState.Retreating;
+                case GhostAction.ATTACK:
+                    return GhostExecutionState.Attacking;
                 default:
                     // No silent fallthrough: an unrecognized GhostAction
                     // value (e.g. an invalid cast) must fail loudly rather

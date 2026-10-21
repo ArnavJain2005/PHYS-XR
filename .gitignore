@@ -69,6 +69,11 @@ crashlytics-build.properties
 /[Aa]ssets/[Ss]treamingAssets/aa.meta
 /[Aa]ssets/[Ss]treamingAssets/aa/*
 
+# Standalone .NET test harness: keep its project file, ignore its build output
+!/Tools/TestHarness/TestHarness.csproj
+/Tools/TestHarness/bin/
+/Tools/TestHarness/obj/
+
 # IDE / editor local settings
 .vscode/
 .idea/

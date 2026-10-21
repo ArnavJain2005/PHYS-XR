@@ -72,5 +72,26 @@ namespace PHYSXR.Communication
                 "seq={0};ts={1};presence={2};confidence={3};disturbance={4};eventType={5};eventId={6}",
                 sequenceNumber, timestamp, presence, confidence, disturbance, eventType, eventId);
         }
+
+        // Proposed contract v1 (Technical Spec section E, not yet verified
+        // against firmware): the legacy keys plus v, dev, boot and tEvent.
+        // Booleans are written lower-case, as firmware would print them.
+        public static string EncodeV1(
+            string deviceId,
+            long boot,
+            long sequenceNumber,
+            long timestamp,
+            string presence,
+            string confidence,
+            bool disturbance,
+            string eventType,
+            long eventId,
+            long eventTimestamp)
+        {
+            return string.Format(System.Globalization.CultureInfo.InvariantCulture,
+                "v=1;dev={0};boot={1};seq={2};ts={3};presence={4};confidence={5};disturbance={6};eventType={7};eventId={8};tEvent={9}",
+                deviceId, boot, sequenceNumber, timestamp, presence, confidence, disturbance ? "true" : "false",
+                eventType, eventId, eventTimestamp);
+        }
     }
 }

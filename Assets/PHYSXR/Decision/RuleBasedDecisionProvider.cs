@@ -1,3 +1,4 @@
+using System;
 using PHYSXR.Core.Data;
 using PHYSXR.Core.Enums;
 using PHYSXR.Core.Interfaces;
@@ -23,6 +24,14 @@ namespace PHYSXR.Decision
     // decides whether the selected candidate is actually returned, or
     // whether the previous action is retained a little longer to avoid
     // rapid de-escalation flicker. See that method for the exact policy.
+    //
+    // DECISION CLOCK (fix P1): hysteresis originally measured dwell with
+    // WorldState.physical.timestamp. That timestamp is the sensor's, so it
+    // stops advancing whenever no packets arrive (virtual-only mode, a sensor
+    // dropout), and the provider then froze in its last action forever. An
+    // optional monotonic clock can now be injected; when present, every
+    // temporal-context timestamp comes from it instead. Without one, the
+    // provider behaves exactly as before, so the existing suites still apply.
     public class RuleBasedDecisionProvider : IDecisionProvider
     {
         // Calibration parameters - NOT frozen architecture values.
@@ -58,14 +67,22 @@ namespace PHYSXR.Decision
         private readonly DecisionHistory temporalContext = new DecisionHistory();
         public DecisionHistory TemporalContext => temporalContext;
 
+        // Optional monotonic decision clock in milliseconds (P1). Null means
+        // the legacy time source, WorldState.physical.timestamp.
+        private readonly Func<long> decisionClock;
+
+        public bool HasDecisionClock => decisionClock != null;
+
         public RuleBasedDecisionProvider(
             float elevatedThreatThreshold = 0.4f,
             float criticalThreatThreshold = 0.7f,
-            long minimumActionDwellMs = 1500L)
+            long minimumActionDwellMs = 1500L,
+            Func<long> decisionClock = null)
         {
             ElevatedThreatThreshold = elevatedThreatThreshold;
             CriticalThreatThreshold = criticalThreatThreshold;
             MinimumActionDwellMs = minimumActionDwellMs;
+            this.decisionClock = decisionClock;
         }
 
         // Clears the temporal context (and therefore all hysteresis state,
@@ -172,7 +189,7 @@ namespace PHYSXR.Decision
         // beyond what DecisionHistory already tracks.
         private GhostAction ApplyHysteresisAndRecord(GhostAction candidateAction, string candidateReason, WorldState state)
         {
-            long timestamp = state?.physical?.timestamp ?? 0L;
+            long timestamp = decisionClock != null ? decisionClock() : state?.physical?.timestamp ?? 0L;
             bool disturbanceActive = state?.physical?.disturbance ?? false;
 
             GhostAction? previousAction = temporalContext.PreviousAction;
