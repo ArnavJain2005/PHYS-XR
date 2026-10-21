@@ -20,6 +20,23 @@ the development PC; COM3/5/7/8 there are Bluetooth. It still runs an old bench s
 wiring: TRIG 25, ECHO 26 with a divider "reported present", SCL 23, ToF "VL53L0X V2"; SDA 21 and common ground
 not confirmed.
 
+**Desk review before acceptance (21 Oct 2026; no hardware touched, nothing below is a physical result).**
+- *Software re-check on `d583f02`:* harness 24 suites / 314 passed (serial suite 29/29), firmware host test
+  47/47, and `arduino-cli compile --warnings all` against the real Pololu VL53L0X 1.3.1 with 0 warnings
+  (305,548 B flash, 24,628 B RAM, `VL53L0X.cpp` linked).
+- *`physxr_station` ultrasonic code:* reviewed, no fault found. TRIG 25 is an output held LOW, ECHO 26 an
+  input with a CHANGE interrupt, 10 µs trigger every 66 ms, 25 ms echo timeout, 2–400 cm accepted. A missing
+  echo marks the sample invalid; nothing is substituted.
+- *The `SONAR No echo` source is unknown.* The sketch now on the board (it prints `LASER`/`SONAR`/`MPU`) was
+  not found on this PC, so its TRIG/ECHO pins cannot be checked, and its `No echo` does **not** by itself
+  show a wiring fault on 25/26. The only bench sketch found, the I²C scanner
+  (`OneDrive/Desktop/PHYS-XR/Demo.cpp/Demo.cpp.ino`), uses `Wire.begin(21, 22)`: SDA 21, **SCL 22**.
+- *Likely physical causes, in order (to be measured, A1–A6, C4):* HC-SR04 not on 5 V; missing common
+  ground; TRIG/ECHO swapped or on other pins; divider reversed (a 10 kΩ/20 kΩ divider wired the wrong way
+  round gives ≈ 1.7 V, below the ESP32's ≈ 2.5 V input-high threshold, so the echo is never seen); an
+  obstruction a few cm in front of the sensors (the ToF read 42–52 mm at the same time, inside the
+  HC-SR04's practical blind zone).
+
 **PC set-up.** Close the Unity Editor and any large programs during player runs: earlier self-test early
 exits coincided with the PC running out of commit memory. Close the Arduino Serial Monitor before starting
 the game or the harness monitor: only one program can hold the COM port.
@@ -28,10 +45,10 @@ the game or the harness monitor: only one program can hold the COM port.
 
 | # | Do | Expect | Result |
 |---|---|---|---|
-| A1 **STOP** | Measure the HC-SR04 ECHO path. ECHO is a **5 V** output; it must reach GPIO 26 through a divider (e.g. 10 kΩ from ECHO to GPIO 26, 20 kΩ from GPIO 26 to GND) or a level shifter. Photograph it. | Divider/shifter present and oriented correctly. With power on later (C4), GPIO 26 never exceeds **3.3 V**. | |
-| A2 **STOP** | Trace the I²C SCL wire. **Unresolved: GPIO 22 or 23** (latest code says 23; schematic poster and I²C scanner say 22). | Record the pin: ____. The firmware tries 23 then 22; C2 must report the same. | |
-| A3 | Trace SDA and ground. | SDA → GPIO 21. **Common ground** between ESP32, VL53L0X, HC-SR04 and MPU6050. | |
-| A4 | Check supplies. | HC-SR04 VCC = **5 V** (it does not range on 3.3 V). VL53L0X and MPU6050 breakouts on VIN or 3V3 as their boards require. | |
+| A1 **STOP** | **USB unplugged.** Measure the HC-SR04 ECHO path with a multimeter (resistance mode). ECHO is a **5 V** output; it must reach GPIO 26 through a divider (e.g. 10 kΩ from the HC-SR04 ECHO pin to GPIO 26, 20 kΩ from GPIO 26 to GND) or a level shifter. Photograph it. | ECHO pin → GPIO 26 ≈ **10 kΩ** (the top resistor, never ≈ 0 Ω); GPIO 26 → GND ≈ **20 kΩ**. In-circuit readings can come out lower because of parallel paths through the modules; if unsure, read the resistors' colour codes or lift one leg. ≈ 0 Ω from ECHO to GPIO 26 means **no protection: stop**. Values swapped (20 k on top, 10 k to GND) means the divider is reversed. Later, powered (C4): GPIO 26 ≤ **3.3 V**, about 3.3 V while echoing with 10 k/20 k. | |
+| A2 **STOP** | **USB unplugged.** Continuity test from the SCL pin of the VL53L0X breakout and of the MPU6050 breakout to the ESP32 header. **Unresolved: GPIO 22 or 23** (latest code says 23; schematic poster and the I²C scanner sketch say 22). | Both modules' SCL beep to the **same** ESP32 pin, and only to it (no continuity to the other candidate). Record the pin: ____. The firmware tries 23 then 22; C2 must report the same. | |
+| A3 | **USB unplugged.** Continuity: SDA of both I²C modules → ESP32 GPIO 21; GND of ESP32, VL53L0X, HC-SR04 and MPU6050 all connected; no continuity between SDA and SCL or between either and GND/3V3/5V. | SDA → GPIO 21 on both modules. **Common ground** across all four boards. No shorts. | |
+| A4 | Check supplies (continuity unplugged, then voltage once A1–A3 pass and USB is connected). | HC-SR04 VCC wired to the ESP32's **5V/VIN** pin and reading ≈ 4.7–5.1 V on USB (it does not range on 3.3 V). VL53L0X and MPU6050 breakouts on VIN or 3V3 as their boards require. | |
 | A5 | Check TRIG/ECHO. | TRIG → GPIO 25, ECHO → GPIO 26, not swapped. (The poster shows 5/18; if the station is really wired 5/18, change `PIN_TRIG`/`PIN_ECHO` in the sketch, do not re-wire.) | |
 | A6 | Clear the ToF's field of view. | Nothing within ~1.2 m in front of the VL53L0X (the old sketch read 42–52 mm, i.e. something ~5 cm away). Note the mounting geometry. | |
 | A7 | Photograph the whole wiring and mounting. | Photos attached to the report. | |
