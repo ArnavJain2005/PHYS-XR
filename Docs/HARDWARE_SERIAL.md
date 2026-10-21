@@ -3,12 +3,22 @@
 How the physical station (ESP32 + VL53L0X + HC-SR04 + MPU6050) drives The Hollow, how to set it up in
 Unity, and what has been verified. Firmware details (pins, protocol, calibration): [`Firmware/README.md`](../Firmware/README.md).
 
-**Status (21 Oct 2026, second pass): software complete; firmware compiles against the real Pololu
-VL53L0X 1.3.1; a fresh Windows player of `a6d976a` passes every self-test, including USB-serial mode with
-no ESP32 attached; the `SOURCE_STATUS` telemetry fix (`0241e15`) is verified in a player of `8bf28a6`.
-Not yet run against the physical station** — no ESP32 was connected in any pass.
-No ESP32 was connected to the development PC (its only COM ports were Bluetooth). Every "Pass" below is
-an automated software test unless it says otherwise. Section 7 is the ordered checklist to run on the hardware.
+**Status (21 Oct 2026, evening): software complete and re-verified; not yet run with this firmware on the
+physical station.** The firmware compiles against the real Pololu VL53L0X 1.3.1 (repeated: 0 warnings,
+`VL53L0X.cpp` linked). The station's board is now connected as **COM6** (Silicon Labs CP210x) but still runs
+an old bench sketch; `physxr_station` has not been flashed. A read-only look and a USB-serial player
+self-test against it are recorded in section 6. Every "Pass" below is an automated software test unless it
+says otherwise. The ordered hardware procedure is [`HARDWARE_ACCEPTANCE.md`](HARDWARE_ACCEPTANCE.md).
+
+> **Physical verification required before powering the station with this firmware**
+>
+> | Item | Status | Why it matters |
+> |---|---|---|
+> | **HC-SR04 ECHO → GPIO 26 voltage protection** (divider or level shifter; ECHO is 5 V) | Reported present, **not measured** | Without it the 5 V echo can damage GPIO 26. Measure ≤ 3.3 V (checklist A1, C4). |
+> | **I²C SCL: GPIO 22 or 23** | **Unresolved** (latest code 23; poster and I²C scanner 22) | The firmware tries 23 then 22 and reports `scl=` in `#HELLO`; the wire must be traced and recorded (A2, C2). |
+> | **Ultrasonic not ranging** | The old sketch printed `SONAR No echo` on every cycle (21 Oct) | If it persists after flashing, confidence stays LOW and R1 PROTECT / R3 INVESTIGATE never fire. Check 5 V supply, TRIG/ECHO not swapped, divider orientation, ground (A4, A5, C4). |
+> | **SDA 21 and common ground** | Not confirmed | No I²C devices without them (A3). |
+> | **ToF field of view** | The old sketch read 42–52 mm with nothing intended in front | Would hold presence at VERY_NEAR; clear the field of view (A6). |
 
 ## 1. Architecture
 
@@ -150,13 +160,12 @@ physical input.
 Command line (Windows player), e.g. a kiosk shortcut:
 
 ```bash
-PHYS-XR.exe -physxr-transport serial -physxr-serial-port COM5 -physxr-serial-baud 115200
+PHYS-XR.exe -physxr-transport serial -physxr-serial-port COM6 -physxr-serial-baud 115200
 ```
 
 Finding the port on Windows: Device Manager → **Ports (COM & LPT)** → plug the ESP32 in and see which entry
-appears (typically "Silicon Labs CP210x USB to UART Bridge (COM5)" or "USB-SERIAL CH340 (COM5)"; on the
-development PC, Windows' device history shows the station's board as a **CP210x that last enumerated as
-COM6**). No entry →
+appears (typically "Silicon Labs CP210x USB to UART Bridge (COMn)" or "USB-SERIAL CH340 (COMn)"). On the
+development PC the station is **COM6** (CP210x); COM3, COM5, COM7 and COM8 there are Bluetooth. No entry →
 install the CP210x/CH340 driver or try a data-capable cable. Entries named "Standard Serial over Bluetooth
 link" are not the ESP32. The Arduino IDE's port menu shows the same name.
 
@@ -184,8 +193,9 @@ link" are not the ESP32. The Arduino IDE's port menu shows the same name.
 |---|---|---|
 | Firmware semantic core (host) | `g++ -std=c++17 -I Firmware/physxr_station Firmware/tests/semantics_test.cpp -o semantics_test && ./semantics_test` | **47/47** |
 | Firmware build for ESP32 | `arduino-cli compile --fqbn esp32:esp32:esp32 Firmware/physxr_station` | **Compiles, 0 warnings** with the real Pololu VL53L0X 1.3.1 and esp32 core 3.3.11: 305,548 B flash (23 %), 24,628 B RAM (7 %) |
-| Serial transport suite | `dotnet run -c Release --project Tools/TestHarness -- --suite SerialTransport` | **25/25** in 15 sequential runs and 12 runs three-at-a-time (after fixing a test-only race in SER-09/SER-10) |
-| Full harness (regression) | `dotnet run -c Release --project Tools/TestHarness` | **24 suites, 305 passed, 0 failed** (includes the gameplay bug-fix commit `1b7a475`); the serial work alone on its base: 23 suites, 291 passed |
+| Serial transport suite | `dotnet run -c Release --project Tools/TestHarness -- --suite SerialTransport` | **29/29** after `02cece8` (raw mode, SER-19..22) and the `dev=` requirement on the serial link (SER-05). Earlier: 25/25 in 15 sequential and 12 parallel runs; SER-09 30/30 idle and 31/31 under load after the race fix in `5efd34f` |
+| Full harness (regression) | `dotnet run -c Release --project Tools/TestHarness` (after `dotnet build -c Release --no-incremental Tools/TestHarness`) | **24 suites, 314 passed, 0 failed** (21 Oct 2026, evening; includes F1 and the raw mode) |
+| Firmware build, repeated | `arduino-cli compile --fqbn esp32:esp32:esp32 --warnings all Firmware/physxr_station`, with `ARDUINO_DIRECTORIES_USER` pointing at the scratch install of Pololu 1.3.1 | **0 warnings**, 305,548 B flash, 24,628 B RAM; the build folder shows the real `VL53L0X.cpp` compiled and linked. Host test 47/47 |
 | Unity compile | Editor import (`Logs/Editor.log`) and a scratch build of `Assembly-CSharp` against the 6000.5.8f1 DLLs | **0 errors, 0 warnings** |
 | Real kernel32 backend | SER-17 + `--serial-monitor AUTO/COM13` on this PC | Missing port → `FAULTED ... not found`; Bluetooth-only → `no USB COM ports, only Bluetooth`; port released |
 | Windows player build of `a6d976a` | `Unity -batchmode -quit -projectPath . -executeMethod PHYSXR.EditorTools.M2SceneSetup.BuildWindows -buildPath Builds/PHYSXR_Windows/PHYS-XR.exe` | **Succeeded**, 0 errors (486 warnings, all from the Sentis package's shaders) |
@@ -193,7 +203,10 @@ link" are not the ESP32. The Arduino IDE's port menu shows the same name.
 | `-physxr-selftest` (VIRTUAL_ONLY / SIMULATED) | see README | **34/34** each |
 | `-physxr-selftest -physxr-condition PHYSICAL_PLUS_VIRTUAL -physxr-transport serial -physxr-serial-port AUTO`, no ESP32 | — | **34/34**; link `DISCONNECTED: no USB COM ports, only Bluetooth ...`, 0 packets, 0 physical events, 0 of 33 decisions citing physical input, port released on exit |
 | Same run on a player of `8bf28a6` (includes the `0241e15` telemetry fix), 3 consecutive runs, telemetry file of each run inspected | — | **3/3**: 34/34 each; record 0 of each `.jsonl` (ts 18–19 ms, frame 0) is the single initial `SOURCE_STATUS`: `from=NONE to=UNAVAILABLE condition=PHYSICAL_PLUS_VIRTUAL transport=USB_SERIAL serial=AUTO @ 115200`, before `SERIAL_LINK` and every encounter record; 0 `PKT_RX`, 0 `PHYS_EVENT`, 0 decisions citing physical input; "USB serial link released" logged on exit. The pre-fix player (`a6d976a`) wrote 0 `SOURCE_STATUS` records in the same test |
-| Live hardware | — | **Not run** (no ESP32 connected) |
+| Read-only look at the connected board | `--serial-monitor COM6 15 115200 --raw` | Board on COM6 runs an **old bench sketch**: `LASER Distance: 42–52 mm`, `MPU Accel Z ≈ 1.03 g`, `SONAR No echo` every cycle. Unity side: 0 lines accepted, source UNAVAILABLE, old sketch reported, port released |
+| Player build of `02cece8` + the `dev=` change (batch, `Builds/M2_Windows`) | `M2SceneSetup.BuildWindows` | **Succeeded**, 0 errors. M2 23/23, default 34/34, SIMULATED 36/36 |
+| `-physxr-selftest -physxr-condition PHYSICAL_PLUS_VIRTUAL -physxr-transport serial -physxr-serial-port COM6`, old sketch attached | — | **34/34**. `SOURCE_STATUS ... transport=USB_SERIAL serial=COM6` first; `SERIAL_LEGACY_FIRMWARE` once; 0 `PKT_RX`, 0 `PHYS_EVENT`, 0 of 34 decisions citing physical input; port released |
+| Live hardware with `physxr_station` | — | **Not run** (firmware not flashed). See [`HARDWARE_ACCEPTANCE.md`](HARDWARE_ACCEPTANCE.md) |
 
 `SerialTransportTests` covers: framing (partial lines, several per read, CRLF, empty, oversized), line
 routing (contract / `#` diagnostic / old raw sketch / boot noise), the validator on the firmware's exact
@@ -206,48 +219,12 @@ R1–R8: INVESTIGATE with one pulse, PROTECT only on HIGH confidence, WARN on LO
 never changing state, link loss → neutral, reboot → resync, **serial and simulator giving identical
 decisions frame by frame**, and no ATTACK from sensor data.
 
-## 7. Hardware acceptance checklist (run in this order)
+## 7. Hardware acceptance checklist
 
-Record pass/fail, the date and observations for each. Stop at the first failure and fix it before continuing.
-
-**A. Before power**
-1. Photograph the wiring. Confirm TRIG → GPIO 25 and ECHO → GPIO 26 **through a divider/level shifter**
-   (HC-SR04 ECHO is 5 V). Confirm SDA → GPIO 21 and note whether SCL goes to GPIO **22** or **23**.
-2. Confirm common ground and the supply each module is on (VL53L0X/MPU6050 breakouts: VIN or 3V3).
-
-**B. Firmware alone (Arduino Serial Monitor, 115200)**
-3. Install the Pololu VL53L0X library; compile and flash `physxr_station` with no errors.
-4. On reset: `#HELLO` shows `scl=` (record it), `mpu=0x68` (or 0x69) and `tof=0x29`; no `#ERR`.
-5. `#CAL state=done` within ~2 s with `noise` < 0.03 g; `#DIAG` shows `imu_cal=1`.
-6. Close the Serial Monitor.
-
-**C. Monitor without Unity** (`--serial-monitor AUTO 120`)
-7. `LINK CONNECTED COMx (station)`; state lines accepted, `rejected 0`, `lost 0` over 2 minutes.
-8. Empty zone: `STATE NONE/HIGH`; ToF reads "nothing in range" or a far distance; sonar valid.
-9. Move a hand/object from 120 cm to 10 cm and back: `tof_cm` and `us_cm` follow it; state goes
-   NONE → NEAR → VERY_NEAR → NEAR → NONE with no flicker at the boundaries; HIGH when both agree.
-10. Cover only the ToF, then only the ultrasonic: confidence drops to LOW; presence never jumps up.
-11. Leave the station untouched 5 min: **no** `EVENT` lines; `imu_g` ≈ 1.00 and steady.
-12. Tap/shake the station 20 times, ≥ 2 s apart: exactly **20** `EVENT n ACCEPTED`, each followed by 2 `DUPLICATE`.
-13. Press the ESP32 reset button: `BOOT new boot`, state resumes within ~3 s, next event accepted after resync.
-14. Unplug for 10 s and replug: `LINK FAULTED/DISCONNECTED` then `CONNECTED` again without restarting the monitor.
-15. Calibrate thresholds if 9–12 need it (Firmware/README.md §5); record the values.
-
-**D. In the game (Windows)**
-16. Menu → `Physical - USB serial`, `AUTO`: panel shows `CONNECTED`, the HELLO identity and live readings.
-17. Pick the explicit COM port instead of AUTO: same result. Pick a wrong port: `FAULTED` with a reason; back to the right one recovers.
-18. Begin. HUD chip: `USB COMx CONNECTED - FRESH`. F1 overlay: readings update, `accepted` rises, `rejected` 0.
-19. Before the encounter, NEAR + tap: The Hollow goes to INVESTIGATE (F1 `decision` line: INVESTIGATE `[INNER]`, reason "INVESTIGATE: qualified physical disturbance detected"); `PHYS_EVENT ACCEPTED` in telemetry.
-20. Partially cover one sensor at NEAR: WARN, reason "WARN: physical condition detected with low confidence" (R4); a light flickers.
-21. In the ghost's threat zone with a person VERY_NEAR (both sensors): PROTECT `[S]`, reason "PROTECT: player at risk + ..." (R1); lights steady.
-22. Unplug during play: chip shows the fault, source STALE → UNAVAILABLE, the ghost continues on virtual rules; replug: FRESH again, no Unity restart.
-23. Encounter, lantern, death/checkpoint, restart and ending still work with the station connected.
-24. Switch the menu to `Simulated sensors`: the chip says `SIMULATED`, the COM port is released
-    (the Arduino Serial Monitor can open it), and keys 1–9 drive the ghost.
-25. Quit; confirm the COM port can be opened by the Arduino IDE immediately (port released).
-26. Telemetry (`%USERPROFILE%\AppData\LocalLow\...\telemetry`): `SERIAL_LINK`, `STATION_LOG`, `SENSOR_DIAG`
-    every 5 s, `PKT_RX`, `PHYS_EVENT`, `DECISION`; `python Tools/analyze_telemetry.py <file>` parses it.
-27. Run a 30-minute soak with the station connected: no exceptions in the player log, loss recorded.
+The ordered, recordable procedure is [`HARDWARE_ACCEPTANCE.md`](HARDWARE_ACCEPTANCE.md): A physical checks
+before power, B flashing, C boot and identity, D each sensor without Unity, E USB link robustness, F in the
+game (sensor-to-ghost responses, the F1 pause/disturbance/resume scenario, link loss, conditions, soak),
+G sign-off. It supersedes the 27-step list that was here.
 
 ## 8. Open items and assumptions
 
@@ -263,8 +240,12 @@ Record pass/fail, the date and observations for each. Stop at the first failure 
   if a board resets anyway, the boot-ID handling covers it. Not observed on hardware.
 - **Telemetry**: fixed in `0241e15` and verified in a player (see section 6). Builds before it lose the
   first `SOURCE_STATUS` record (condition, transport, port).
-- **Port release with a real port**: "link released" is verified only with no port open (AUTO found no USB
-  port). That a real COM port can be reopened by the Arduino IDE right after quitting is checklist step 25.
-- **Memory**: the intermittent self-test early exits were traced (by the gameplay session) to the PC running
-  out of commit memory while the Editor, its build workers and several players ran at once; with the Editor
-  closed, all runs passed. Run hardware tests with the Editor closed or with memory to spare.
+- **Port release with a real port**: the player and the harness monitor both logged "released" after
+  holding the real COM6 (21 Oct). That the Arduino IDE can reopen it immediately is checklist F19.
+- **Serial contract**: on the USB-serial link Unity requires `v=1` **and** `dev=` on every state line; a line
+  missing either is rejected (`VERSION_UNSUPPORTED` / `FOREIGN_DEVICE`). UDP and the legacy format keep both
+  optional.
+- **Memory**: the intermittent self-test early exits most likely come from the PC running out of commit
+  memory while the Editor, its build workers and several players ran at once (one occurrence coincided with
+  a Windows low-virtual-memory event; with the Editor closed, all later runs passed). Not proven. Run
+  hardware tests with the Editor closed or with memory to spare.

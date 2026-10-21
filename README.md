@@ -30,7 +30,7 @@ Each stage is a small, independently tested contract, so the sensing source, the
 | Sensor simulation | ✅ Complete | In-game simulated station (number-row hotkeys) and `Tools/esp32_sim.py` over real UDP |
 | Known defects P1–P5 | ✅ Fixed with regression tests | `DefectRegressionTests` (26) |
 | XR / Quest | ⛔ Not implemented | Desktop only. The repo's OpenXR packages are untouched |
-| ESP32 firmware + USB-serial link | 🟡 Written and tested in software; **not yet run on hardware** | [`Firmware/`](Firmware) (ToF + ultrasonic fusion, MPU6050 disturbance, contract v1 at 115200 baud) and `SerialLineReceiver`; menu mode *Physical - USB serial*. Hardware checklist: [`Docs/HARDWARE_SERIAL.md`](Docs/HARDWARE_SERIAL.md) |
+| ESP32 firmware + USB-serial link | 🟡 Written and tested in software; **not yet run on hardware** | [`Firmware/`](Firmware) (ToF + ultrasonic fusion, MPU6050 disturbance, contract v1 at 115200 baud) and `SerialLineReceiver`; menu mode *Physical - USB serial*. Guide: [`Docs/HARDWARE_SERIAL.md`](Docs/HARDWARE_SERIAL.md); live acceptance checklist: [`Docs/HARDWARE_ACCEPTANCE.md`](Docs/HARDWARE_ACCEPTANCE.md) |
 | RL decision provider | ⛔ Not implemented | `IDecisionProvider` allows one |
 
 Verification evidence and what remains manual: [`Docs/TechnicalSpec_MilestoneStatus.md`](Docs/TechnicalSpec_MilestoneStatus.md).
@@ -234,7 +234,7 @@ The legacy one-argument constructor keeps the original pass-through for its test
 dotnet run -c Release --project Tools/TestHarness
 ```
 
-It compiles the Unity-independent sources under `Assets/PHYSXR` directly (C# 9) and runs every `RunAll()` suite. The exit code is the failure count. **Current result: 24 suites, 305 tests, 0 failed.**
+It compiles the Unity-independent sources under `Assets/PHYSXR` directly (C# 9) and runs every `RunAll()` suite. The exit code is the failure count. **Current result: 24 suites, 314 tests, 0 failed** (after `dotnet build -c Release --no-incremental Tools/TestHarness`).
 
 | Suite | IDs | Count |
 |---|---|---|
@@ -246,7 +246,7 @@ It compiles the Unity-independent sources under `Assets/PHYSXR` directly (C# 9) 
 | `GameFlowEncounterTests` | FLOW-17..26 (death, checkpoint, commit, session) | 10 |
 | `EncounterDirectorTests` | DIR-01..08 (incl. the one-shot first-sighting window and E5 chain) | 8 |
 | `PlayerLocomotionTests` | LOCO-01..08: sprint stamina, exhaustion and regen, grounded-only jump, jump height | 8 |
-| `SerialTransportTests` | SER-01..18h: framing, routing, validator hardening, diagnostics, link lifecycle (unplug, replug, reboot, start/stop leaks), AUTO probing, kernel32 backend, serial → R1–R8 end to end incl. serial/simulator parity | 25 |
+| `SerialTransportTests` | SER-01..22: framing, routing, validator hardening (incl. `v` and `dev` required on the serial link), diagnostics, link lifecycle (unplug, replug, reboot, start/stop leaks), AUTO probing, kernel32 backend, serial → R1–R8 end to end incl. serial/simulator parity, raw-line capture for the monitor | 29 |
 
 Firmware semantic core (no ESP32 needed): `g++ -std=c++17 -I Firmware/physxr_station Firmware/tests/semantics_test.cpp -o semantics_test` then run it (47 checks).
 Live station check without Unity: `dotnet run -c Release --project Tools/TestHarness -- --serial-monitor AUTO 30`.
@@ -323,7 +323,7 @@ Assets/PHYSXR/
 └── WorldState/       WorldStateManager
 Firmware/ physxr_station/ (ESP32 sketch + semantic core), tests/ (host test), README.md
 Tools/  TestHarness/ (incl. --serial-monitor), esp32_sim.py, analyze_telemetry.py
-Docs/   TechnicalSpec_MilestoneStatus.md, HARDWARE_SERIAL.md, ASSETS.md
+Docs/   TechnicalSpec_MilestoneStatus.md, HARDWARE_SERIAL.md, HARDWARE_ACCEPTANCE.md, F1_PauseEventFix.md, ASSETS.md
 ```
 
 ---
@@ -332,7 +332,7 @@ Docs/   TechnicalSpec_MilestoneStatus.md, HARDWARE_SERIAL.md, ASSETS.md
 
 - **No manual play-through by a person yet.** Everything above is verified by the harness, compile checks, Windows builds, headless player self-tests and a screenshot tour. The feel, difficulty and five-minute target (T25), the real keyboard, mouse and cursor (T21), and audio balance still need human playtests.
 - **No Quest/XR build.** Desktop only; the UI is screen-space. The installed OpenXR packages and the developer's local XR settings are untouched.
-- **Firmware not yet run on the physical station.** The firmware and the USB-serial link are tested in software (host test, ESP32 compile, `SerialTransportTests`), but no ESP32 was connected. Unresolved hardware facts: SCL on GPIO 22 or 23 (the firmware probes both), TRIG/ECHO 25/26 vs the poster's 5/18, the HC-SR04 ECHO divider, and uncalibrated thresholds. T03 and T26 need hardware; see [`Docs/HARDWARE_SERIAL.md`](Docs/HARDWARE_SERIAL.md) §7.
+- **Firmware not yet run on the physical station.** The firmware and the USB-serial link are tested in software (host test, ESP32 compile against the real Pololu VL53L0X 1.3.1, `SerialTransportTests`). The station's board is connected as COM6 but still runs an old bench sketch (its ultrasonic printed `SONAR No echo` throughout). Unresolved hardware facts: SCL on GPIO 22 or 23 (the firmware probes both), TRIG/ECHO 25/26 vs the poster's 5/18, the HC-SR04 ECHO voltage divider (reported, not measured), and uncalibrated thresholds. T03 and T26 need hardware; see [`Docs/HARDWARE_ACCEPTANCE.md`](Docs/HARDWARE_ACCEPTANCE.md).
 - **Art is procedural**: boxes, cylinders and generated textures. It is deliberately lit, but it is not photoreal and has no baked GI, reflection probes or SSAO tuning. Haunted Jaunt and Mixamo assets were not imported (licences unconfirmed, no LFS); see `Docs/ASSETS.md`.
 - **No asmdefs or Test Runner bridge**: boundaries are by folder convention, and NUnit is not used.
 - `WorldState` carries events as the 3 s disturbance pulse (`causeEventId` for correlation), not as an event list.

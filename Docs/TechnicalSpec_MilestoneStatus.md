@@ -20,7 +20,7 @@ Last updated 21 Oct 2026 (game implementation pass on top of `d9ef09d`; gameplay
 | M4 Attack, lantern, death, checkpoint | Done (automated) | `EncounterSelfTest` 34/34 (T14, T15, T17, T18, T20, plus the bug-fix pass: readable modal, sprint/jump, first-sighting E5, solid ghost body). |
 | M5 Simulated physical input | Done in software | `SimulatedSensorStation` → real validator/pipeline; hotkeys; `SensorScenarioTests` 11/11; encounter self-test under SIMULATED 36/36 (34 plus the F1 pause checks P01/P02). |
 | M6 Telemetry + analysis | Done in software | `JsonLinesTelemetrySink`, all section G record types, `Tools/analyze_telemetry.py`, T13 determinism test. |
-| M7 ESP32 on Windows | **Software done; hardware run pending** | Transport is USB serial (the project's link; final report §3.3), UDP kept. I-1 addressed in software: `Firmware/physxr_station` emits contract v1 at 115200 baud (host test 47/47; ESP32 compile clean against a VL53L0X API stub). `SerialLineReceiver` → same `SensorFeed`/validator/pipeline; `SerialTransportTests` 25/25. **Not run on the physical station** (no ESP32 connected). Checklist: `Docs/HARDWARE_SERIAL.md` §7. |
+| M7 ESP32 on Windows | **Software done; hardware run pending** | Transport is USB serial (the project's link; final report §3.3), UDP kept. I-1 addressed in software: `Firmware/physxr_station` emits contract v1 at 115200 baud (host test 47/47; ESP32 compile with the real Pololu VL53L0X 1.3.1, 0 warnings). `SerialLineReceiver` → same `SensorFeed`/validator/pipeline; `SerialTransportTests` 29/29. A player in USB-serial mode against the real board (COM6, old bench sketch still flashed) passed 34/34 with 0 packets accepted and 0 physical decisions. **Not run with `physxr_station` on the physical station.** Checklist: [`HARDWARE_ACCEPTANCE.md`](HARDWARE_ACCEPTANCE.md). |
 | M8 / M9 Quest | Not started | Desktop only (I-2, I-3). |
 | M10 Art, audio, ending | Done with procedural assets | House dressing, lighting states, storm, post-processing, 39 synthesised cues, ending with window silhouette and subtitles. Reviewed from screenshots (capture tour), not in person. |
 | M11 Acceptance + evaluation | Not started | Needs people and hardware. |
@@ -58,7 +58,7 @@ Deviations, recorded:
 
 | Kind | What ran | Result |
 |---|---|---|
-| Standalone .NET harness (`dotnet run -c Release --project Tools/TestHarness`, C# 9, net9.0) | 24 suites | **310 passed, 0 failed** at `ec4af1e` (full rebuild, `--no-incremental`; 305 before F1 plus WSM-PAUSE-01..05) |
+| Standalone .NET harness (`dotnet run -c Release --project Tools/TestHarness`, C# 9, net9.0) | 24 suites | **314 passed, 0 failed** at `02cece8` plus the serial `dev=` requirement (full rebuild, `--no-incremental`; 310 at `ec4af1e`, then SER-19..22) |
 | Unity compile (the open Editor, 6000.5.8f1) | Full script compile after the last change | 0 errors, 0 warnings in PHYS-XR code |
 | Windows player build (from the open Editor, `BuildPipeline` with explicit scene paths) | StandaloneWindows64, Bootstrap + Game_BlackthornHouse | **Build Finished, Result: Success** |
 | `-physxr-m2-selftest` (headless player) | Objective route | **23/23**, scripted route 33.5 s |
@@ -123,7 +123,7 @@ under player load (24 suites, 305 passed).
 |---|---|---|
 | T01 Virtual-only | **Pass (software)** | SENS-T01 |
 | T02 Physical + virtual (simulated) | **Pass (software)** | SENS-T02a/b |
-| T03 Real ESP32 | Not run | Firmware and serial link exist and pass software tests (SER-04, SER-18a–h); needs the station (`Docs/HARDWARE_SERIAL.md` §7, steps 1–27) |
+| T03 Real ESP32 | Not run | Firmware and serial link exist and pass software tests (SER-04, SER-18a–h); needs the station: [`HARDWARE_ACCEPTANCE.md`](HARDWARE_ACCEPTANCE.md) A–G |
 | T04 Duplicate events | **Pass (software)** | SENS-T04 |
 | T05 Old event ID | **Pass (software)** | SENS-T05 |
 | T06 Stale packets | **Pass (software)** | SENS-T06, P5-04 |
@@ -146,7 +146,7 @@ under player load (24 suites, 305 passed).
 | T25 Under five minutes | Not run | Scripted route 33.5 s; needs first-time players |
 | T26 Latency | Not run | Needs hardware and video. `ts`/`tEvent` (T0/T1) and arrival `t2` are logged per line (`PKT_RX`, `PHYS_EVENT`) |
 | T27 Telemetry correlation | Partial | The analyzer joins caused decisions to events and behaviours; no physical-event trial was logged yet |
-| T28 Repo regression | **Pass** | 310/310 at `ec4af1e` |
+| T28 Repo regression | **Pass** | 314/314 (21 Oct 2026, evening) |
 | T29 Defect probes P1–P5 | **Pass** | DefectRegressionTests: each "legacy" case still shows the original defect through the old API, each "fixed" case passes |
 
 ## Manual acceptance (gameplay bug-fix pass)
@@ -170,5 +170,5 @@ reference.
 1. Play from the menu with keyboard and mouse: cursor lock across focus changes, mouse feel, settings sliders (T21; pause and recovery were team-reported as passing on `1b7a475`).
 2. A first-time player's run time and difficulty of the encounter (T25), and the lantern timing in practice.
 3. Audio balance and spatialisation by ear: ambience, footsteps, surge and hum, ghost voice, heartbeat, ending static.
-4. Physical sensors: the ESP32 station over USB serial — the ordered checklist in `Docs/HARDWARE_SERIAL.md` §7 (wiring, SCL pin, firmware flash, `--serial-monitor`, in-game reactions, unplug/replug, reset, calibration). UDP path: `python Tools/esp32_sim.py --scenario near` with "Physical - UDP 47800" selected; Windows Firewall may ask on first listen.
+4. Physical sensors: the ESP32 station over USB serial — the ordered checklist in [`HARDWARE_ACCEPTANCE.md`](HARDWARE_ACCEPTANCE.md) (ECHO divider and SCL pin first, then flashing, each sensor, USB reconnect, sensor-to-ghost responses, the F1 pause scenario, soak). UDP path: `python Tools/esp32_sim.py --scenario near` with "Physical - UDP 47800" selected; Windows Firewall may ask on first listen.
 5. The in-Editor self-test menus with the Game view focused.

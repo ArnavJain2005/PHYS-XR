@@ -58,7 +58,12 @@ existing R5 behaviour on the input the cleanup creates, not an effect of F1.
 
 - **Physical hardware.** No run with the ESP32 station: pause, knock the station, resume, and expect
   `PHYS_EVENT_DROPPED` and no reaction, then a knock in play giving INVESTIGATE. This belongs with the
-  checklist in `Docs/HARDWARE_SERIAL.md` section 7.
+  checklist in [`HARDWARE_ACCEPTANCE.md`](HARDWARE_ACCEPTANCE.md), steps F9–F12.
 - **Manual play.** Pause and resume with a person present was not checked by hand.
-- **Milestone record.** `Docs/TechnicalSpec_MilestoneStatus.md` belongs to the gameplay session and was
-  left untouched. It still lists the encounter self-test as 34/34 and does not mention F1.
+
+## Milestone record
+
+`Docs/TechnicalSpec_MilestoneStatus.md` records F1 since `4c9c7c5` (section "F1: physical events while
+paused"). The gameplay session repeated the automated checks there on a fresh build: harness 310/310,
+SIMULATED 36/36 with P01/P02 passing, default 34/34, M2 23/23. The physical-hardware and manual-play items
+above are still open; step F of [`HARDWARE_ACCEPTANCE.md`](HARDWARE_ACCEPTANCE.md) is the hardware run.

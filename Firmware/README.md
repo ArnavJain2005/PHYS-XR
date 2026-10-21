@@ -9,8 +9,24 @@ ESP32 + VL53L0X (ToF) + HC-SR04 (ultrasonic) + MPU6050, sending the semantic
 | `physxr_station/physxr_semantics.h` | Portable semantic core (proximity classes, fusion, disturbance detector, line format); no Arduino dependency |
 | `tests/semantics_test.cpp` | Host test of the semantic core (runs on a PC, no ESP32) |
 
-Status: **written and compile-checked, not yet run on the physical station.**
-See "What has and has not been verified" at the end.
+Status: **written and compile-checked, not yet run on the physical station.** The station's board is
+connected to the development PC (COM6) but still runs an old bench sketch; `physxr_station` has not been
+flashed. See "What has and has not been verified" at the end.
+
+> **Check these on the physical station before powering it with this firmware.** They cannot be verified
+> in software, and the first one can damage the ESP32.
+>
+> 1. **HC-SR04 ECHO voltage.** ECHO is a 5 V output. It must reach GPIO 26 through a divider (e.g.
+>    10 kΩ / 20 kΩ) or a level shifter. Measure GPIO 26 while echoing: it must stay ≤ 3.3 V. The divider is
+>    *reported* present but has not been measured.
+> 2. **I²C SCL pin: GPIO 22 or 23 is unresolved.** The firmware tries 23, then 22, and reports the one that
+>    answered in `#HELLO ... scl=NN`. Trace the wire, record the value, and update the table below.
+> 3. **SDA on GPIO 21 and a common ground** between the ESP32 and all three modules (not yet confirmed).
+> 4. **HC-SR04 powered from 5 V, TRIG on 25, ECHO on 26, not swapped.** On 21 Oct the old sketch printed
+>    `SONAR No echo` on every cycle. If the ultrasonic stays invalid after flashing, confidence stays LOW
+>    and R1 PROTECT and R3 INVESTIGATE (both need HIGH) can never fire; only the LOW-confidence WARNs can.
+>
+> The full ordered procedure is [`Docs/HARDWARE_ACCEPTANCE.md`](../Docs/HARDWARE_ACCEPTANCE.md).
 
 ## 1. Pins and bus
 
@@ -52,8 +68,11 @@ arduino-cli compile --fqbn esp32:esp32:esp32 Firmware/physxr_station
 ```
 
 ```bash
-arduino-cli upload --fqbn esp32:esp32:esp32 -p COM5 Firmware/physxr_station
+arduino-cli upload --fqbn esp32:esp32:esp32 -p COM6 Firmware/physxr_station
 ```
+
+`COM6` is the station's CP210x bridge on the development PC; COM3/5/7/8 there are Bluetooth. On another PC,
+use the port Device Manager shows for "Silicon Labs CP210x" or "USB-SERIAL CH340".
 
 ## 3. Serial protocol (what Unity receives)
 
@@ -155,7 +174,8 @@ calibration on the mounted station). They are constants at the top of `physxr_st
 | `#ERR sensor=tof/imu ...` | That module is unpowered, miswired or failed; the other sensors keep working. |
 | `imu_cal=0` forever | The station is moving (or vibrating) during calibration. |
 | `imu_cal=3` | Baseline outside 0.7–1.3 g: wrong range setting or a faulty IMU. |
-| Ultrasonic always INVALID | ECHO not reaching GPIO 26 (divider wiring), or no target within 4 m. |
+| Ultrasonic always INVALID (`us_ok=0`; the old sketch printed `SONAR No echo`) | Check, in order: HC-SR04 VCC is **5 V** (it does not work on 3.3 V); TRIG → 25 and ECHO → 26, not swapped; divider orientation (5 V side on ECHO, GPIO 26 on the tap, the other resistor to GND); common ground; a target within 2–400 cm. Measure GPIO 26 ≤ 3.3 V while it echoes. While it stays invalid, confidence is LOW, so R1 PROTECT and R3 INVESTIGATE cannot fire. |
+| ToF reads a few cm with nothing in front | Something (a cover, the case, a cable) is in the ToF's field of view. On 21 Oct the old sketch read 42–52 mm; with this firmware that would hold presence at VERY_NEAR. Clear the field of view. |
 | Status STALE/UNAVAILABLE in game while CONNECTED | Lines are arriving but being rejected: see the `reject` line in the F1 overlay. |
 
 ## 7. What has and has not been verified
@@ -165,5 +185,6 @@ calibration on the mounted station). They are constants at the top of `physxr_st
 | Semantic core host test (`g++ ... semantics_test.cpp`) | **47/47 checks pass** |
 | `arduino-cli compile --fqbn esp32:esp32:esp32` (core 3.3.11) with the real **Pololu VL53L0X 1.3.1** | **Compiles, 0 warnings** — 305,548 bytes flash (23 %), 24,628 bytes RAM (7 %). Every library member the sketch uses (`setBus`, `init`, `setTimeout`, `startContinuous`, `readReg`, `RESULT_INTERRUPT_STATUS`, `RESULT_RANGE_STATUS`, `readRangeContinuousMillimeters`, `timeoutOccurred`, `last_status`) is public in the real header. (21 Oct 2026; library installed in a scratch folder, not the IDE sketchbook.) |
 | Golden state lines accepted by Unity's validator | **Pass** (`SerialTransportTests` SER-04) |
-| Flashed to an ESP32, sensors read, live link to Unity | **Not done** — no ESP32 was connected (21 Oct 2026: only Bluetooth COM ports present; Windows' device history shows the board's **Silicon Labs CP210x** bridge last enumerated as **COM6** on this PC). Use `Docs/HARDWARE_SERIAL.md` section 7. |
+| Same compile, repeated by the gameplay session | **Compiles, 0 warnings** (`--warnings all`), same sizes; the build linked the real `VL53L0X.cpp` from the Pololu 1.3.1 library (read-only use of the scratch install above). Host test 47/47. (21 Oct 2026, evening) |
+| Flashed to an ESP32, sensors read, live link to Unity | **Not done.** The board is now connected as **COM6** (Silicon Labs CP210x) but runs an old bench sketch. A 15 s read-only look (`--serial-monitor COM6 15 115200 --raw`) showed `LASER Distance: 42–52 mm`, `MPU Accel Z ≈ 1.03 g`, and `SONAR No echo` on every cycle; Unity accepted 0 lines and reported the old sketch. A USB-serial player self-test against it passed 34/34 with 0 packets and 0 physical decisions. Use [`Docs/HARDWARE_ACCEPTANCE.md`](../Docs/HARDWARE_ACCEPTANCE.md). |
 | ECHO divider, SCL pin, module addresses, thresholds | **Not verified** on the physical station |
