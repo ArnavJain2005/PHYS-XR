@@ -7,7 +7,7 @@ This file records milestone status against the **Technical Implementation Specif
 there is evidence, and the evidence is named.
 
 Branch: `demo/warning-beat-arbitration`. Unity `6000.5.8f1`, URP 17.5.0, Input System 1.20.0.
-Last updated 21 Oct 2026 (game implementation pass on top of `d9ef09d`).
+Last updated 21 Oct 2026 (game implementation pass on top of `d9ef09d`; gameplay bug-fix pass `1b7a475` with team-reported manual acceptance; ESP32 USB-serial integration).
 
 ## Milestone summary
 
@@ -63,13 +63,44 @@ Deviations, recorded:
 | Windows player build (from the open Editor, `BuildPipeline` with explicit scene paths) | StandaloneWindows64, Bootstrap + Game_BlackthornHouse | **Build Finished, Result: Success** |
 | `-physxr-m2-selftest` (headless player) | Objective route | **23/23**, scripted route 33.5 s |
 | `-physxr-selftest` (headless player) | Encounter checks | **34/34**. Next attack 11.53 s after the lantern hit; ghost body stops the player at 0.73 m (contact 0.65 m); 10 restarts: 1 camera/listener/EventSystem/flow/ghost; materials 53 → 53; managed heap 4.2 → 4.3 MB |
-| `-physxr-selftest -physxr-condition SIMULATED` (headless player) | Same, simulated packets through the validator | **34/34** (three runs; one earlier run exited early with a truncated log and no failed check, not reproduced); telemetry: 459 packets accepted, 0 rejected; 0 inappropriate attacks |
+| `-physxr-selftest -physxr-condition SIMULATED` (headless player) | Same, simulated packets through the validator | **34/34**; telemetry: 459 packets accepted, 0 rejected; 0 inappropriate attacks. Intermittent early exits: see below |
+| Repeat runs on `8bf28a6` (headless player, 21 Oct 2026, 20:56–21:10) | 1 × M2, 4 × VIRTUAL_ONLY + 4 × SIMULATED idle, then 3 + 3 alongside a looping harness | M2 23/23; **14 of 15** encounter runs 34/34; 1 VIRTUAL_ONLY run exited 1 early (see below) |
 | Player logs of those three runs | Scan for exceptions and errors | None |
 | `-physxr-capture` (windowed player) | 12 screenshots: menu, dark and powered rooms, first sighting, encounter, ending, end card | Reviewed; light levels and the ghost's materials tuned from them |
 | `Tools/analyze_telemetry.py` on self-test logs | CSV summary | Parses; 0 inappropriate attacks, 0 dropped records |
 
 The Editor-side Play-mode self-test was attempted, but an unfocused Editor throttles Play mode
 to about 1.5 fps, so all in-engine checks were run in the Windows player instead.
+
+### Intermittent failures (investigated 21 Oct 2026)
+
+**Player self-test early exit — open; most likely memory exhaustion, not proven.** Four
+encounter self-test runs (VIRTUAL_ONLY and SIMULATED, on two builds: the 13:14 build and `8bf28a6`) exited with code 1
+partway through. The log simply stops: no `SELFTEST FAIL`, no exception, no `SELFTEST END`, no
+crash dump. The last line differs each time (after M05, S07 or T14b), so it is not one failing
+check.
+- 13:17, a SIMULATED run by the gameplay session: no event in the Windows logs.
+- 19:35, the ESP32 session's two runs: Windows logged *"Your system is low on virtual memory"*
+  (Application Popup 26) at 19:35:11. The two players died at 19:35:18 and 19:35:40, and the
+  Unity Editor hung (Application Hang 1002) at 19:35:59.
+- 20:56, reproduced in 1 of 15 repeat runs: it happened at the lowest free memory of the series,
+  4.5 GB free commit and 1.1 GB free RAM. About 31 GB of commit was in use on a 15.7 GB machine:
+  the Editor and two build workers (about 8 GB), Blender, three Claude processes and browsers.
+  After the Editor was closed, free commit was about 14 GB and all 14 remaining runs passed,
+  including 6 next to a looping harness (CPU load alone did not reproduce it).
+
+No code path in the game exits with 1 except `Application.Quit(failed)` after `SELFTEST END`,
+which is not reached. The tests are unchanged and still count such a run as a failure. To
+re-check, run the self-tests with the Editor and other large processes closed, and record free
+commit (`Get-CimInstance Win32_OperatingSystem`, `FreeVirtualMemory`) at each run.
+
+**Harness SER-09 failure — resolved.** SER-09 failed 1 run in 5 on 21 Oct (*failed handle closed:
+expected 0 but got 1*). Cause: a race in the test, not the product. `SerialLineReceiver` publishes
+FAULTED inside its catch block and closes the port handle in the `finally` block just after; the
+test asserted the handle count in between. Fixed in `5efd34f`: SER-09 and SER-10 now wait (3 s
+limit) for the handle to reach 0, so they still require the release. Verification on `8bf28a6`:
+the serial suite passed 30/30 runs on an idle machine, and the full harness passed 31/31 runs
+under player load (24 suites, 305 passed).
 
 ## Acceptance matrix (section G)
 
@@ -95,7 +126,7 @@ to about 1.5 fps, so all in-engine checks were run in the Windows player instead
 | T18 Repeated restarts | **Pass (player)** | EncounterSelfTest T18a–d. "Socket still receiving" was not checked (virtual-only run) |
 | T19 Fuse and exit | **Pass (player)** | M2 C03–C07 (lights, hum loop and surge sound exist; audio not verified by ear) |
 | T20 Full restart | **Pass (player)** | M2 C10a/c, EncounterSelfTest T20 |
-| T21 Windows input | Not run | Needs a person |
+| T21 Windows input | **Partial (team-reported manual pass)** | On `1b7a475` the team reported PASS for E open/close of readables, sprint and jump, and pause and recovery (see Manual acceptance). Not reported: mouse feel, cursor lock across focus changes, settings sliders |
 | T22–T24 Quest | Not run | No Quest build |
 | T25 Under five minutes | Not run | Scripted route 33.5 s; needs first-time players |
 | T26 Latency | Not run | Needs hardware and video. `ts`/`tEvent` (T0/T1) and arrival `t2` are logged per line (`PKT_RX`, `PHYS_EVENT`) |
@@ -103,9 +134,25 @@ to about 1.5 fps, so all in-engine checks were run in the Windows player instead
 | T28 Repo regression | **Pass** | 305/305 |
 | T29 Defect probes P1–P5 | **Pass** | DefectRegressionTests: each "legacy" case still shows the original defect through the old API, each "fixed" case passes |
 
+## Manual acceptance (gameplay bug-fix pass)
+
+Manual play-testing by the project team on commit `1b7a475` (branch
+`demo/warning-beat-arbitration`, Windows desktop build). These results are **team-reported**:
+they were recorded from the team's report and were not performed or observed by the automated
+sessions that wrote this file. The automated checks covering the same areas are listed for
+reference.
+
+| # | Area | Team-reported result | Automated coverage of the same area |
+|---|---|---|---|
+| 1 | Ghost collision (the player cannot walk through The Hollow) | **PASS** | EncounterSelfTest B01 (player stops 0.73 m from the ghost's centre; contact 0.65 m) |
+| 2 | Radio and letter open/close with E | **PASS** | EncounterSelfTest M01–M05 (E opens, controls blocked, E closes, controls restored, Esc/pause close) |
+| 3 | First-sighting attack | **PASS** | EncounterSelfTest S04a–d; ENC-E5a–d; DIR-07/08 |
+| 4 | Sprint and jump | **PASS** | EncounterSelfTest J01–J03; PlayerLocomotionTests LOCO-01..08 |
+| 5 | Pause and recovery | **PASS** | M2 C09b; EncounterSelfTest M05, J03, T17a–c |
+
 ## Manual checks still needed
 
-1. Play from the menu with keyboard and mouse: cursor lock, mouse feel, pause/resume, settings sliders (T21).
+1. Play from the menu with keyboard and mouse: cursor lock across focus changes, mouse feel, settings sliders (T21; pause and recovery were team-reported as passing on `1b7a475`).
 2. A first-time player's run time and difficulty of the encounter (T25), and the lantern timing in practice.
 3. Audio balance and spatialisation by ear: ambience, footsteps, surge and hum, ghost voice, heartbeat, ending static.
 4. Physical sensors: the ESP32 station over USB serial — the ordered checklist in `Docs/HARDWARE_SERIAL.md` §7 (wiring, SCL pin, firmware flash, `--serial-monitor`, in-game reactions, unplug/replug, reset, calibration). UDP path: `python Tools/esp32_sim.py --scenario near` with "Physical - UDP 47800" selected; Windows Firewall may ask on first listen.
