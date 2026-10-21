@@ -36,7 +36,7 @@ poster and the bench prototype). If something else is ever wired to GPIO 22 or 2
 ## 2. Build and flash
 
 1. Arduino IDE 2.x with the **esp32 by Espressif** core (3.x; compile-checked against 3.3.11).
-2. Library Manager: install **"VL53L0X" by Pololu** (the sketch uses its `setBus`, `startContinuous`,
+2. Library Manager: install **"VL53L0X" by Pololu** (verified with 1.3.1; the sketch uses its `setBus`, `startContinuous`,
    `readReg`, `readRangeContinuousMillimeters`, `timeoutOccurred`, `last_status`).
 3. Open `Firmware/physxr_station/physxr_station.ino`, board **ESP32 Dev Module**, the station's COM port.
 4. Upload. **Close the Serial Monitor before starting Unity** — only one program can hold the COM port.
@@ -163,7 +163,7 @@ calibration on the mounted station). They are constants at the top of `physxr_st
 | Check | Result |
 |---|---|
 | Semantic core host test (`g++ ... semantics_test.cpp`) | **47/47 checks pass** |
-| `arduino-cli compile --fqbn esp32:esp32:esp32` (core 3.3.11) | **Compiles, 0 warnings** (22 % flash, 7 % RAM) — against a compile-only stub of the Pololu VL53L0X header, because the library was not installed on the build PC. Compile again with the real library before flashing. |
+| `arduino-cli compile --fqbn esp32:esp32:esp32` (core 3.3.11) with the real **Pololu VL53L0X 1.3.1** | **Compiles, 0 warnings** — 305,548 bytes flash (23 %), 24,628 bytes RAM (7 %). Every library member the sketch uses (`setBus`, `init`, `setTimeout`, `startContinuous`, `readReg`, `RESULT_INTERRUPT_STATUS`, `RESULT_RANGE_STATUS`, `readRangeContinuousMillimeters`, `timeoutOccurred`, `last_status`) is public in the real header. (21 Oct 2026; library installed in a scratch folder, not the IDE sketchbook.) |
 | Golden state lines accepted by Unity's validator | **Pass** (`SerialTransportTests` SER-04) |
-| Flashed to an ESP32, sensors read, live link to Unity | **Not done** — no ESP32 was connected while this was written. Use `Docs/HARDWARE_SERIAL.md` section 7. |
+| Flashed to an ESP32, sensors read, live link to Unity | **Not done** — no ESP32 was connected (21 Oct 2026: only Bluetooth COM ports present; Windows' device history shows the board's **Silicon Labs CP210x** bridge last enumerated as **COM6** on this PC). Use `Docs/HARDWARE_SERIAL.md` section 7. |
 | ECHO divider, SCL pin, module addresses, thresholds | **Not verified** on the physical station |

@@ -3,7 +3,9 @@
 How the physical station (ESP32 + VL53L0X + HC-SR04 + MPU6050) drives The Hollow, how to set it up in
 Unity, and what has been verified. Firmware details (pins, protocol, calibration): [`Firmware/README.md`](../Firmware/README.md).
 
-**Status (21 Oct 2026): software complete and tested; not yet run against the physical station.**
+**Status (21 Oct 2026, second pass): software complete; firmware compiles against the real Pololu
+VL53L0X 1.3.1; a fresh Windows player of `a6d976a` passes every self-test, including USB-serial mode with
+no ESP32 attached. Not yet run against the physical station** — no ESP32 was connected in either pass.
 No ESP32 was connected to the development PC (its only COM ports were Bluetooth). Every "Pass" below is
 an automated software test unless it says otherwise. Section 7 is the ordered checklist to run on the hardware.
 
@@ -151,7 +153,9 @@ PHYS-XR.exe -physxr-transport serial -physxr-serial-port COM5 -physxr-serial-bau
 ```
 
 Finding the port on Windows: Device Manager → **Ports (COM & LPT)** → plug the ESP32 in and see which entry
-appears (typically "Silicon Labs CP210x USB to UART Bridge (COM5)" or "USB-SERIAL CH340 (COM5)"). No entry →
+appears (typically "Silicon Labs CP210x USB to UART Bridge (COM5)" or "USB-SERIAL CH340 (COM5)"; on the
+development PC, Windows' device history shows the station's board as a **CP210x that last enumerated as
+COM6**). No entry →
 install the CP210x/CH340 driver or try a data-capable cable. Entries named "Standard Serial over Bluetooth
 link" are not the ESP32. The Arduino IDE's port menu shows the same name.
 
@@ -178,12 +182,15 @@ link" are not the ESP32. The Arduino IDE's port menu shows the same name.
 | What | Command | Result (21 Oct 2026) |
 |---|---|---|
 | Firmware semantic core (host) | `g++ -std=c++17 -I Firmware/physxr_station Firmware/tests/semantics_test.cpp -o semantics_test && ./semantics_test` | **47/47** |
-| Firmware build for ESP32 | `arduino-cli compile --fqbn esp32:esp32:esp32 Firmware/physxr_station` | **Compiles, 0 warnings** (against a compile-only VL53L0X stub; library not installed on the PC) |
+| Firmware build for ESP32 | `arduino-cli compile --fqbn esp32:esp32:esp32 Firmware/physxr_station` | **Compiles, 0 warnings** with the real Pololu VL53L0X 1.3.1 and esp32 core 3.3.11: 305,548 B flash (23 %), 24,628 B RAM (7 %) |
 | Serial transport suite | `dotnet run -c Release --project Tools/TestHarness -- --suite SerialTransport` | **25/25** in 15 sequential runs and 12 runs three-at-a-time (after fixing a test-only race in SER-09/SER-10) |
 | Full harness (regression) | `dotnet run -c Release --project Tools/TestHarness` | **24 suites, 305 passed, 0 failed** (includes the gameplay bug-fix commit `1b7a475`); the serial work alone on its base: 23 suites, 291 passed |
 | Unity compile | Editor import (`Logs/Editor.log`) and a scratch build of `Assembly-CSharp` against the 6000.5.8f1 DLLs | **0 errors, 0 warnings** |
 | Real kernel32 backend | SER-17 + `--serial-monitor AUTO/COM13` on this PC | Missing port → `FAULTED ... not found`; Bluetooth-only → `no USB COM ports, only Bluetooth`; port released |
-| Windows player build + `-physxr-selftest` / `-physxr-m2-selftest` | — | **Not re-run in this pass** (the Unity MCP bridge was disconnected; the Editor holds the project lock). Rebuild and re-run before the demo. |
+| Windows player build of `a6d976a` | `Unity -batchmode -quit -projectPath . -executeMethod PHYSXR.EditorTools.M2SceneSetup.BuildWindows -buildPath Builds/PHYSXR_Windows/PHYS-XR.exe` | **Succeeded**, 0 errors (486 warnings, all from the Sentis package's shaders) |
+| `-physxr-m2-selftest` (headless player) | see README | **23/23** |
+| `-physxr-selftest` (VIRTUAL_ONLY / SIMULATED) | see README | **34/34** each |
+| `-physxr-selftest -physxr-condition PHYSICAL_PLUS_VIRTUAL -physxr-transport serial -physxr-serial-port AUTO`, no ESP32 | — | **34/34**; link `DISCONNECTED: no USB COM ports, only Bluetooth ...`, 0 packets, 0 physical events, 0 of 33 decisions citing physical input, port released on exit |
 | Live hardware | — | **Not run** (no ESP32 connected) |
 
 `SerialTransportTests` covers: framing (partial lines, several per read, CRLF, empty, oversized), line
@@ -247,8 +254,10 @@ Record pass/fail, the date and observations for each. Stop at the first failure 
 - **TRIG/ECHO**: 25/26 from the bench prototype; the poster says 5/18. Confirm against the wiring (A1).
 - **ECHO level shifting** is required by the HC-SR04's 5 V output and was not verified on the build.
 - **Thresholds** (proximity 30/80 cm, disturbance 0.08 g / 3 samples / 1.5 s) are starting values, not calibrated.
-- **VL53L0X library**: the real Pololu library was not available on the PC; the firmware was compiled
-  against a stub of its public API only. Compile with the real library before flashing (B3).
+- **VL53L0X library**: compiled against the real Pololu 1.3.1 (installed in a scratch folder for the check).
+  Install it in the Arduino IDE (Library Manager, "VL53L0X" by Pololu) before flashing (B3). That the
+  station's ToF breakout is a VL53L0X comes from the schematic poster; it is not physically confirmed.
 - **USB adapter behaviour on open**: DTR/RTS are left de-asserted so opening should not reset the board;
   if a board resets anyway, the boot-ID handling covers it. Not observed on hardware.
-- **Player build and in-player self-tests** were not re-run after these changes.
+- **Telemetry**: until the fix after `a6d976a`, the first `SOURCE_STATUS` record (condition, transport,
+  port) was emitted before the trial file opened and was lost; the trial header holds only a settings hash.
