@@ -14,6 +14,21 @@ Note the date, the tester, the build commit and the COM port at the top of your 
 |---|---|---|---|---|---|
 | | | | | | |
 
+## Overview: bring-up order
+
+None of these steps has been performed yet. Each must pass before the next; steps marked **STOP** in the checklist block everything after them.
+
+| # | Step | Checklist | Evidence to record |
+|---|---|---|---|
+| 1 | Verify wiring and electrical safety with USB **unplugged**: ECHO divider, SCL pin, SDA, common ground, 5 V to the HC-SR04 | A1–A7 | Meter readings, photos |
+| 2 | Flash `physxr_station` | B1–B3 | Compile and upload output |
+| 3 | Confirm the handshake: `#HELLO … dev=phys-xr-01 … scl=NN`, IMU calibration done | C1–C5 | Serial log; GPIO 26 ≤ 3.3 V measured |
+| 4 | Validate each sensor on its own, without Unity | D1–D8 | Harness monitor log |
+| 5 | Calibrate proximity and disturbance thresholds | D9, [`Firmware/README.md`](../Firmware/README.md) §5 | Calibrated values table |
+| 6 | Confirm Unity accepts live lines (`FRESH`, `rejected 0`) | F1–F3, E1–E4 | HUD/F1 screenshot, telemetry |
+| 7 | Verify observable ghost reactions (R3, R4, R5, R1; never ATTACK) | F4–F17 | Video + `DECISION … cause_evt` |
+| 8 | Full run, soak, analyzer summary, sign-off | F18–F21, G | `.jsonl`, analyzer CSV |
+
 **Known before starting (21 Oct 2026).** The station's board enumerates as **COM6** (Silicon Labs CP210x) on
 the development PC; COM3/5/7/8 there are Bluetooth. It still runs an old bench sketch, which printed
 `LASER Distance: 42–52 mm`, `MPU Accel Z ≈ 1.03 g` and **`SONAR No echo` on every cycle**. User-reported
