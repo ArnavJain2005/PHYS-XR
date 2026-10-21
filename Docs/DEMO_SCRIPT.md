@@ -115,7 +115,7 @@ threat level and the ghost warns on its own (rule R7), which blurs the sensor re
 
 ### Evidence to mention if asked
 
-- Software tests: 24 suites, 310 tests, 0 failed (`dotnet run -c Release --project Tools/TestHarness`).
+- Software tests: 24 suites, 314 tests, 0 failed (`dotnet run -c Release --project Tools/TestHarness`; last run 22 Oct 2026).
 - Headless game self-tests: Simulated 36/36, default 34/34, route 23/23.
 - Telemetry for every decision, including its rule and the event that caused it:
   `%USERPROFILE%\AppData\LocalLow\DefaultCompany\PHYS_XR\telemetry`, analysed by

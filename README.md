@@ -21,7 +21,7 @@ An ESP32 sensing station turns proximity and disturbance into semantic events. U
 </div>
 
 > [!IMPORTANT]
-> **Where the project stands (22 Oct 2026, branch `demo/warning-beat-arbitration` @ `5124e90`).** The full software loop is implemented and passes its automated tests: sensing contract, validation, WorldState, decision layers, ghost behaviour, the game and telemetry. It also runs end to end with **simulated** sensor input. The **ESP32 firmware is written and compile-checked but has not run on the physical station**. The board still carries an old bench sketch, and two wiring facts must be measured before it is powered with the new firmware. No real sensor packet has been accepted by Unity yet. The game is **Windows desktop only**; the Meta Quest build has not started. [Current status](#current-project-status) and [Limitations](#current-limitations-and-open-issues) give the detail.
+> **The software loop works with simulated sensors; the physical loop has not run yet.** The ESP32 firmware is written and compile-checked, but the station still carries an old bench sketch, and Unity has never accepted a real sensor packet. Two wiring checks must pass before the station is powered with the new firmware. See [Hardware](#hardware) and [Open issues](#open-issues).
 
 ```mermaid
 flowchart LR
@@ -29,12 +29,24 @@ flowchart LR
     E -.-> H[("log")]
 ```
 
-<sub>The core idea in one line. Raw sensor values stop at the ESP32; everything to the right of it reasons over semantic state only.</sub>
+<sub>Physical sensing → semantic interpretation → physical/virtual state fusion → autonomous decision → visible response. Raw sensor values stop at the ESP32; everything to the right reasons over semantic state only.</sub>
+
+### At a glance
+
+| | |
+|---|---|
+| **What it is** | A cyber-physical game prototype: an ESP32 station reports *who is near* and *whether it was knocked*, and an explainable agent (The Hollow) folds that into its decisions alongside game state |
+| **What makes it different** | A sensor reading is evidence, not a button. The same knock can make the ghost investigate, warn or ignore it, depending on confidence, player position, threat level and the ghost's current activity |
+| **Works today** (automated evidence) | Decision system, validation pipeline, WorldState, ghost behaviour, the Windows game *The Presence*, telemetry, all running together on **simulated** sensors (simulated input verified through to the decision; see [L6](#open-issues) for the remaining logging gap): 314/314 software tests, 47/47 firmware-core host checks, headless game self-tests 23/23 and 36/36 |
+| **Not yet verified** | Firmware on the physical station, a real sensor-to-ghost reaction, latency, a user study. Not started: Meta Quest build, dashboard |
+| **Try it** | [Quick Start](#quick-start): open in Unity, choose *Simulated sensors*, press F1, trigger a knock |
+| **Go deeper** | [Architecture](#system-architecture) · [Ghost decision system](#the-ghost-decision-system) · [Status](#current-project-status) · [Testing](#testing-experiments-and-validation) · [Roadmap](#roadmap) |
 
 ---
 
 ## Contents
 
+- [Quick Start](#quick-start)
 - [Executive overview](#executive-overview)
 - [Problem, objectives and contributions](#problem-objectives-and-contributions)
 - [Current project status](#current-project-status)
@@ -54,6 +66,46 @@ flowchart LR
 - [Roadmap](#roadmap)
 - [Research context and references](#research-context-and-references)
 - [Team, acknowledgements and licence](#team-acknowledgements-and-licence)
+
+---
+
+## Quick Start
+
+Software only: no ESP32 is needed and nothing is flashed. You need Windows, **Unity 6000.5.8f1** (from `ProjectSettings/ProjectVersion.txt`) and, for step 6, a .NET SDK that builds `net9.0`.
+
+1. **Clone**
+
+   ```bash
+   git clone https://github.com/ArnavJain2005/PHYS-XR.git
+   ```
+
+2. **Open in Unity.** Add the cloned folder in Unity Hub and open it with 6000.5.8f1. The first import builds `Library/` and takes a while.
+
+3. **Run the game.** Open `Assets/PHYSXR/Scenes/Bootstrap.unity` and press Play, keeping the Game view focused (an unfocused Editor throttles Play mode). To build a standalone player instead, see [Build the Windows player](#build-the-windows-player).
+
+4. **Select simulated sensors.** On the main menu, click the **`Sensors:`** button until it reads **`Sensors:  Simulated sensors`**, then click **Begin**. The HUD sensor chip reads `SIMULATED`.
+
+5. **Watch a decision.** Press **F1** to open the developer overlay; its `decision` line shows the action, `[rule]` and reason.
+   - Walk into the corridor and look at The Hollow. Its first sighting gives one non-lethal lunge (`ATTACK [E5]`), then it follows you (`FOLLOW [INNER]`).
+   - **Before picking up the fuse**, step at least 5 m away from it and press **`2`** (simulated presence NEAR), then **`5`** (one knock).
+   - Expect `INVESTIGATE [INNER]` with the reason "qualified physical disturbance detected" (rule R3). The ghost walks to a spot near you and searches. Press **`1`** to clear the presence again.
+   - This is **simulated** input through the real validator and rules. It is not the physical station.
+
+6. **Run the automated tests** (no Unity needed):
+
+   ```bash
+   dotnet run -c Release --project Tools/TestHarness
+   ```
+
+   Expect `SUITES RUN: 24, TOTAL FAILED: 0`. The firmware's semantic core has its own host test (any C++17 compiler):
+
+   ```bash
+   g++ -std=c++17 -I Firmware/physxr_station Firmware/tests/semantics_test.cpp -o semantics_test
+   ```
+
+   Run `./semantics_test` and expect `47 checks, 0 failed`.
+
+More: the full [installation](#installation-and-setup), [run modes](#running-and-demonstrating), the [12-beat demo script](Docs/DEMO_SCRIPT.md), and, before touching hardware, the [hardware safety checklist](Docs/HARDWARE_ACCEPTANCE.md).
 
 ---
 
@@ -177,6 +229,9 @@ The five levels are kept separate on purpose: passing a test is not the same as 
 
 ### Milestone history (from Git)
 
+<details>
+<summary>11 milestones from the initial snapshot (21 Sep 2026) to the documentation audit (22 Oct 2026)</summary>
+
 | Date | Commit | Milestone |
 |---|---|---|
 | 21 Sep 2026 | `2b33c4a` | Initial snapshot: core contracts, communication, R1–R8, ghost execution, tests |
@@ -189,7 +244,9 @@ The five levels are kept separate on purpose: passing a test is not the same as 
 | 21 Oct | `1b7a475` | Gameplay fixes (solid ghost, modal readables, first-sighting attack, sprint/jump); team manual acceptance on this commit |
 | 21 Oct | `0241e15`, `ec4af1e` | Telemetry ordering fix; F1: physical events ignored while paused |
 | 21 Oct | `e6e0ed9`, `d583f02`, `5124e90` | Device ID required on serial; hardware acceptance checklist; faculty demo run sheet |
-| 22 Oct | (this README) | Documentation audit; harness, firmware host test and player self-tests re-run (see [Evidence](#re-verification-performed-for-this-readme-22-oct-2026)) |
+| 22 Oct | `93a8dce` (merged to `main` via PR #3) | README rewritten from a documentation audit; harness, firmware host test and player self-tests re-run (see [Evidence](#re-verification-performed-for-this-readme-22-oct-2026)) |
+
+</details>
 
 ---
 
@@ -297,7 +354,7 @@ sequenceDiagram
 | 8–9 | `GhostRuntimePipeline` → `GhostMotionController` | Execution state Investigating: walk to the anchor nearest the player and linger |
 | all | Telemetry | `PKT_RX`, `PHYS_EVENT`, `DECISION` with `cause_evt=n`, `BEHAVIOUR START` |
 
-<sub>The intended physical path, implemented in code. With the **simulator** in place of steps 1–3 it is verified end to end. Steps 1–3 on the **real station** have not been run (see [Hardware](#hardware)). R3 needs the player outside the ghost's 3.5 m threat zone.</sub>
+<sub>One knock must produce one reaction. The firmware repeats each event on three lines so a lost line cannot lose the event; the `(boot, eventId)` check then makes sure those three lines start one 3 s disturbance pulse, not three. With the **simulator** in place of steps 1–3, the chain is verified up to the decision (SENS, SER-18, self-test P02). A logged trial joining a caused decision to its visible behaviour is still missing ([L6](#open-issues)), and steps 1–3 on the **real station** have not been run. R3 needs the player outside the ghost's 3.5 m threat zone.</sub>
 
 ---
 
@@ -558,6 +615,21 @@ The policy has no randomness, no learned parameters and no wall-clock reads; tim
 > [!WARNING]
 > **Nothing in this section has been verified on the physical station with the PHYS-XR firmware.** Pins, addresses and thresholds below come from the firmware source and its documents. Two items are safety or function blockers that need a meter, not software: the **HC-SR04 ECHO voltage divider** (5 V signal into a 3.3 V GPIO) and the **I²C SCL pin** (22 or 23). Follow [`Docs/HARDWARE_ACCEPTANCE.md`](Docs/HARDWARE_ACCEPTANCE.md) A1–A3 before powering the station with `physxr_station`.
 
+### Bring-up order
+
+None of these steps has been performed yet. Each must pass before the next; steps marked **STOP** in the checklist block everything after them.
+
+| # | Step | Checklist | Evidence to record |
+|---|---|---|---|
+| 1 | Verify wiring and electrical safety with USB **unplugged**: ECHO divider, SCL pin, SDA, common ground, 5 V to the HC-SR04 | A1–A7 | Meter readings, photos |
+| 2 | Flash `physxr_station` | B1–B3 | Compile and upload output |
+| 3 | Confirm the handshake: `#HELLO … dev=phys-xr-01 … scl=NN`, IMU calibration done | C1–C5 | Serial log; GPIO 26 ≤ 3.3 V measured |
+| 4 | Validate each sensor on its own, without Unity | D1–D8 | Harness monitor log |
+| 5 | Calibrate proximity and disturbance thresholds | D9, [`Firmware/README.md`](Firmware/README.md) §5 | Calibrated values table |
+| 6 | Confirm Unity accepts live lines (`FRESH`, `rejected 0`) | F1–F3, E1–E4 | HUD/F1 screenshot, telemetry |
+| 7 | Verify observable ghost reactions (R3, R4, R5, R1; never ATTACK) | F4–F17 | Video + `DECISION … cause_evt` |
+| 8 | Full run, soak, analyzer summary, sign-off | F18–F21, G | `.jsonl`, analyzer CSV |
+
 ### Bill of materials and sensor roles
 
 | Component | Purpose | Signal | Firmware responsibility | Semantic output | Status |
@@ -651,6 +723,9 @@ v=1;dev=phys-xr-01;boot=2864130047;seq=1234;ts=987654;presence=NEAR;confidence=H
 v=1;dev=phys-xr-01;boot=2864130047;seq=1235;ts=987702;presence=VERY_NEAR;confidence=LOW;disturbance=true;eventType=DISTURBANCE;eventId=17;tEvent=987690
 ```
 
+<details>
+<summary><b>Field-by-field guarantees</b> (what each key promises and which component enforces it)</summary>
+
 | Key | Guarantee | Owner |
 |---|---|---|
 | `v` | Protocol version, `1`. **Required on USB serial**; optional on UDP/legacy | Firmware; validator enforces |
@@ -660,6 +735,8 @@ v=1;dev=phys-xr-01;boot=2864130047;seq=1235;ts=987702;presence=VERY_NEAR;confide
 | `ts` | Device ms since boot; used for ordering and latency, **never** compared with Unity's clock | Firmware |
 | `presence`, `confidence`, `disturbance` | Semantic state (enums in upper case) | Firmware semantic core |
 | `eventType`, `eventId`, `tEvent` | One qualified event; `eventId` +1 per event from 1 each boot; repeated on 3 lines; Unity accepts it **once** | Firmware; `PhysicalEventManager` dedups |
+
+</details>
 
 **Diagnostic lines** start with `#` (`#HELLO`, `#DIAG`, `#CAL`, `#ERR`). Unity shows them in the menu and F1 overlay and logs them (`STATION_LOG`, `SENSOR_DIAG`), but they **never** enter `PhysicalState`. Raw distances and IMU magnitude appear only here.
 
@@ -734,7 +811,7 @@ All images come from the game itself. Four are from the project's own `-physxr-c
 <table>
   <tr>
     <td width="50%"><img src="Docs/media/menu_sensor_condition.jpg" alt="Main menu with the Sensors condition selector set to Virtual only and the telemetry folder path" width="100%"><br><sub><b>Menu.</b> The sensing condition is chosen per trial; the panel explains it. The trial ID and telemetry path are shown for evaluation runs.</sub></td>
-    <td width="50%"><img src="Docs/media/first_sighting_e5.jpg" alt="The Hollow lunging at the camera in a red-tinted corridor" width="100%"><br><sub><b>First sighting (E5).</b> One telegraphed, non-lethal lunge on the first clear view. The red grade is the attack wind-up.</sub></td>
+    <td width="50%"><img src="Docs/media/first_sighting_e5.jpg" alt="The Hollow lunging at the camera in a red-tinted corridor" width="100%"><br><sub><b>First sighting (E5).</b> One telegraphed, non-lethal lunge on the first clear view. The red grade is the game's post-processing tint while an attack is in progress.</sub></td>
   </tr>
   <tr>
     <td><img src="Docs/media/kitchen_fuse_objective.jpg" alt="Dark tiled kitchen with the fuse on the table under a hanging lamp" width="100%"><br><sub><b>Objective.</b> The fuse on the kitchen table, with the house dark before power is restored.</sub></td>
@@ -780,8 +857,8 @@ From `analyze_telemetry.py`: outcome, duration, deaths, attempts, time share per
 
 | Level | What | How to run | Latest result |
 |---|---|---|---|
-| Unit + integration (no Unity) | 24 suites, 314 tests over `Core`, `Communication`, `PhysicalWorld`, `WorldState`, `Decision`, `Telemetry`, `Ghost` (non-Unity parts), `Game/Flow` | `dotnet run -c Release --project Tools/TestHarness` | **314 passed, 0 failed** (22 Oct 2026, after a `--no-incremental` rebuild) |
-| Firmware host test | Semantic core: classes, hysteresis, fusion, disturbance detector, line format | `g++ -std=c++17 …` (below) | **47 checks, 0 failed** (22 Oct) |
+| Unit + integration (no Unity) | 24 suites, 314 tests over `Core`, `Communication`, `PhysicalWorld`, `WorldState`, `Decision`, `Telemetry`, `Ghost` (non-Unity parts), `Game/Flow` | `dotnet run -c Release --project Tools/TestHarness` | **314 passed, 0 failed** (22 Oct 2026, on `5124e90` and again on `dc932ca`, each after a `--no-incremental` rebuild) |
+| Firmware host test | Semantic core: classes, hysteresis, fusion, disturbance detector, line format | `g++ -std=c++17 …` (below) | **47 checks, 0 failed** (22 Oct, same two commits) |
 | Firmware compile | ESP32 core 3.3.11 + Pololu VL53L0X 1.3.1 | `arduino-cli compile --fqbn esp32:esp32:esp32 Firmware/physxr_station` | 0 warnings, 305,548 B flash (21 Oct; `arduino-cli` is not on the PATH of the machine used for this README, so not re-run) |
 | Player self-test: route | Objective route through the real controller | `-physxr-m2-selftest` | **23/23** (22 Oct) |
 | Player self-test: encounter | Readables, sprint/jump, E5, surge, attack, lantern, death, solid body, checkpoint, 10 restarts | `-physxr-selftest` | 34/34 (21 Oct) |
@@ -791,6 +868,10 @@ From `analyze_telemetry.py`: outcome, duration, deaths, attempts, time share per
 | Build | Windows player, `BuildPipeline` | `M2SceneSetup.BuildWindows` | Succeeded, 0 errors (21 Oct) |
 | Manual play | Team play-through on `1b7a475` | — | 5 items **team-reported PASS** (collision, readables, first sighting, sprint/jump, pause) |
 | User study | First-time players | — | **Not run** |
+
+Each level proves only its own layer. Passing harness tests and a firmware compile do **not** show that the station works. A player self-test with the USB link open does **not** show that real sensor data was accepted (that run accepted 0 packets). Simulated input is a development and pilot condition, not a substitute for hardware-in-the-loop testing.
+
+**How "314" is counted.** The harness registers 24 suites in [`Tools/TestHarness/Program.cs`](Tools/TestHarness/Program.cs) and prints one `PASS:`/`FAIL:` line per test, then `SUITES RUN: 24, TOTAL FAILED: 0`; its exit code is the failure count. 314 is the number of `PASS:` lines. History: 310 at `ec4af1e` (F1 fix, which added WSM-PAUSE-01..05), then 314 at `02cece8` (SER-19..22). Older documents quoting 310 are dated before that change.
 
 <details>
 <summary><b>Per-suite breakdown</b> (from the 22 Oct harness run)</summary>
@@ -828,7 +909,7 @@ Full matrix with evidence per row: [`Docs/TechnicalSpec_MilestoneStatus.md`](Doc
 
 ### Re-verification performed for this README (22 Oct 2026)
 
-Run on this machine against `5124e90` with the Unity Editor closed:
+Run on the development machine against `5124e90` with the Unity Editor closed. The harness and the firmware host test were repeated on `dc932ca` (current `main`, whose only later change is the team-roles table) with the same results; the player self-tests were not repeated, because no runtime code changed.
 
 | Check | Result |
 |---|---|
@@ -865,7 +946,10 @@ flowchart TD
 
 <sub>The **masked** baseline is what makes the comparison fair: in condition A the station is plugged in and logged, so the only difference is whether its state reaches the agent.</sub>
 
-**Protocol (to be executed; nothing below has been measured):**
+**Status: planned. No trial has been run and nothing below has been measured.**
+
+<details>
+<summary><b>Protocol</b>: expected-action table, conditions, per-hop timestamps T0–T4, reliability, repeats, human measures</summary>
 
 1. **Expected-action table.** For each scripted cue (NEAR+knock outside the zone, LOW-confidence NEAR, knock with nobody near, VERY_NEAR inside the zone, cable pull), write the expected `GhostAction` from the rule tables above before running trials. Decision correctness = fraction of cues where the logged `DECISION` matches.
 2. **Conditions.** A and B as above. SIMULATED is a pilot condition only and is reported separately.
@@ -879,6 +963,8 @@ flowchart TD
 5. **Repeats.** At least the 20-tap protocol of checklist D8 per condition, plus full runs. Report the median and spread; do not average away outliers.
 6. **Human measures.** Perceived responsiveness and interaction clarity by questionnaire with first-time players (T25).
 7. **Limitations to report.** A single station, a single room, an authored policy, and a small sample.
+
+</details>
 
 ---
 
@@ -902,10 +988,10 @@ flowchart TD
 ### Get the code
 
 ```bash
-git clone https://github.com/Dr-Dre420/PHYS-XR.git
+git clone https://github.com/ArnavJain2005/PHYS-XR.git
 ```
 
-Open the repository root in Unity Hub with 6000.5.8f1. The first import regenerates `Library/` (gitignored).
+The default branch is `main`. Open the repository root in Unity Hub with 6000.5.8f1. The first import regenerates `Library/` (gitignored). The repository was previously published as `Dr-Dre420/PHYS-XR`, and GitHub redirects that address. An older clone can switch with `git remote set-url origin https://github.com/ArnavJain2005/PHYS-XR.git`.
 
 ### Build the Windows player
 
@@ -920,6 +1006,9 @@ Unity -batchmode -quit -projectPath . -executeMethod PHYSXR.EditorTools.M2SceneS
 Without `-buildPath`, the output goes to `Builds/M2_Windows/PHYS-XR.exe`. `Builds/` is gitignored, so **check the executable's timestamp against your commit before a demo**. A stale build in one of the two folders is easy to launch by mistake.
 
 ### Flash the firmware (after the hardware safety checks)
+
+> [!CAUTION]
+> Do not power the station with this firmware until checklist steps **A1–A3** pass with the USB cable unplugged. A1 is the ECHO divider: an unprotected 5 V echo can damage GPIO 26. A2 is the SCL pin. See [Bring-up order](#bring-up-order). The firmware has not yet been flashed to the station.
 
 ```bash
 arduino-cli lib install "VL53L0X"
@@ -946,6 +1035,9 @@ arduino-cli upload --fqbn esp32:esp32:esp32 -p COM6 Firmware/physxr_station
 
 ### Troubleshooting
 
+<details>
+<summary>Common symptoms: port in use, no COM port, no data, not FRESH, slow Editor self-tests, early self-test exits, stale harness binary</summary>
+
 | Symptom | Fix |
 |---|---|
 | `FAULTED … in use by another program` | Close the Arduino Serial Monitor, the harness monitor, or another game instance |
@@ -956,6 +1048,8 @@ arduino-cli upload --fqbn esp32:esp32:esp32 -p COM6 Firmware/physxr_station
 | Editor Play mode runs at ~1.5 fps during self-tests | An unfocused Editor throttles Play mode; use the Windows player |
 | Player self-test exits 1 with no `SELFTEST END` | Most likely low commit memory (see [issue L7](#open-issues)); close the Editor and large apps |
 | Harness reports failures after a manual code mutation | Rebuild with `--no-incremental` (timestamps can let a stale binary run) |
+
+</details>
 
 More: [`Firmware/README.md`](Firmware/README.md) §6, [`Docs/HARDWARE_SERIAL.md`](Docs/HARDWARE_SERIAL.md) §5.
 
@@ -1039,7 +1133,7 @@ The faculty run sheet [`Docs/DEMO_SCRIPT.md`](Docs/DEMO_SCRIPT.md) gives a hardw
 | 7 | Within 3.5 m of the ghost, press `3` | `PROTECT [S]` (R1); press `1` within 5 s |
 | 9–10 | After power, enter the dining room; lantern during wind-up | `WARN [E4]` → `ATTACK [E3]` → `RETREAT [E0]` |
 
-Run the sensor beats **before** picking up the fuse, outside the threat zone. Afterwards R7 makes the ghost warn on its own. Note: the run sheet's evidence list quotes "310 tests"; the current count is 314.
+Run the sensor beats **before** picking up the fuse, outside the threat zone. Afterwards R7 makes the ghost warn on its own.
 
 ### 7. Collecting telemetry
 
@@ -1120,9 +1214,9 @@ Generated and ignored: `Library/`, `Temp/`, `Logs/`, `Builds/`, `UserSettings/`,
 | L8 | **No live latency or reliability numbers** | No hardware trial | No quantitative claim possible | P1 (after L1) | [Phase 4](#phase-4--telemetry-and-experimental-evaluation) protocol | Median and spread for T0→T4 per hop with n reported |
 | L9 | **Manual acceptance incomplete** | Team-reported pass on 5 items only | Feel, difficulty, audio balance unknown | P2 | T21 remaining items, T25 first-time players, audio by ear | Recorded results with tester names and dates |
 | L10 | **Desktop only; no Quest build** | No XR rig or input adapter | Deviates from the synopsis' primary platform | P3 (after the MVP loop) | [Phase 6](#phase-6--optional-research-extensions) | Quest build passes T22–T24 |
-| L11 | **No dashboard** | None in repo | Observers rely on the F1 overlay | P3 | [Phase 5](#phase-5--dashboard-and-demonstration-readiness) | Reads telemetry, never the COM port |
+| L11 | **No dashboard** | None in repo (a "Dashboard & Live Telemetry" workstream is assigned; see [Team](#team-acknowledgements-and-licence)) | Observers rely on the F1 overlay | P3 | [Phase 5](#phase-5--dashboard-and-demonstration-readiness) | Reads telemetry, never the COM port |
 | L12 | **Boundaries by convention** | No `.asmdef`, no Unity Test Runner bridge | Accidental cross-layer references possible | P3 | Add asmdefs per namespace | Compile fails on a forbidden reference |
-| L13 | **Doc drift** | `DEMO_SCRIPT.md` quotes 310 tests; milestone doc says `SensorScenarioTests` 11/11 (now 12) | Minor confusion | P3 | Update those counts | Counts match the harness |
+| L13 | ~~Doc drift~~ **Resolved 22 Oct 2026** | `DEMO_SCRIPT.md` quoted 310 tests and the milestone doc `SensorScenarioTests` 11/11 | — | — | Both now state 314 and 12/12, with the date; dated historical 310 figures elsewhere were left as recorded | Counts match the harness |
 | L14 | **Procedural art only** | Third-party kits not imported (licences unconfirmed, no LFS) | Visual fidelity limited | P4 | Only if needed: confirm licences, add LFS | Asset register updated |
 
 ### Known design limitations
@@ -1131,7 +1225,6 @@ Generated and ignored: `Library/`, `Temp/`, `Logs/`, `Builds/`, `UserSettings/`,
 - Checkpoint and full restarts both reload the game scene; the checkpoint is a saved stage and pose, not a snapshot.
 - USB serial works only on the Windows desktop build (kernel32).
 - The decision policy is authored, so behaviour variety comes from inputs, not adaptation.
-- The working tree on the development machine has uncommitted XR/OpenXR and package changes (for example a Unity MCP package in `Packages/manifest.json`). They are not part of the documented build and were deliberately left untouched.
 
 ---
 
@@ -1149,10 +1242,20 @@ flowchart LR
 
 <sub>Phases 1→2→4 are the critical path. Phase 3 can proceed in parallel because the decision layer is testable without hardware.</sub>
 
+| Category | Phase | Done when (short form; full criteria below) |
+|---|---|---|
+| **Immediate prerequisites** | [0 Baseline](#phase-0--baseline-stabilization) | Clean-checkout build; 314/314, 47/47, 23/23, 36/36 in repeated runs |
+| | [1 Hardware and link](#phase-1--hardware-and-communication-reliability) | Wiring measured and safe; `#HELLO` seen; per-sensor checks and calibration recorded; 20 taps → 20 accepted events |
+| | [2 Physical-to-ghost](#phase-2--physical-to-virtual-integration) | One logged, filmed hardware trial each for R1, R3, R4, R5, with `cause_evt` joined to a visible behaviour |
+| **System hardening** | [3 Decision hardening](#phase-3--ghost-decision-system-hardening) | Replay test on recorded hardware sequences; thresholds re-checked via parameters, not rule changes |
+| **Evaluation and demonstration** | [4 Evaluation](#phase-4--telemetry-and-experimental-evaluation) | Virtual-only vs physical-plus-virtual results, every number traceable to a log or video |
+| | [5 Dashboard and demo](#phase-5--dashboard-and-demonstration-readiness) | Run sheet executed twice in a row on the demo PC; hardware photos and video in the gallery |
+| **Optional research** | [6 Extensions](#phase-6--optional-research-extensions) | Not committed scope: Quest, Wi-Fi/UDP firmware, RL or other providers, more sensors |
+
 ### Phase 0 — Baseline stabilization
 
 - **Objective:** a known-good, reproducible state to measure against.
-- **Work packages:** (a) commit or explicitly shelve the local XR/package working-tree changes; (b) build one player from a clean checkout and record its commit; (c) re-run harness, host test and the three self-tests with free memory logged (L7); (d) fix the doc drift (L13); (e) confirm no `PHYS-XR.exe` survives a normal quit (checklist F19).
+- **Work packages:** (a) decide whether the XR/OpenXR package changes on the development machine are committed or dropped; (b) build one player from a clean checkout and record its commit; (c) re-run harness, host test and the three self-tests with free memory logged (L7); (d) doc drift (L13): done 22 Oct 2026; (e) confirm no `PHYS-XR.exe` survives a normal quit (checklist F19).
 - **Files:** `Docs/*`, `Builds/` (local), `Packages/manifest.json` (owner's decision).
 - **Dependencies:** none. **Priority:** P0. **Risks:** memory-related flakiness masks real failures.
 - **Acceptance / exit:** clean-checkout build; 314/314; 47/47; M2 23/23; SIMULATED 36/36 in 5 consecutive runs; build commit written next to the executable.
@@ -1237,9 +1340,9 @@ The project proposal, synopsis, Final Software Architecture v2.0, Hardware Speci
 
 ## Team, acknowledgements and licence
 
-PHYS-XR is a B.Tech Cyber Physical Systems project (IAVR and ESDP, Semester 5) at the School of Electrical Engineering, Manipal Institute of Technology, Manipal, academic year 2026–27. The synopsis lists the team as:
+PHYS-XR is a B.Tech Cyber Physical Systems project (IAVR and ESDP, Semester 5) at the School of Electrical Engineering, Manipal Institute of Technology, Manipal, academic year 2026–27. The team, as listed in the synopsis, with roles as revised by the team on 22 Oct 2026:
 
-| Member | Planned workstream (team role documents, 1 Sep 2026) |
+| Member | Role |
 |---|---|
 | Arnav Jain | Unity core & XR game |
 | Arya M | Dashboard & Live Telemetry |
