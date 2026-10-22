@@ -55,6 +55,19 @@ namespace PHYSXR.Decision
         public string LastDecisionReason { get; private set; }
             = "FOLLOW: no active threat or event requiring intervention";
 
+        // Rule IDs (additive, telemetry only - Decide() never reads them).
+        // LastCandidateRuleId: the R1-R8 rule that matched this call.
+        // LastRuleId: the same, or "HYST" when hysteresis retained the
+        //   previous action instead of that candidate.
+        // LastDisturbanceRuleEligible: R3's or R5's conditions held this call,
+        //   whether or not an earlier rule matched first. R3 and R5 are the
+        //   only rules that read the disturbance pulse.
+        public const string HysteresisRuleId = "HYST";
+
+        public string LastCandidateRuleId { get; private set; } = string.Empty;
+        public string LastRuleId { get; private set; } = string.Empty;
+        public bool LastDisturbanceRuleEligible { get; private set; }
+
         // Deterministic temporal-context foundation (owned, not injected -
         // there is only ever one per provider instance). Populated by
         // ApplyHysteresisAndRecord with the FINAL action every call (never
@@ -99,8 +112,11 @@ namespace PHYSXR.Decision
 
         public GhostAction Decide(WorldState state)
         {
-            (GhostAction candidateAction, string candidateReason) = SelectCandidate(state);
-            return ApplyHysteresisAndRecord(candidateAction, candidateReason, state);
+            (GhostAction candidateAction, string candidateReason, string candidateRuleId) = SelectCandidate(state);
+            LastCandidateRuleId = candidateRuleId;
+            GhostAction finalAction = ApplyHysteresisAndRecord(candidateAction, candidateReason, state, out bool retained);
+            LastRuleId = retained ? HysteresisRuleId : candidateRuleId;
+            return finalAction;
         }
 
         // R1-R8, unchanged: same conditions, same first-match-wins order,
@@ -108,7 +124,10 @@ namespace PHYSXR.Decision
         // hysteresis existed. Only the shape changed (a candidate is
         // returned rather than immediately resolved/recorded), so this
         // method can be unit-tested and unaffected by hysteresis policy.
-        private (GhostAction, string) SelectCandidate(WorldState state)
+        // Each result also names its rule, and R3's and R5's conditions are
+        // held in locals (same expressions) so their eligibility can be
+        // reported even when an earlier rule matches first.
+        private (GhostAction, string, string) SelectCandidate(WorldState state)
         {
             PhysicalState physical = state?.physical;
             PlayerState player = state?.player;
@@ -127,42 +146,46 @@ namespace PHYSXR.Decision
             float threatLevel = virtualWorld?.threatLevel ?? 0f;
             bool eventActive = virtualWorld?.eventActive ?? false;
 
+            bool r3Conditions = (presence == PresenceLevel.NEAR || presence == PresenceLevel.VERY_NEAR)
+                && disturbance
+                && confidence == ConfidenceLevel.HIGH
+                && !inThreatZone;
+            bool r5Conditions = disturbance && presence == PresenceLevel.NONE && !inThreatZone;
+            LastDisturbanceRuleEligible = r3Conditions || r5Conditions;
+
             // R1 - CRITICAL PLAYER RISK
             if (inThreatZone && presence == PresenceLevel.VERY_NEAR && confidence == ConfidenceLevel.HIGH)
-                return (GhostAction.PROTECT, "PROTECT: player at risk + high-confidence VERY_NEAR physical presence");
+                return (GhostAction.PROTECT, "PROTECT: player at risk + high-confidence VERY_NEAR physical presence", "R1");
 
             // R2 - CRITICAL VIRTUAL/GENERAL THREAT
             if (threatLevel >= CriticalThreatThreshold && !inThreatZone)
-                return (GhostAction.RETREAT, "RETREAT: sufficiently high threat without active player-risk condition");
+                return (GhostAction.RETREAT, "RETREAT: sufficiently high threat without active player-risk condition", "R2");
 
             // R3 - QUALIFIED PHYSICAL EVENT
-            if ((presence == PresenceLevel.NEAR || presence == PresenceLevel.VERY_NEAR)
-                && disturbance
-                && confidence == ConfidenceLevel.HIGH
-                && !inThreatZone)
-                return (GhostAction.INVESTIGATE, "INVESTIGATE: qualified physical disturbance detected");
+            if (r3Conditions)
+                return (GhostAction.INVESTIGATE, "INVESTIGATE: qualified physical disturbance detected", "R3");
 
             // R4 - UNCERTAIN PHYSICAL CONDITION
             if (presence == PresenceLevel.NEAR && confidence == ConfidenceLevel.LOW && !inThreatZone)
-                return (GhostAction.WARN, "WARN: physical condition detected with low confidence");
+                return (GhostAction.WARN, "WARN: physical condition detected with low confidence", "R4");
 
             // R5 - QUALIFIED DISTURBANCE WITHOUT PROXIMITY
-            if (disturbance && presence == PresenceLevel.NONE && !inThreatZone)
-                return (GhostAction.WARN, "WARN: disturbance detected without proximity confirmation");
+            if (r5Conditions)
+                return (GhostAction.WARN, "WARN: disturbance detected without proximity confirmation", "R5");
 
             // R6 - VIRTUAL EVENT (MVP: never INVESTIGATE for a purely virtual event)
             if (eventActive && presence == PresenceLevel.NONE && !inThreatZone && threatLevel < CriticalThreatThreshold)
-                return (GhostAction.WARN, "WARN: virtual event detected");
+                return (GhostAction.WARN, "WARN: virtual event detected", "R6");
 
             // R7 - ELEVATED VIRTUAL THREAT
             if (threatLevel >= ElevatedThreatThreshold
                 && threatLevel < CriticalThreatThreshold
                 && !inThreatZone
                 && presence == PresenceLevel.NONE)
-                return (GhostAction.WARN, "WARN: elevated virtual threat");
+                return (GhostAction.WARN, "WARN: elevated virtual threat", "R7");
 
             // R8 - NORMAL
-            return (GhostAction.FOLLOW, "FOLLOW: no active threat or event requiring intervention");
+            return (GhostAction.FOLLOW, "FOLLOW: no active threat or event requiring intervention", "R8");
         }
 
         // The hysteresis policy, applied in exactly this order every call,
@@ -187,7 +210,9 @@ namespace PHYSXR.Decision
         // threshold deadbands, no separate safety-exit dwell parameter,
         // no repeated-event gating, and no additional persistent state
         // beyond what DecisionHistory already tracks.
-        private GhostAction ApplyHysteresisAndRecord(GhostAction candidateAction, string candidateReason, WorldState state)
+        // retained: true when the dwell kept the previous action instead of
+        // the candidate (the dwell only ever returns a different action).
+        private GhostAction ApplyHysteresisAndRecord(GhostAction candidateAction, string candidateReason, WorldState state, out bool retained)
         {
             long timestamp = decisionClock != null ? decisionClock() : state?.physical?.timestamp ?? 0L;
             bool disturbanceActive = state?.physical?.disturbance ?? false;
@@ -231,6 +256,7 @@ namespace PHYSXR.Decision
             // candidate would corrupt PreviousAction/TimeEnteredCurrentAction
             // and future dwell calculations.
             temporalContext.Update(finalAction, timestamp, disturbanceActive);
+            retained = finalAction != candidateAction;
             LastDecisionReason = finalReason;
 
             return finalAction;
