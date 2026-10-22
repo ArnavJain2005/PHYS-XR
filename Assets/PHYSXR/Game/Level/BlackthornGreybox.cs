@@ -293,6 +293,8 @@ namespace PHYSXR.Game.Level
         {
             if (navMeshInstance.valid)
                 navMeshInstance.Remove();
+            if (dustMaterial != null)
+                Destroy(dustMaterial);
         }
 
         // --------------------------------------------------------------- player

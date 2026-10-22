@@ -24,7 +24,11 @@ namespace PHYSXR.Game.Gameplay
     public class PowerSystem : MonoBehaviour
     {
         [SerializeField] private float surgeSeconds = 1.6f;
-        [SerializeField] private Color unpoweredAmbient = new Color(0.016f, 0.018f, 0.026f);
+        // Ambient is a three-colour gradient: a cool fill from above (the
+        // night through the windows), a darker band at eye level and almost
+        // nothing from the floor, which keeps shapes readable in the dark
+        // without the flat, grey look of a single ambient colour.
+        [SerializeField] private Color unpoweredAmbient = new Color(0.018f, 0.021f, 0.03f);
         [SerializeField] private Color poweredAmbient = new Color(0.06f, 0.055f, 0.05f);
 
         private readonly List<Light> mainLights = new List<Light>();
@@ -169,8 +173,11 @@ namespace PHYSXR.Game.Gameplay
 
         private void ApplyLighting(bool powered)
         {
-            RenderSettings.ambientMode = UnityEngine.Rendering.AmbientMode.Flat;
-            RenderSettings.ambientLight = powered ? poweredAmbient : unpoweredAmbient;
+            Color ambient = powered ? poweredAmbient : unpoweredAmbient;
+            RenderSettings.ambientMode = UnityEngine.Rendering.AmbientMode.Trilight;
+            RenderSettings.ambientSkyColor = ambient * 1.3f + new Color(0f, 0.003f, 0.012f);
+            RenderSettings.ambientEquatorColor = ambient;
+            RenderSettings.ambientGroundColor = ambient * 0.35f;
 
             foreach (Light light in mainLights)
                 if (light != null) light.enabled = powered;

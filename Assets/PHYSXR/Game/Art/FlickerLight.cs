@@ -5,7 +5,8 @@ namespace PHYSXR.Game.Art
     // Gives a light an unsteady, failing-bulb character. Steady() suppresses
     // it (the ghost's PROTECT behaviour: "steady lights"); Pulse() gives one
     // short burst of failure (the ghost's WARN entry flickers the nearest
-    // light). Optional emissive renderer follows the light.
+    // light); SetDisturbance() makes it struggle while the ghost is close
+    // (PresenceLights). Optional emissive renderer follows the light.
     public class FlickerLight : MonoBehaviour
     {
         private static readonly int EmissionColorId = Shader.PropertyToID("_EmissionColor");
@@ -19,6 +20,7 @@ namespace PHYSXR.Game.Art
         private float seed;
         private float burstUntil;
         private bool steady;
+        private float disturbance;
 
         public float BaseIntensity
         {
@@ -48,6 +50,13 @@ namespace PHYSXR.Game.Art
             burstUntil = Time.time + seconds;
         }
 
+        // 0 = undisturbed .. 1 = the ghost is right beside it. A steady
+        // (PROTECT) light ignores it: the ghost holds those lights still.
+        public void SetDisturbance(float amount)
+        {
+            disturbance = Mathf.Clamp01(amount);
+        }
+
         private void Update()
         {
             if (target == null)
@@ -72,6 +81,15 @@ namespace PHYSXR.Game.Art
                 float n = Mathf.PerlinNoise(t * 9f, seed);
                 float dropout = Mathf.PerlinNoise(t * 1.3f, seed + 4f) > 0.82f && n > 0.5f ? 0.15f : 1f;
                 k = Mathf.Lerp(1f, 0.75f + n * 0.4f, roughness) * dropout;
+            }
+
+            if (!steady && disturbance > 0.01f && t >= burstUntil)
+            {
+                // Brown-out: the light sags, stutters and now and then drops.
+                float sag = Mathf.Lerp(1f, 0.55f, disturbance);
+                float stutter = Mathf.PerlinNoise(t * 19f, seed + 9f);
+                float drop = stutter < 0.18f + 0.22f * disturbance ? 0.12f : 1f;
+                k *= Mathf.Lerp(1f, sag * (0.8f + stutter * 0.4f) * drop, disturbance);
             }
 
             target.intensity = baseIntensity * k;

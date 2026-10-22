@@ -44,7 +44,16 @@ namespace PHYSXR.Game.Audio
         WinSting,
         RadioStatic,
         NoteRustle,
-        CandleCrackle
+        CandleCrackle,
+        GhostPresence,
+        GhostDrag,
+        ScoreDrone,
+        ScoreStrings,
+        ScorePulse,
+        ScoreSwell,
+        DistantKnock,
+        PipeGroan,
+        WaterDrip
     }
 
     // Every sound in the game, synthesised in code: oscillators, filtered
@@ -68,7 +77,11 @@ namespace PHYSXR.Game.Audio
                 case AudioCue.HouseCreak:
                     return 4;
                 case AudioCue.Thunder:
+                case AudioCue.DistantKnock:
+                case AudioCue.WaterDrip:
                     return 3;
+                case AudioCue.PipeGroan:
+                    return 2;
                 default:
                     return 1;
             }
@@ -90,6 +103,11 @@ namespace PHYSXR.Game.Audio
                 case AudioCue.Heartbeat:
                 case AudioCue.RadioStatic:
                 case AudioCue.CandleCrackle:
+                case AudioCue.GhostPresence:
+                case AudioCue.GhostDrag:
+                case AudioCue.ScoreDrone:
+                case AudioCue.ScoreStrings:
+                case AudioCue.ScorePulse:
                     return true;
                 default:
                     return false;
@@ -282,6 +300,15 @@ namespace PHYSXR.Game.Audio
                 case AudioCue.RadioStatic: return Static(rng);
                 case AudioCue.NoteRustle: return Rustle(rng);
                 case AudioCue.CandleCrackle: return Candle(rng);
+                case AudioCue.GhostPresence: return Presence(rng);
+                case AudioCue.GhostDrag: return Drag(rng);
+                case AudioCue.ScoreDrone: return ScoreDrone(rng);
+                case AudioCue.ScoreStrings: return ScoreStrings(rng);
+                case AudioCue.ScorePulse: return ScorePulse(rng);
+                case AudioCue.ScoreSwell: return ScoreSwell(rng);
+                case AudioCue.DistantKnock: return DistantKnock(rng, v);
+                case AudioCue.PipeGroan: return PipeGroan(rng, v);
+                case AudioCue.WaterDrip: return Drip(rng, v);
                 default: return Buffer(0.1f);
             }
         }
@@ -834,6 +861,202 @@ namespace PHYSXR.Game.Audio
                 float pop = rng.Next() > 0.9993f ? rng.Bipolar() : 0f;
                 return lp.Low(rng.Bipolar() * 0.05f) + pop * 0.8f;
             });
+        }
+    
+        // ------------------------------------------------- the Hollow, score
+
+        // A low pressure around the ghost: two sub tones a fraction of a hertz
+        // apart (a slow beat), with upper harmonics so small speakers still
+        // carry it, and a faint breathy band on top.
+        private static float[] Presence(Rng rng)
+        {
+            var air = Biquad.BandPass(190f, 2.5f);
+            return Loop(12f, 1f, i =>
+            {
+                float t = T(i);
+                float swell = 0.65f + 0.35f * Mathf.Sin(t * 2f * Mathf.PI / 12f * 2f);
+                float sub = Sine(38f * t) + Sine(38.5f * t) * 0.8f;
+                float harm = Sine(76f * t) * 0.35f + Sine(114.3f * t) * 0.18f + Sine(152.6f * t) * 0.08f;
+                return (sub * 0.5f + harm) * swell * 0.6f + air.Process(rng.Bipolar()) * 0.25f * swell;
+            });
+        }
+
+        // Cloth dragged over boards: irregular pulls of band-passed noise with
+        // a soft low rub under each.
+        private static float[] Drag(Rng rng)
+        {
+            var cloth = Biquad.BandPass(1300f, 1.1f);
+            var rub = Biquad.BandPass(240f, 3f);
+            float pull = 0f;
+            int nextPull = 0;
+            float pullLen = 0.6f;
+            int pullStart = 0;
+            return Loop(6f, 0.4f, i =>
+            {
+                if (i >= nextPull)
+                {
+                    pullStart = i;
+                    pullLen = 0.45f + rng.Next() * 0.5f;
+                    nextPull = i + (int)(Rate * (pullLen + 0.1f + rng.Next() * 0.35f));
+                    pull = 0.6f + rng.Next() * 0.4f;
+                }
+                float k = (float)(i - pullStart) / (Rate * pullLen);
+                float env = k < 1f ? Mathf.Sin(k * Mathf.PI) * pull : 0f;
+                float n = rng.Bipolar();
+                return cloth.Process(n) * env * 1.4f + rub.Process(n) * env * 0.8f;
+            });
+        }
+
+        // Score layer 1, the tension bed: a dark low cluster (A, B-flat, E)
+        // with slow, independent swells and filtered air.
+        private static float[] ScoreDrone(Rng rng)
+        {
+            var air = new OnePole(380f);
+            float brown = 0f;
+            return Loop(32f, 3f, i =>
+            {
+                float t = T(i);
+                float a = Sine(55f * t) + Sine(110.1f * t) * 0.4f + Sine(165.2f * t) * 0.15f;
+                float b = Sine(58.27f * t + 0.2f * Mathf.Sin(t * 0.21f)) + Sine(116.6f * t) * 0.3f;
+                float e = Sine(82.4f * t) + Sine(164.9f * t) * 0.25f;
+                float sa = 0.55f + 0.45f * Mathf.Sin(t * 0.196f);
+                float sb = 0.4f + 0.4f * Mathf.Sin(t * 0.137f + 2f);
+                float se = 0.35f + 0.35f * Mathf.Sin(t * 0.093f + 4f);
+                brown = (brown + rng.Bipolar() * 0.02f) * 0.997f;
+                return (a * sa + b * sb * 0.8f + e * se * 0.6f) * 0.35f + air.Low(brown) * 2.2f;
+            });
+        }
+
+        // Score layer 2, unease: high, glassy, bowed-noise bands a semitone
+        // apart, swelling and receding with an uneven tremolo.
+        private static float[] ScoreStrings(Rng rng)
+        {
+            var b1 = Biquad.BandPass(1760f, 40f);
+            var b2 = Biquad.BandPass(1864.7f, 40f);
+            var b3 = Biquad.BandPass(2637f, 45f);
+            return Loop(24f, 2.5f, i =>
+            {
+                float t = T(i);
+                float n = rng.Bipolar();
+                float s1 = Mathf.Pow(0.5f + 0.5f * Mathf.Sin(t * 0.33f), 2f);
+                float s2 = Mathf.Pow(0.5f + 0.5f * Mathf.Sin(t * 0.27f + 1.7f), 2f);
+                float s3 = Mathf.Pow(0.5f + 0.5f * Mathf.Sin(t * 0.19f + 3.1f), 3f);
+                float trem = 0.75f + 0.25f * Mathf.Sin(t * 2f * Mathf.PI * (6.5f + 2f * Mathf.Sin(t * 0.4f)));
+                float glass = Sine(3520f * t) * 0.02f * s3;
+                return (b1.Process(n) * s1 + b2.Process(n) * s2 * 0.9f + b3.Process(n) * s3 * 0.7f) * trem * 6f + glass;
+            });
+        }
+
+        // Score layer 3, escalation: a low throb at 66 bpm with an accent
+        // every fourth beat and a muffled ostinato under it.
+        private static float[] ScorePulse(Rng rng)
+        {
+            const float beat = 60f / 66f;
+            var thump = new OnePole(260f);
+            var ost = new OnePole(420f);
+            return Loop(beat * 12f, 0.05f, i =>
+            {
+                float t = T(i);
+                int n = Mathf.FloorToInt(t / beat);
+                float bt = t - n * beat;
+                float accent = n % 4 == 0 ? 1f : 0.6f;
+                float kick = Mathf.Sin(2f * Mathf.PI * (44f * bt + 30f * (1f - Mathf.Exp(-bt * 18f)) / 18f)) * Env(bt, 0.004f, 0.28f);
+                float knock = thump.Low(rng.Bipolar()) * Env(bt, 0.002f, 0.06f) * 3f;
+                float tone = ost.Low(Saw((n % 3 == 2 ? 103.8f : 110f) * t)) * Env(bt, 0.02f, 0.45f) * 0.5f;
+                return (kick * 0.9f + knock) * accent + tone;
+            });
+        }
+
+        // A rising swell that cuts off: the moment before something happens.
+        private static float[] ScoreSwell(Rng rng)
+        {
+            var s = Buffer(3.2f);
+            var bp = Biquad.BandPass(300f, 2f);
+            for (int i = 0; i < s.Length; i++)
+            {
+                float t = T(i);
+                float k = Mathf.Clamp01(t / 2.6f);
+                bp.SetBandPass(Mathf.Lerp(250f, 3200f, k * k), 2f);
+                float rise = Mathf.Pow(k, 2.4f) * (t < 2.6f ? 1f : Mathf.Exp(-(t - 2.6f) * 14f));
+                float cluster = Sine(Mathf.Lerp(110f, 220f, k) * t) + Sine(Mathf.Lerp(116.5f, 233f, k) * t) * 0.8f;
+                s[i] = (bp.Process(rng.Bipolar()) * 1.5f + cluster * 0.35f) * rise;
+            }
+            Room(s, 0.35f, 1.4f);
+            return s;
+        }
+
+        // ---------------------------------------------- house, one-shots
+
+        // Two to four dull knocks somewhere inside the walls.
+        private static float[] DistantKnock(Rng rng, int v)
+        {
+            var s = Buffer(2.4f);
+            var lp = new OnePole(220f);
+            int knocks = 2 + v % 3;
+            float at = 0.05f;
+            var times = new float[knocks];
+            for (int k = 0; k < knocks; k++)
+            {
+                times[k] = at;
+                at += 0.24f + rng.Next() * 0.22f;
+            }
+            for (int i = 0; i < s.Length; i++)
+            {
+                float t = T(i);
+                float x = 0f;
+                for (int k = 0; k < knocks; k++)
+                {
+                    float kt = t - times[k];
+                    if (kt < 0f) continue;
+                    x += (Sine((95f + v * 12f) * kt) * 0.8f + rng.Bipolar() * 0.5f) * Env(kt, 0.002f, 0.07f) * (k == knocks - 1 ? 0.7f : 1f);
+                }
+                s[i] = lp.Low(x) * 2.5f;
+            }
+            Room(s, 0.5f, 1.6f);
+            return s;
+        }
+
+        // An old pipe groaning under pressure: a gliding buzz through narrow
+        // resonances, swelling and dying away.
+        private static float[] PipeGroan(Rng rng, int v)
+        {
+            float len = 2.6f + v * 0.6f;
+            var s = Buffer(len);
+            var r1 = Biquad.BandPass(420f + v * 60f, 14f);
+            var r2 = Biquad.BandPass(910f + v * 90f, 18f);
+            var r3 = Biquad.BandPass(1730f, 20f);
+            float phase = 0f;
+            for (int i = 0; i < s.Length; i++)
+            {
+                float t = T(i);
+                float k = t / len;
+                float f = Mathf.Lerp(78f + v * 9f, 64f, k) * (1f + 0.03f * Mathf.Sin(t * 5.3f));
+                phase += f / Rate;
+                float src = Saw(phase) + rng.Bipolar() * 0.15f;
+                float env = Mathf.Pow(Mathf.Sin(k * Mathf.PI), 1.5f) * (0.75f + 0.25f * Mathf.Sin(t * 9f));
+                s[i] = (r1.Process(src) * 1.2f + r2.Process(src) + r3.Process(src) * 0.5f) * env * 3f;
+            }
+            Room(s, 0.45f, 1.8f);
+            return s;
+        }
+
+        // A single drip landing in standing water.
+        private static float[] Drip(Rng rng, int v)
+        {
+            var s = Buffer(0.9f);
+            float f0 = 700f + v * 140f;
+            float phase = 0f;
+            for (int i = 0; i < s.Length; i++)
+            {
+                float t = T(i);
+                float f = f0 * (1f + 1.4f * (1f - Mathf.Exp(-t * 60f)));
+                phase += f / Rate;
+                float plop = Sine(phase) * Env(t, 0.001f, 0.045f);
+                float splash = rng.Bipolar() * Env(t, 0.0005f, 0.012f) * 0.3f;
+                s[i] = plop + splash;
+            }
+            Room(s, 0.6f, 1.1f);
+            return s;
         }
     }
 }

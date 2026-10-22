@@ -4,16 +4,21 @@ using UnityEngine;
 
 namespace PHYSXR.Game.Art
 {
-    // The storm outside and the house's own noises: lightning (window panes
-    // and flash lights, and the moon light during the ending), thunder after a
-    // distance-dependent delay, rain muffled by the walls, and occasional
-    // creaks somewhere near the player. Presentation only; it never touches
+    // The storm outside and the house's own noises: moonlight through the
+    // windows and lightning (window panes and their spot lights, and the moon
+    // light during the ending), thunder after a distance-dependent delay, rain
+    // muffled by the walls, and occasional creaks somewhere near the player. Presentation only; it never touches
     // game rules. Runs on scaled time, so it waits while the game is paused.
     public class StormController : MonoBehaviour
     {
         private static readonly int EmissionColorId = Shader.PropertyToID("_EmissionColor");
-        private static readonly Color PaneDark = new Color(0.02f, 0.03f, 0.05f);
+        // Panes read as a faint night sky, so a figure in front of a window
+        // is a silhouette; the window lights keep a dim, cold spill between
+        // strikes (the only light in the unpowered house that is not red,
+        // candle or lantern).
+        private static readonly Color PaneDark = new Color(0.035f, 0.05f, 0.085f);
         private static readonly Color PaneFlash = new Color(1.6f, 1.8f, 2.3f);
+        private const float MoonSpill = 0.9f;
 
         private GameAudio audioPlayer;
         private AudioSource rain;
@@ -110,8 +115,8 @@ namespace PHYSXR.Game.Art
                 foreach (Light l in windowLights)
                 {
                     if (l == null) continue;
-                    l.enabled = k > 0.01f && !outdoors;
-                    l.intensity = 8f * k;
+                    l.enabled = !outdoors;
+                    l.intensity = MoonSpill + 8f * k;
                 }
             }
 

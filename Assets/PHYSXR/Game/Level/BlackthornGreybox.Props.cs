@@ -17,6 +17,7 @@ namespace PHYSXR.Game.Level
             Kitchen(Group(props, "Kitchen"));
             Utility(Group(props, "Utility"));
             Dining(Group(props, "Dining"));
+            BuildStory(Group(props, "Story"));
         }
 
         // ------------------------------------------------------------- rooms
