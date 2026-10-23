@@ -38,7 +38,10 @@ namespace PHYSXR.Game.Art
             Portrait,
             Landscape,
             Fabric,
-            MenuBackdrop
+            MenuBackdrop,
+            GhostSkin,
+            GraveLinen,
+            GraveLinenNormal
         }
 
         private static readonly Dictionary<Id, Texture2D> Cache = new Dictionary<Id, Texture2D>();
@@ -89,6 +92,9 @@ namespace PHYSXR.Game.Art
                 case Id.Landscape: return Landscape(128, 59);
                 case Id.Fabric: return Fabric(128);
                 case Id.MenuBackdrop: return Landscape(512, 61);
+                case Id.GhostSkin: return GhostSkin(256);
+                case Id.GraveLinen: return GraveLinen(256);
+                case Id.GraveLinenNormal: return NormalFrom(LinenHeight(256), 256, 1.6f);
                 default: return Solid(Color.magenta);
             }
         }
@@ -571,6 +577,72 @@ namespace PHYSXR.Game.Art
                 float weave = ((x + y) % 4 < 2 ? 0.05f : -0.05f);
                 float n = Fbm(u, v, 4, 3, 113);
                 Color c = new Color(0.2f, 0.19f, 0.17f) * (0.85f + n * 0.3f + weave);
+                c.a = 1f;
+                p[y * size + x] = C(c);
+            }
+            return Finish(t, p);
+        }
+
+        // The Hollow's skin: grey, bloodless and mottled, with dark veins
+        // (ridged noise) and bruise-like blotches. Kept pale so the face,
+        // hands and ribs read against the dark shroud in near darkness.
+        private static Texture2D GhostSkin(int size)
+        {
+            var t = NewTexture(size, size, false);
+            var p = new Color32[size * size];
+            Color pale = new Color(0.62f, 0.64f, 0.6f);
+            Color bruise = new Color(0.28f, 0.27f, 0.3f);
+            Color vein = new Color(0.16f, 0.2f, 0.24f);
+            for (int y = 0; y < size; y++)
+            for (int x = 0; x < size; x++)
+            {
+                float u = (float)x / size, v = (float)y / size;
+                float mottle = Fbm(u, v, 4, 4, 171);
+                float blotch = Mathf.SmoothStep(0.58f, 0.78f, Fbm(u, v, 3, 3, 173));
+                float ridge = 1f - Mathf.Abs(Fbm(u, v, 5, 3, 179) * 2f - 1f);
+                float veins = Mathf.SmoothStep(0.86f, 0.97f, ridge) * (0.4f + 0.6f * Fbm(u, v, 8, 2, 181));
+                Color c = pale * (0.8f + mottle * 0.35f);
+                c = Color.Lerp(c, bruise, blotch * 0.55f);
+                c = Color.Lerp(c, vein, veins * 0.7f);
+                c.a = 1f;
+                p[y * size + x] = C(c);
+            }
+            return Finish(t, p);
+        }
+
+        private static float[] LinenHeight(int size)
+        {
+            var h = new float[size * size];
+            for (int y = 0; y < size; y++)
+            for (int x = 0; x < size; x++)
+            {
+                float u = (float)x / size, v = (float)y / size;
+                float warp = Mathf.Sin(u * size * Mathf.PI * 0.5f) * 0.5f + 0.5f;
+                float weft = Mathf.Sin(v * size * Mathf.PI * 0.5f) * 0.5f + 0.5f;
+                float creases = Fbm(u * 0.5f, v * 2f, 4, 3, 191);
+                h[y * size + x] = (warp * weft) * 0.35f + creases * 0.65f;
+            }
+            return h;
+        }
+
+        // Grave linen: an old, grey weave, darkened by damp and grave soil,
+        // with soil blotches and tide-mark stains.
+        private static Texture2D GraveLinen(int size)
+        {
+            var t = NewTexture(size, size, false);
+            var p = new Color32[size * size];
+            Color cloth = new Color(0.2f, 0.19f, 0.175f);
+            Color soil = new Color(0.07f, 0.055f, 0.045f);
+            for (int y = 0; y < size; y++)
+            for (int x = 0; x < size; x++)
+            {
+                float u = (float)x / size, v = (float)y / size;
+                float weave = ((x + y) % 4 < 2 ? 0.04f : -0.04f);
+                float n = Fbm(u, v, 6, 4, 193);
+                float stain = Mathf.SmoothStep(0.5f, 0.7f, Fbm(u, v, 3, 4, 197));
+                float tide = Mathf.SmoothStep(0.45f, 0.1f, v + (Fbm(u, v, 4, 2, 199) - 0.5f) * 0.3f);
+                Color c = cloth * (0.8f + n * 0.4f + weave);
+                c = Color.Lerp(c, soil, Mathf.Clamp01(stain * 0.6f + tide * 0.7f));
                 c.a = 1f;
                 p[y * size + x] = C(c);
             }

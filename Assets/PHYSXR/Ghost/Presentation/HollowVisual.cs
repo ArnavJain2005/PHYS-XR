@@ -3,16 +3,33 @@ using UnityEngine;
 
 namespace PHYSXR.Ghost
 {
-    // The Hollow's body: an original, code-built apparition (GDD 9.1, "an
-    // unnaturally distorted humanoid") - a tall, gaunt figure in a tattered
-    // shroud with an elongated pale head, arms too long for its body and two
-    // pinpoint eyes. It floats; the hem drags on the floor.
+    // The Hollow's body: an original apparition (GDD 9.1, "an unnaturally
+    // distorted humanoid") - a tall, gaunt figure in a torn burial shroud.
+    // Under a cowl of rotten linen its face is a bloodless skull with deep
+    // sockets, two pinpoint eyes and an unhinged jaw that hangs too far open;
+    // the shroud is torn over the chest and shows the ribs; the arms are bare
+    // bone and skin, too long for the body, ending in overlong fingers. It
+    // floats; the hem drags on the floor.
+    //
+    // The body parts are modelled in Blender (Tools/blender/build_hollow.py)
+    // and supplied by IGhostPresentationAssets.BodyMesh; each is authored in
+    // the local space of the transform it hangs from. If any part is missing
+    // the figure falls back to the original primitive build.
     //
     // Animation is procedural: every frame the current pose blends toward a
     // target pose chosen by the motion controller (one per behaviour), with
-    // walk bob, sway, a cloth-like hem and occasional "glitches" (a head snap
-    // or a brief vertical stretch) that make the movement abrupt but readable.
-    // Glitch timing comes from a seeded generator, so a replay looks the same.
+    // walk bob, sway, breathing, a cloth-like robe and occasional "glitches"
+    // (a head snap or a brief vertical stretch) that make the movement abrupt
+    // but readable. Two deliberate departures from human motion, used
+    // sparingly so they keep their contrast:
+    //  - the head leads: it turns to the look target (the player, set by the
+    //    motion controller) well before the slower body follows, and holds on
+    //    the target while the body moves away;
+    //  - total stillness: now and then, when it is not moving, every idle
+    //    motion stops for one to three seconds, and ends in a small, quick
+    //    re-orientation of the head.
+    // Glitch and stillness timing come from a seeded generator, so a replay
+    // looks the same.
     //
     // Presentation only: it knows nothing about decisions, WorldState or
     // sensors. Everything it creates (meshes, material instances) it destroys.
@@ -73,10 +90,18 @@ namespace PHYSXR.Ghost
         private readonly List<Object> owned = new List<Object>();
         private readonly List<Renderer> renderers = new List<Renderer>();
 
-        private Transform body, chest, neck, head, armL, armR, foreL, foreR;
+        // Robe cloth: vertices this far below the collar sway fully.
+        private const float RobeCollar = 1.62f;
+        private const float ArmSplayModelled = 11f;
+        private const float HeadYawLimit = 75f, HeadPitchLimit = 30f;
+
+        private Transform body, chest, neck, head, armL, armR, foreL, foreR, torso;
         private Mesh shroud;
+        private Renderer shroudRenderer;
         private Vector3[] shroudBase, shroudVerts;
         private float[] hemJag;
+        private float[] clothWeight, clothAngle;
+        private bool modelled;
         private Material shroudMat, skinMat, eyeMat, wispMat;
         private Light glow;
         private ParticleSystem wisps, mist;
@@ -96,6 +121,12 @@ namespace PHYSXR.Ghost
         private float visibility = 1f;
         private float visibilityTarget = 1f;
         private Color eyeBase0;
+        private Vector3? lookTarget;
+        private float lookYaw, lookPitch;
+        private float stillness;
+        private float stillUntil;
+        private float nextStill = 6f;
+        private float snapUntil;
 
         private static readonly int EmissionColorId = Shader.PropertyToID("_EmissionColor");
 
@@ -107,6 +138,12 @@ namespace PHYSXR.Ghost
 
         public Vector3 ChestPosition => chest != null ? chest.position : transform.position + Vector3.up * 1.4f;
 
+        // True when the figure was built from the modelled body parts.
+        public bool Modelled => modelled;
+
+        // 1 while the figure is holding completely still.
+        public float Stillness => stillness;
+
         public void Build(IGhostPresentationAssets assets)
         {
             shroudMat = Own(assets.CreateShroudMaterial());
@@ -115,6 +152,101 @@ namespace PHYSXR.Ghost
             wispMat = Own(assets.CreateWispMaterial());
             eyeBase0 = eyeMat.HasProperty(EmissionColorId) ? eyeMat.GetColor(EmissionColorId) : Color.white;
 
+            var parts = new Mesh[7];
+            modelled = true;
+            for (int i = 0; i < parts.Length; i++)
+            {
+                parts[i] = assets.BodyMesh((GhostBodyPart)i);
+                modelled &= parts[i] != null;
+            }
+
+            if (modelled)
+                BuildModelled(parts);
+            else
+                BuildPrimitive();
+
+            BuildParticles();
+
+            var lightGo = new GameObject("Glow");
+            lightGo.transform.SetParent(head, false);
+            lightGo.transform.localPosition = modelled ? new Vector3(0f, 0.02f, 0.55f) : new Vector3(0f, -0.3f, 0.32f);
+            glow = lightGo.AddComponent<Light>();
+            glow.type = LightType.Point;
+            glow.color = new Color(0.6f, 0.72f, 1f);
+            glow.range = modelled ? 1.4f : 2.6f;
+            glow.intensity = 0.2f;
+            glow.shadows = LightShadows.None;
+        }
+
+        // The modelled figure. Node positions match the primitive build, so
+        // poses, glitches and the motion controller's numbers are unchanged.
+        private void BuildModelled(Mesh[] parts)
+        {
+            body = Node("Body", transform, Vector3.zero);
+            chest = Node("Chest", body, new Vector3(0f, 1.45f, 0f));
+            torso = MeshPart("Torso", chest, parts[(int)GhostBodyPart.Torso], skinMat, false);
+            neck = Node("Neck", chest, new Vector3(0f, 0.3f, 0.02f));
+            MeshPart("NeckMesh", neck, parts[(int)GhostBodyPart.Neck], skinMat, false);
+            head = Node("Head", neck, new Vector3(0f, 0.27f, 0.02f));
+            MeshPart("Skull", head, parts[(int)GhostBodyPart.Head], skinMat, false);
+            MeshPart("Hood", head, parts[(int)GhostBodyPart.Hood], shroudMat, false);
+            // Pinpoints deep in the sockets: they catch the eye, not the room.
+            Part("EyeL", head, PrimitiveType.Sphere, new Vector3(-0.037f, 0.034f, 0.074f), Vector3.one * 0.014f, eyeMat, false);
+            Part("EyeR", head, PrimitiveType.Sphere, new Vector3(0.037f, 0.034f, 0.074f), Vector3.one * 0.014f, eyeMat, false);
+
+            armL = ModelledArm("ArmL", -1f, parts, out foreL);
+            armR = ModelledArm("ArmR", 1f, parts, out foreR);
+
+            // The robe is deformed every frame, so it gets its own copy.
+            Mesh robe = Own(Instantiate(parts[(int)GhostBodyPart.Robe]));
+            robe.name = "HollowRobe";
+            robe.MarkDynamic();
+            shroud = robe;
+            shroudBase = robe.vertices;
+            shroudVerts = (Vector3[])shroudBase.Clone();
+            clothWeight = new float[shroudBase.Length];
+            clothAngle = new float[shroudBase.Length];
+            for (int i = 0; i < shroudBase.Length; i++)
+            {
+                float k = Mathf.Clamp01((RobeCollar - shroudBase[i].y) / RobeCollar);
+                clothWeight[i] = k * k;
+                clothAngle[i] = Mathf.Atan2(shroudBase[i].x, shroudBase[i].z);
+            }
+            // Room for the sway and the trailing drag, so it is never culled early.
+            Bounds b = robe.bounds;
+            b.Expand(new Vector3(0.3f, 0.05f, 0.5f));
+            robe.bounds = b;
+            shroudRenderer = MeshPart("Robe", body, robe, shroudMat, true).GetComponent<Renderer>();
+        }
+
+        private Transform ModelledArm(string name, float side, Mesh[] parts, out Transform forearm)
+        {
+            Transform shoulder = Node(name, chest, new Vector3(0.2f * side, 0.12f, 0f));
+            // One mesh for both arms, mirrored for the right (thumb outward).
+            var mirror = new Vector3(side > 0f ? -1f : 1f, 1f, 1f);
+            MeshPart("Upper", shoulder, parts[(int)GhostBodyPart.UpperArm], skinMat, false).localScale = mirror;
+            forearm = Node("Fore", shoulder, new Vector3(0f, -0.52f, 0f));
+            MeshPart("Lower", forearm, parts[(int)GhostBodyPart.Forearm], skinMat, false).localScale = mirror;
+            return shoulder;
+        }
+
+        private Transform MeshPart(string name, Transform parent, Mesh mesh, Material material, bool castShadows)
+        {
+            var go = new GameObject(name);
+            go.transform.SetParent(parent, false);
+            go.AddComponent<MeshFilter>().sharedMesh = mesh;
+            var r = go.AddComponent<MeshRenderer>();
+            r.sharedMaterial = material;
+            // The robe carries the figure's shadow; the thin parts would add
+            // shadow-map cost for little. Every part still receives shadows.
+            r.shadowCastingMode = castShadows ? UnityEngine.Rendering.ShadowCastingMode.On : UnityEngine.Rendering.ShadowCastingMode.Off;
+            renderers.Add(r);
+            return go.transform;
+        }
+
+        // The original code-built figure, kept as the fallback.
+        private void BuildPrimitive()
+        {
             body = Node("Body", transform, new Vector3(0f, 0f, 0f));
             chest = Node("Chest", body, new Vector3(0f, 1.45f, 0f));
             Part("Torso", chest, PrimitiveType.Capsule, new Vector3(0f, -0.2f, 0f), new Vector3(0.3f, 0.36f, 0.2f), shroudMat, true);
@@ -135,17 +267,6 @@ namespace PHYSXR.Ghost
             armR = Arm("ArmR", 1f, out foreR);
 
             BuildShroud();
-            BuildParticles();
-
-            var lightGo = new GameObject("Glow");
-            lightGo.transform.SetParent(head, false);
-            lightGo.transform.localPosition = new Vector3(0f, -0.3f, 0.32f);
-            glow = lightGo.AddComponent<Light>();
-            glow.type = LightType.Point;
-            glow.color = new Color(0.6f, 0.72f, 1f);
-            glow.range = 2.6f;
-            glow.intensity = 0.2f;
-            glow.shadows = LightShadows.None;
         }
 
         private T Own<T>(T obj) where T : Object
@@ -241,6 +362,7 @@ namespace PHYSXR.Ghost
             mr.sharedMaterial = shroudMat;
             mr.shadowCastingMode = UnityEngine.Rendering.ShadowCastingMode.On;
             renderers.Add(mr);
+            shroudRenderer = mr;
         }
 
         private void BuildParticles()
@@ -298,6 +420,13 @@ namespace PHYSXR.Ghost
             speed = metresPerSecond;
         }
 
+        // Where the head looks (world space), or null to let it follow the
+        // pose. The head turns toward it ahead of the body.
+        public void SetLookTarget(Vector3? worldPoint)
+        {
+            lookTarget = worldPoint;
+        }
+
         // Lantern hit or other shock: brief bright flare.
         public void Flash()
         {
@@ -323,12 +452,14 @@ namespace PHYSXR.Ghost
             current = PoseValues.Lerp(current, goal, 1f - Mathf.Exp(-blendSpeed * dt));
 
             UpdateGlitch(goal);
+            UpdateStillness(dt);
+            float alive = 1f - 0.94f * stillness;
             walkPhase += dt * Mathf.Lerp(1.2f, 7f, Mathf.Clamp01(speed / 3.5f));
             if (visibility != visibilityTarget)
                 ApplyVisibility(Mathf.MoveTowards(visibility, visibilityTarget, dt * 2f));
 
-            float bob = Mathf.Sin(walkPhase * 2f) * 0.045f * Mathf.Clamp01(speed) + Mathf.Sin(time * 1.3f) * 0.02f;
-            float sway = Mathf.Sin(time * 0.9f) * 3f * current.agitation + Mathf.Sin(walkPhase) * 4f * Mathf.Clamp01(speed);
+            float bob = Mathf.Sin(walkPhase * 2f) * 0.045f * Mathf.Clamp01(speed) + Mathf.Sin(time * 1.3f) * 0.02f * alive;
+            float sway = Mathf.Sin(time * 0.9f) * 3f * current.agitation * alive + Mathf.Sin(walkPhase) * 4f * Mathf.Clamp01(speed);
             float shake = current.shake > 0.01f ? (Mathf.PerlinNoise(time * 23f, 0.3f) - 0.5f) * 14f * current.shake : 0f;
 
             body.localPosition = new Vector3(0f, 0.04f + bob, 0f);
@@ -336,23 +467,78 @@ namespace PHYSXR.Ghost
             body.localScale = new Vector3(1f, current.stretch * glitchStretch, 1f);
 
             chest.localRotation = Quaternion.Euler(current.lean * 0.65f + current.hunch * 25f, 0f, sway * 0.6f + shake * 0.5f);
+            if (torso != null)
+            {
+                // Slow, shallow breaths that lift the ribs; none while still.
+                float breath = Mathf.Sin(time * 1.05f) * alive;
+                torso.localScale = new Vector3(1f + 0.018f * breath, 1f, 1f + 0.03f * breath);
+            }
             neck.localRotation = Quaternion.Euler(current.hunch * 18f, 0f, 0f);
-            float twitch = (Mathf.PerlinNoise(time * 2.1f, 7.7f) - 0.5f) * 10f * current.agitation;
-            head.localRotation = Quaternion.Euler(-current.hunch * 10f, glitchYaw + twitch, current.headTilt + shake);
+            float twitch = (Mathf.PerlinNoise(time * 2.1f, 7.7f) - 0.5f) * 10f * current.agitation * alive;
+            UpdateLook(dt);
+            head.localRotation = Quaternion.Euler(-current.hunch * 10f + lookPitch, glitchYaw + twitch + lookYaw, current.headTilt + shake);
 
             float swing = Mathf.Sin(walkPhase) * 18f * Mathf.Clamp01(speed) * (1f - current.armRaise);
             PoseArm(armL, foreL, -1f, swing);
             PoseArm(armR, foreR, 1f, -swing);
 
-            AnimateShroud(dt);
+            if (shroudRenderer == null || shroudRenderer.isVisible)
+                AnimateShroud(alive);
 
             float eye = Mathf.Max(0f, current.eye) * (1f + flash * 3f) * visibility;
             if (glitchUntil > time)
                 eye *= 1.8f;
             eyeMat.SetColor(EmissionColorId, eyeBase0 * eye);
-            glow.intensity = (0.12f + 0.16f * eye) * visibility;
+            glow.intensity = (0.12f + 0.16f * eye) * visibility * (modelled ? 0.35f : 1f);
             glow.color = Color.Lerp(new Color(0.6f, 0.72f, 1f), new Color(1f, 0.35f, 0.3f), Mathf.Clamp01((current.eye - 1.2f) / 1.2f));
             flash = Mathf.MoveTowards(flash, 0f, dt * 2.5f);
+        }
+
+        // Head yaw and pitch toward the look target, relative to the figure's
+        // own facing. Fast (the head leads the body), frozen while the figure
+        // holds still, and quicker in the short "snap" after a stillness.
+        private void UpdateLook(float dt)
+        {
+            float yaw = 0f, pitch = 0f;
+            if (lookTarget.HasValue)
+            {
+                Vector3 d = transform.InverseTransformPoint(lookTarget.Value) - new Vector3(0f, 2.0f, 0.1f);
+                float flat = new Vector2(d.x, d.z).magnitude;
+                yaw = Mathf.Clamp(Mathf.Atan2(d.x, d.z) * Mathf.Rad2Deg, -HeadYawLimit, HeadYawLimit);
+                pitch = Mathf.Clamp(-Mathf.Atan2(d.y, Mathf.Max(0.05f, flat)) * Mathf.Rad2Deg, -HeadPitchLimit, HeadPitchLimit);
+            }
+
+            float rate = time < snapUntil ? 22f : 7f;
+            float k = (1f - Mathf.Exp(-rate * dt)) * (1f - stillness);
+            lookYaw = Mathf.Lerp(lookYaw, yaw, k);
+            lookPitch = Mathf.Lerp(lookPitch, pitch, k);
+        }
+
+        // Rare, complete stillness while the figure is not moving.
+        private void UpdateStillness(float dt)
+        {
+            bool idlePose = target == Pose.Watch || target == Pose.Investigate || target == Pose.Protect || target == Pose.Drift;
+            bool canHold = idlePose && speed < 0.15f && visibility > 0.99f;
+            if (time >= nextStill)
+            {
+                if (canHold)
+                {
+                    stillUntil = time + 1.2f + Rand(ref glitchSeed) * 1.8f;
+                    nextStill = stillUntil + 7f + Rand(ref glitchSeed) * 9f;
+                }
+                else
+                {
+                    nextStill = time + 1.5f;
+                }
+            }
+
+            // Any movement or a change of pose breaks the hold at once.
+            if (!canHold && time < stillUntil)
+                stillUntil = time;
+            bool still = time < stillUntil;
+            if (!still && stillness > 0.5f)
+                snapUntil = time + 0.25f;
+            stillness = Mathf.MoveTowards(stillness, still ? 1f : 0f, dt * (still ? 5f : 8f));
         }
 
         private void PoseArm(Transform shoulder, Transform fore, float side, float swing)
@@ -360,18 +546,39 @@ namespace PHYSXR.Ghost
             float raise = current.armRaise * 150f;
             float reach = current.armReach * 70f;
             float spread = current.armSpread * 40f * side;
-            shoulder.localRotation = Quaternion.Euler(-(raise * 0.6f + reach) + swing, 0f, spread + 6f * side);
+            float splay = modelled ? ArmSplayModelled : 6f;
+            shoulder.localRotation = Quaternion.Euler(-(raise * 0.6f + reach) + swing, 0f, spread + splay * side);
             fore.localRotation = Quaternion.Euler(-(current.armRaise * 70f) - current.armReach * 15f - 10f, 0f, current.armRaise * -25f * side);
         }
 
-        private void AnimateShroud(float dt)
+        private void AnimateShroud(float alive)
         {
-            int ringVerts = ShroudSegments + 1;
             float drag = Mathf.Clamp(speed, 0f, 3.5f) * 0.05f;
+            float agitation = 0.03f + 0.05f * current.agitation * alive;
+            if (modelled)
+            {
+                // Imported robe: the same two travelling waves, weighted by
+                // how far below the collar each vertex hangs. The imported
+                // normals are kept: the displacement is a few centimetres.
+                for (int i = 0; i < shroudBase.Length; i++)
+                {
+                    Vector3 b = shroudBase[i];
+                    float k = clothWeight[i];
+                    float amp = k * agitation;
+                    float a = clothAngle[i];
+                    float wave = Mathf.Sin(time * 2.3f + a * 3f + b.y * 3.5f) * amp;
+                    float wave2 = Mathf.Sin(time * 3.7f - a * 5f + b.y * 6f) * amp * 0.5f;
+                    shroudVerts[i] = new Vector3(b.x * (1f + wave) + wave2 * 0.5f, b.y, b.z * (1f + wave) - drag * k);
+                }
+                shroud.vertices = shroudVerts;
+                return;
+            }
+
+            int ringVerts = ShroudSegments + 1;
             for (int r = 0; r < ShroudRings; r++)
             {
                 float k = (float)r / (ShroudRings - 1);
-                float amp = k * k * (0.03f + 0.05f * current.agitation);
+                float amp = k * k * agitation;
                 for (int s = 0; s < ringVerts; s++)
                 {
                     Vector3 b = shroudBase[r * ringVerts + s];

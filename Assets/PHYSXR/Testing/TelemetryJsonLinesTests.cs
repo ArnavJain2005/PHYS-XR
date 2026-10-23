@@ -172,7 +172,15 @@ namespace PHYSXR.Testing
             for (int i = 0; i < 20; i++) chain.Step(0.2f, true, PresenceLevel.NONE, false, 10f, null);
             for (int i = 0; i < 20; i++) chain.Step(0.2f, true, PresenceLevel.NEAR, false, 10f, i == 0 ? 17 : (long?)null);
             List<TelemetryRecord> decisions = Decisions(chain.Sink);
-            AssertTrue(chain.Sink.Records.Count == decisions.Count, "change-only: DECISION records only");
+            // Change-only mode writes no per-frame stage records: only DECISION
+            // records, plus exactly one PHYS_EVENT_OUTCOME for the one event.
+            var outcomes = new List<TelemetryRecord>();
+            foreach (TelemetryRecord r in chain.Sink.Records)
+                if (r.type == "PHYS_EVENT_OUTCOME")
+                    outcomes.Add(r);
+            AssertTrue(chain.Sink.Records.Count == decisions.Count + outcomes.Count, "change-only: DECISION and PHYS_EVENT_OUTCOME records only");
+            AssertTrue(outcomes.Count == 1 && outcomes[0].relatedId == 17 && outcomes[0].detail.Contains("outcome=ACTED inner=R3 "),
+                "one ACTED outcome for evt 17: " + (outcomes.Count > 0 ? outcomes[0].detail : "none"));
             AssertTrue(decisions.Count >= 2 && decisions.Count <= 4, "few records for 40 frames, got " + decisions.Count);
             AssertTrue(decisions[0].decisionId == 1 && decisions[0].ghostAction == GhostAction.FOLLOW && decisions[0].ruleId == "INNER", "first FOLLOW dec=1");
             TelemetryRecord investigate = decisions.Find(r => r.ghostAction == GhostAction.INVESTIGATE);

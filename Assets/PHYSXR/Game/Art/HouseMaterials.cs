@@ -54,7 +54,9 @@ namespace PHYSXR.Game.Art
             LockGreen,
             Stone,
             Bark,
-            LitWindow
+            LitWindow,
+            WetSoil,
+            Gouge
         }
 
         public const string TemplateLit = "PHYSXR/Mat_LitNormal";
@@ -93,6 +95,17 @@ namespace PHYSXR.Game.Art
             Material m = FromTemplate(TemplateLit, "Universal Render Pipeline/Lit");
             m.SetColor(BaseColorId, color);
             m.SetFloat(SmoothnessId, smoothness);
+            return m;
+        }
+
+        // A new opaque, textured, faintly self-lit material (caller owns it).
+        // Uses the emissive template, so it carries no normal map.
+        public static Material NewEmissiveLit(Texture albedo, Color tint, float smoothness, Color emission)
+        {
+            Material m = Emissive(tint, emission);
+            m.SetTexture(BaseMapId, albedo);
+            m.SetFloat(SmoothnessId, smoothness);
+            m.SetFloat(MetallicId, 0f);
             return m;
         }
 
@@ -165,6 +178,10 @@ namespace PHYSXR.Game.Art
                 case Surface.LockRed: return Emissive(new Color(0.7f, 0.05f, 0.05f), new Color(2f, 0.1f, 0.1f));
                 case Surface.LockGreen: return Emissive(new Color(0.1f, 0.7f, 0.2f), new Color(0.2f, 2f, 0.4f));
                 case Surface.LitWindow: return Emissive(new Color(0.3f, 0.22f, 0.12f), new Color(1.4f, 0.9f, 0.45f));
+                // Dark, still-wet grave soil: a sheen that catches the lantern.
+                case Surface.WetSoil: return Textured(ProceduralTextures.Id.Ground, null, new Color(0.2f, 0.17f, 0.15f), 0.45f, 0f);
+                // Raw, pale wood under the varnish.
+                case Surface.Gouge: return Plain(new Color(0.42f, 0.32f, 0.22f), 0.15f);
                 default: return Plain(Color.magenta, 0f);
             }
         }

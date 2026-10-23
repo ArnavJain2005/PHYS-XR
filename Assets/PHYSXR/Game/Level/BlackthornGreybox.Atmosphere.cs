@@ -2,6 +2,7 @@ using System.Collections.Generic;
 using PHYSXR.Game.Art;
 using PHYSXR.Game.Audio;
 using PHYSXR.Game.Gameplay;
+using PHYSXR.Ghost;
 using UnityEngine;
 using S = PHYSXR.Game.Art.HouseMaterials.Surface;
 
@@ -10,8 +11,11 @@ namespace PHYSXR.Game.Level
     public partial class BlackthornGreybox
     {
         private readonly List<Light> stormLights = new List<Light>();
+        // Every light that can struggle when the ghost is near.
+        private readonly List<FlickerLight> flickers = new List<FlickerLight>();
 
         public HorrorPostFx PostFx { get; private set; }
+        public TensionScore Score { get; private set; }
 
         // ------------------------------------------------------------- lights
 
@@ -44,6 +48,7 @@ namespace PHYSXR.Game.Level
             light.shadowStrength = 0.8f;
             FlickerLight flicker = light.gameObject.AddComponent<FlickerLight>();
             flicker.Initialize(light, roughness, bulb, HouseMaterials.EmissionOf(S.BulbOn));
+            flickers.Add(flicker);
             mainLights.Add(light);
             if (bulb != null)
                 bulbs.Add(bulb);
@@ -105,9 +110,16 @@ namespace PHYSXR.Game.Level
             Transform g = Group(parent, name);
             Block(g, "Housing", at + Vector3.up * 0.06f, new Vector3(0.22f, 0.08f, 0.12f), S.Metal, false);
             GameObject lamp = Block(g, "Lamp", at, new Vector3(0.16f, 0.05f, 0.08f), S.EmergencyOn, false);
-            emergencyBulbs.Add(lamp.GetComponent<Renderer>());
-            Light light = PointLight(g, name + "_Light", at + Vector3.down * 0.1f, new Color(0.85f, 0.12f, 0.08f), intensity, range, false);
+            Renderer lampRenderer = lamp.GetComponent<Renderer>();
+            emergencyBulbs.Add(lampRenderer);
+            // A dimmer, less saturated red than a warning beacon: it marks the
+            // rooms without flooding them, so the cold window light and the
+            // lantern keep their colour.
+            Light light = PointLight(g, name + "_Light", at + Vector3.down * 0.1f, new Color(0.78f, 0.17f, 0.1f), intensity * 0.8f, range, false);
             emergencyLights.Add(light);
+            FlickerLight flicker = light.gameObject.AddComponent<FlickerLight>();
+            flicker.Initialize(light, 0.04f, lampRenderer, HouseMaterials.EmissionOf(S.EmergencyOn));
+            flickers.Add(flicker);
         }
 
         private void Candles(Transform parent)
@@ -122,7 +134,9 @@ namespace PHYSXR.Game.Level
                 Sphere(g, "Flame", b + Vector3.up * (0.18f + h), new Vector3(0.02f, 0.045f, 0.02f), S.CandleFlame);
             }
             Light light = PointLight(g, "CandleLight", new Vector3(6f, 1.15f, 4f), new Color(1f, 0.6f, 0.3f), 2.2f, 5f, false);
-            light.gameObject.AddComponent<FlickerLight>().Initialize(light, 1f);
+            FlickerLight flame = light.gameObject.AddComponent<FlickerLight>();
+            flame.Initialize(light, 1f);
+            flickers.Add(flame);
             GameAudio.CreateLoop(AudioCue.CandleCrackle, g, new Vector3(6f, 1f, 4f), true, 1f, 0.5f, 4f);
         }
 
@@ -213,12 +227,13 @@ namespace PHYSXR.Game.Level
 
         private void BuildAtmosphere(Transform systems)
         {
+            // Cool fog: depth falls away into blue-black rather than grey.
             RenderSettings.fog = true;
             RenderSettings.fogMode = FogMode.ExponentialSquared;
-            RenderSettings.fogColor = new Color(0.016f, 0.018f, 0.024f);
+            RenderSettings.fogColor = new Color(0.014f, 0.018f, 0.028f);
             RenderSettings.fogDensity = 0.05f;
 
-            GameAudio.CreateLoop(AudioCue.AmbienceHouse, systems, Vector3.zero, false, 1f);
+            AudioSource houseBed = GameAudio.CreateLoop(AudioCue.AmbienceHouse, systems, Vector3.zero, false, 1f);
             AudioSource storm = GameAudio.CreateLoop(AudioCue.AmbienceStorm, systems, Vector3.zero, false, 1f);
             AudioLowPassFilter muffle = storm.gameObject.AddComponent<AudioLowPassFilter>();
             muffle.cutoffFrequency = 750f;
@@ -236,6 +251,71 @@ namespace PHYSXR.Game.Level
 
             PostFx = systems.gameObject.AddComponent<HorrorPostFx>();
             PostFx.Initialize(FlowController);
+
+            Score = systems.gameObject.AddComponent<TensionScore>();
+            Score.Initialize(FlowController, Audio, houseBed, muffle);
+            systems.gameObject.AddComponent<AmbientEvents>().Initialize(FlowController, Audio, Score, Player.transform);
+            systems.gameObject.AddComponent<PresenceLights>().Initialize(FlowController, Audio, flickers);
+
+            // Dust hanging in the air where the cold window light falls.
+            if (PresentationProfile.Lightweight)
+                return;
+            DustMotes(interior, "Dust_Entry", new Vector3(-4.6f, 1.5f, -6.4f), new Vector3(2.4f, 2f, 2.2f));
+            DustMotes(interior, "Dust_EntryHall", new Vector3(0f, 1.7f, -3.8f), new Vector3(5f, 1.6f, 4f));
+            DustMotes(interior, "Dust_Corridor", new Vector3(-4f, 1.6f, 4f), new Vector3(2f, 1.8f, 5.5f));
+            DustMotes(interior, "Dust_Kitchen", new Vector3(-4f, 1.5f, 14.6f), new Vector3(2.6f, 1.8f, 2f));
+            DustMotes(interior, "Dust_Dining", new Vector3(6.6f, 1.6f, 4f), new Vector3(2.2f, 1.8f, 3f));
+        }
+
+        // A slow drift of fine, faint dust. Unlit specks kept dim and sparse;
+        // no shadows, a hard particle cap, and alpha blending (not additive)
+        // so they never bloom.
+        private void DustMotes(Transform parent, string name, Vector3 centre, Vector3 size)
+        {
+            var go = new GameObject(name);
+            go.transform.SetParent(parent, false);
+            go.transform.position = centre;
+            var ps = go.AddComponent<ParticleSystem>();
+            ps.Stop(true, ParticleSystemStopBehavior.StopEmittingAndClear);
+            var main = ps.main;
+            main.loop = true;
+            main.prewarm = true;
+            main.startLifetime = new ParticleSystem.MinMaxCurve(10f, 16f);
+            main.startSpeed = 0.015f;
+            main.startSize = new ParticleSystem.MinMaxCurve(0.004f, 0.011f);
+            main.startColor = new Color(0.62f, 0.66f, 0.74f, 0.45f);
+            main.maxParticles = 45;
+            main.simulationSpace = ParticleSystemSimulationSpace.World;
+            var emission = ps.emission;
+            emission.rateOverTime = 3.2f;
+            var shape = ps.shape;
+            shape.shapeType = ParticleSystemShapeType.Box;
+            shape.scale = size;
+            var noise = ps.noise;
+            noise.enabled = true;
+            noise.strength = 0.04f;
+            noise.frequency = 0.25f;
+            var col = ps.colorOverLifetime;
+            col.enabled = true;
+            var grad = new Gradient();
+            grad.SetKeys(new[] { new GradientColorKey(Color.white, 0f), new GradientColorKey(Color.white, 1f) },
+                new[] { new GradientAlphaKey(0f, 0f), new GradientAlphaKey(1f, 0.25f), new GradientAlphaKey(1f, 0.75f), new GradientAlphaKey(0f, 1f) });
+            col.color = grad;
+            var r = go.GetComponent<ParticleSystemRenderer>();
+            r.sharedMaterial = DustMaterial();
+            r.shadowCastingMode = UnityEngine.Rendering.ShadowCastingMode.Off;
+            r.receiveShadows = false;
+            ps.Play();
+        }
+
+        private Material dustMaterial;
+
+        // One instance for every dust volume; destroyed with the house.
+        private Material DustMaterial()
+        {
+            if (dustMaterial == null)
+                dustMaterial = HouseMaterials.NewParticle(ProceduralTextures.Get(ProceduralTextures.Id.SoftBlob), Color.white, false);
+            return dustMaterial;
         }
 
         private void Reverb(string name, Vector3 at, AudioReverbPreset preset, float minDistance, float maxDistance)
@@ -277,14 +357,19 @@ namespace PHYSXR.Game.Level
             GameObject upper = ExteriorWindow(root, "Upper_R", new Vector3(3.0f, 4.7f, fz), 0.9f, 1.3f, S.WindowStorm);
             upper.name = "SilhouetteWindow";
 
-            // The figure in the upper window, revealed by the ending sequence.
+            // The figure in the upper window, revealed by the ending sequence:
+            // The Hollow itself, from the same meshes, in black, scaled to
+            // stand in the frame with its head tipped to one side.
             Transform figure = new GameObject("Silhouette").transform;
             figure.SetParent(root, false);
-            Block(figure, "Body", new Vector3(3.0f, 4.45f, fz - 0.1f), new Vector3(0.36f, 0.95f, 0.02f), S.Black, false);
-            Block(figure, "Shoulders", new Vector3(3.0f, 4.86f, fz - 0.1f), new Vector3(0.5f, 0.14f, 0.02f), S.Black, false);
-            Sphere(figure, "Head", new Vector3(3.02f, 5.08f, fz - 0.1f), new Vector3(0.2f, 0.3f, 0.02f), S.Black);
-            Block(figure, "ArmL", new Vector3(2.76f, 4.42f, fz - 0.1f), new Vector3(0.06f, 0.75f, 0.02f), S.Black, false, Quaternion.Euler(0f, 0f, -4f));
-            Block(figure, "ArmR", new Vector3(3.24f, 4.42f, fz - 0.1f), new Vector3(0.06f, 0.75f, 0.02f), S.Black, false, Quaternion.Euler(0f, 0f, 4f));
+            if (!WindowFigure(figure, new Vector3(3.0f, 4.05f, fz - 0.1f)))
+            {
+                Block(figure, "Body", new Vector3(3.0f, 4.45f, fz - 0.1f), new Vector3(0.36f, 0.95f, 0.02f), S.Black, false);
+                Block(figure, "Shoulders", new Vector3(3.0f, 4.86f, fz - 0.1f), new Vector3(0.5f, 0.14f, 0.02f), S.Black, false);
+                Sphere(figure, "Head", new Vector3(3.02f, 5.08f, fz - 0.1f), new Vector3(0.2f, 0.3f, 0.02f), S.Black);
+                Block(figure, "ArmL", new Vector3(2.76f, 4.42f, fz - 0.1f), new Vector3(0.06f, 0.75f, 0.02f), S.Black, false, Quaternion.Euler(0f, 0f, -4f));
+                Block(figure, "ArmR", new Vector3(3.24f, 4.42f, fz - 0.1f), new Vector3(0.06f, 0.75f, 0.02f), S.Black, false, Quaternion.Euler(0f, 0f, 4f));
+            }
             figure.gameObject.SetActive(false);
 
             float rise = 2.2f, run = 5.6f;
@@ -338,6 +423,59 @@ namespace PHYSXR.Game.Level
             zone.maxDistance = 20f;
 
             root.gameObject.SetActive(false);
+        }
+
+        // Builds the modelled Hollow, posed and black, at `floor` (facing out
+        // of the house). False if the meshes are unavailable.
+        private bool WindowFigure(Transform parent, Vector3 floor)
+        {
+            var assets = new HollowAssets();
+            Mesh robe = assets.BodyMesh(GhostBodyPart.Robe), torso = assets.BodyMesh(GhostBodyPart.Torso);
+            Mesh neckMesh = assets.BodyMesh(GhostBodyPart.Neck), headMesh = assets.BodyMesh(GhostBodyPart.Head);
+            Mesh hood = assets.BodyMesh(GhostBodyPart.Hood), upper = assets.BodyMesh(GhostBodyPart.UpperArm);
+            Mesh fore = assets.BodyMesh(GhostBodyPart.Forearm);
+            if (robe == null || torso == null || neckMesh == null || headMesh == null || hood == null || upper == null || fore == null)
+                return false;
+
+            Material black = HouseMaterials.Get(S.Black);
+            Transform root = FigureNode(parent, "Hollow", floor, Quaternion.Euler(0f, 180f, 0f));
+            root.localScale = Vector3.one * 0.5f;
+            FigurePart(root, robe, black);
+            Transform chest = FigureNode(root, "Chest", new Vector3(0f, 1.49f, 0f), Quaternion.Euler(6f, 0f, 0f));
+            FigurePart(chest, torso, black);
+            Transform neck = FigureNode(chest, "Neck", new Vector3(0f, 0.3f, 0.02f), Quaternion.Euler(10f, 0f, 0f));
+            FigurePart(neck, neckMesh, black);
+            Transform head = FigureNode(neck, "Head", new Vector3(0f, 0.27f, 0.02f), Quaternion.Euler(-6f, 0f, 24f));
+            FigurePart(head, headMesh, black);
+            FigurePart(head, hood, black);
+            foreach (float side in new[] { -1f, 1f })
+            {
+                Transform shoulder = FigureNode(chest, "Arm", new Vector3(0.2f * side, 0.12f, 0f), Quaternion.Euler(-4f, 0f, 9f * side));
+                FigurePart(shoulder, upper, black).localScale = new Vector3(side > 0f ? -1f : 1f, 1f, 1f);
+                Transform forearm = FigureNode(shoulder, "Fore", new Vector3(0f, -0.52f, 0f), Quaternion.Euler(-8f, 0f, 0f));
+                FigurePart(forearm, fore, black).localScale = new Vector3(side > 0f ? -1f : 1f, 1f, 1f);
+            }
+            return true;
+        }
+
+        private static Transform FigureNode(Transform parent, string name, Vector3 localPosition, Quaternion localRotation)
+        {
+            Transform t = new GameObject(name).transform;
+            t.SetParent(parent, false);
+            t.localPosition = localPosition;
+            t.localRotation = localRotation;
+            return t;
+        }
+
+        private static Transform FigurePart(Transform parent, Mesh mesh, Material material)
+        {
+            var go = new GameObject(mesh.name);
+            go.transform.SetParent(parent, false);
+            go.AddComponent<MeshFilter>().sharedMesh = mesh;
+            var r = go.AddComponent<MeshRenderer>();
+            r.sharedMaterial = material;
+            r.shadowCastingMode = UnityEngine.Rendering.ShadowCastingMode.Off;
+            return go.transform;
         }
 
         private GameObject ExteriorWindow(Transform root, string name, Vector3 centre, float width, float height, S pane)

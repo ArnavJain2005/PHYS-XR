@@ -14,15 +14,35 @@ namespace PHYSXR.Ghost
         StrikeImpact,
         StrikeWhiff,
         ProtectHum,
-        LanternRecoil
+        LanternRecoil,
+        Presence,
+        Drag
     }
 
-    // What the ghost's presentation needs from the game: sounds and
-    // materials. The game implements it (HollowAssets); the Ghost layer never
+    // The modelled body parts of the figure. Each mesh is authored in the
+    // local space of the HollowVisual transform it hangs from (see
+    // Tools/blender/build_hollow.py).
+    public enum GhostBodyPart
+    {
+        Head,
+        Hood,
+        Neck,
+        Torso,
+        Robe,
+        UpperArm,
+        Forearm
+    }
+
+    // What the ghost's presentation needs from the game: sounds, materials
+    // and meshes. The game implements it (HollowAssets); the Ghost layer never
     // references game code, keeping the dependency direction Game -> Ghost.
     public interface IGhostPresentationAssets
     {
         AudioClip Clip(GhostSound sound, out float volume);
+
+        // Shared asset, not owned by the caller. Null when the part is not
+        // available; the figure then falls back to primitive shapes.
+        Mesh BodyMesh(GhostBodyPart part);
 
         // Owned by the caller: the ghost destroys these when it is destroyed.
         Material CreateShroudMaterial();

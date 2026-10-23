@@ -9,11 +9,15 @@ using UnityEngine.Rendering.Universal;
 
 namespace PHYSXR.Game.Art
 {
-    // URP post-processing for the house: ACES tonemapping, a cold desaturated
-    // grade, vignette, film grain, bloom for bulbs and candles, and a little
-    // chromatic aberration. The look tightens as The Hollow gets close: the
-    // vignette closes in, grain and fringing rise, and during an attack the
-    // grade bleeds toward red. Death drains the colour. A heartbeat rises and
+    // URP post-processing for the house: ACES tonemapping and a split grade
+    // (cool, blue-black shadows; warm, tungsten highlights, so practical
+    // lights glow against the night), a small lift so darkness hides detail
+    // without crushing the silhouettes the player navigates by, a restrained
+    // vignette, fine grain, bloom for bulbs and candles. At rest the image is
+    // clean: fringing and heavy grain arrive only with the ghost. The look
+    // tightens as The Hollow gets close: the vignette closes in, colour
+    // drains, grain and fringing rise, and during an attack the grade bleeds
+    // toward red and the frame pulls in slightly. Death drains the colour. A heartbeat rises and
     // quickens with the same closeness. Presentation only: it
     // reads the ghost's distance and phase, never the decision layer.
     //
@@ -30,6 +34,7 @@ namespace PHYSXR.Game.Art
         private FilmGrain grain;
         private ChromaticAberration fringe;
         private Bloom bloom;
+        private LensDistortion pull;
         private float brightness;
         private float threat;
         private float attack;
@@ -47,31 +52,52 @@ namespace PHYSXR.Game.Art
             tone.mode.value = TonemappingMode.ACES;
 
             grade = profile.Add<ColorAdjustments>(true);
-            grade.contrast.value = 16f;
-            grade.saturation.value = -24f;
-            grade.colorFilter.value = new Color(0.93f, 0.97f, 1.04f);
+            grade.contrast.value = 15f;
+            grade.saturation.value = -18f;
+            grade.colorFilter.value = new Color(0.95f, 0.97f, 1.02f);
 
             WhiteBalance balance = profile.Add<WhiteBalance>(true);
-            balance.temperature.value = -9f;
-            balance.tint.value = 3f;
+            balance.temperature.value = -6f;
+            balance.tint.value = 2f;
+
+            ShadowsMidtonesHighlights split = profile.Add<ShadowsMidtonesHighlights>(true);
+            split.shadows.value = new Vector4(0.9f, 0.97f, 1.12f, 0f);
+            split.midtones.value = new Vector4(0.98f, 0.99f, 1.02f, 0f);
+            split.highlights.value = new Vector4(1.08f, 1.0f, 0.9f, 0f);
+
+            LiftGammaGain lift = profile.Add<LiftGammaGain>(true);
+            lift.lift.value = new Vector4(0.98f, 1f, 1.04f, 0.004f);
 
             vignette = profile.Add<Vignette>(true);
-            vignette.intensity.value = 0.36f;
+            vignette.intensity.value = 0.3f;
             vignette.smoothness.value = 0.45f;
             vignette.color.value = Color.black;
 
-            grain = profile.Add<FilmGrain>(true);
-            grain.type.value = FilmGrainLookup.Medium2;
-            grain.intensity.value = 0.3f;
-            grain.response.value = 0.8f;
+            // The lightweight (headset) profile leaves out grain, fringing and
+            // lens distortion: each is a full-screen pass, and the last two
+            // are uncomfortable in a headset.
+            bool full = !PresentationProfile.Lightweight;
+            if (full)
+            {
+                grain = profile.Add<FilmGrain>(true);
+                grain.type.value = FilmGrainLookup.Thin2;
+                grain.intensity.value = 0.22f;
+                grain.response.value = 0.8f;
+
+                pull = profile.Add<LensDistortion>(true);
+                pull.intensity.value = 0f;
+            }
 
             bloom = profile.Add<Bloom>(true);
             bloom.threshold.value = 0.95f;
             bloom.intensity.value = 0.7f;
             bloom.scatter.value = 0.65f;
 
-            fringe = profile.Add<ChromaticAberration>(true);
-            fringe.intensity.value = 0.08f;
+            if (full)
+            {
+                fringe = profile.Add<ChromaticAberration>(true);
+                fringe.intensity.value = 0.02f;
+            }
 
             volume = gameObject.AddComponent<Volume>();
             volume.isGlobal = true;
@@ -114,12 +140,16 @@ namespace PHYSXR.Game.Art
             attack = Mathf.MoveTowards(attack, targetAttack, dt * 3f);
             death = Mathf.MoveTowards(death, dead ? 1f : 0f, dt * 0.8f);
 
-            vignette.intensity.value = 0.36f + 0.2f * threat + 0.1f * attack + 0.2f * death;
+            vignette.intensity.value = 0.3f + 0.2f * threat + 0.1f * attack + 0.2f * death;
             vignette.color.value = Color.Lerp(Color.black, new Color(0.35f, 0f, 0f), attack * 0.8f + death * 0.5f);
-            grain.intensity.value = 0.3f + 0.3f * threat + 0.3f * death;
-            fringe.intensity.value = 0.08f + 0.3f * threat + 0.3f * attack;
-            grade.saturation.value = -24f - 20f * threat - 60f * death;
-            grade.colorFilter.value = Color.Lerp(new Color(0.93f, 0.97f, 1.04f), new Color(1.1f, 0.75f, 0.72f), attack * 0.7f);
+            if (grain != null)
+                grain.intensity.value = 0.22f + 0.3f * threat + 0.35f * death;
+            if (fringe != null)
+                fringe.intensity.value = 0.02f + 0.28f * threat + 0.3f * attack;
+            grade.saturation.value = -18f - 24f * threat - 60f * death;
+            grade.colorFilter.value = Color.Lerp(new Color(0.95f, 0.97f, 1.02f), new Color(1.1f, 0.75f, 0.72f), attack * 0.7f);
+            if (pull != null)
+                pull.intensity.value = -0.14f * attack;
             grade.postExposure.value = brightness - 0.4f * death;
 
             float beat = Mathf.Clamp01((threat - 0.35f) / 0.65f);

@@ -47,6 +47,10 @@ namespace PHYSXR.Ghost
         public const float BodyRadius = 0.35f, BodyHeight = 2.0f;
         public const int BodyLayer = 2; // Ignore Raycast
         private const float ScreechMinInterval = 6f;
+        // Idle turning is deliberately slower than the head (HollowVisual
+        // turns the head first); the attack keeps the agent's fast turning.
+        private const float IdleTurnRate = 110f;
+        private const float EyeHeight = 1.6f;
 
         public enum InterruptResult
         {
@@ -74,6 +78,9 @@ namespace PHYSXR.Ghost
         private AudioSource breath;
         private AudioSource hum;
         private AudioSource oneShot;
+        private AudioSource presence;
+        private AudioSource drag;
+        private float presenceVolume, dragVolume;
 
         private GhostExecutionState? behaviour;
         private long behaviourDecision;
@@ -146,6 +153,17 @@ namespace PHYSXR.Ghost
             hum.Stop();
             oneShot = MakeSource("Voice", GhostSound.Screech, false, 2f, 30f);
             breath.Stop();
+            // A low pressure you feel within a few metres (direction is vague
+            // on purpose), and cloth dragging on the boards while it moves.
+            presence = MakeSource("Presence", GhostSound.Presence, true, 1f, 9f);
+            presence.spread = 120f;
+            presenceVolume = presence.volume;
+            presence.Stop();
+            drag = MakeSource("Drag", GhostSound.Drag, true, 1f, 11f);
+            drag.transform.localPosition = new Vector3(0f, 0.1f, 0f);
+            dragVolume = drag.volume;
+            drag.volume = 0f;
+            drag.Stop();
         }
 
         private void BuildBody()
@@ -213,6 +231,10 @@ namespace PHYSXR.Ghost
                 Play(GhostSound.Manifest, 0.9f);
             if (!breath.isPlaying)
                 breath.Play();
+            if (!presence.isPlaying)
+                presence.Play();
+            if (!drag.isPlaying)
+                drag.Play();
 
             if (flicker && visual.Visibility > 0.5f)
             {
@@ -237,6 +259,8 @@ namespace PHYSXR.Ghost
             visual.SetVisible(false, true);
             breath.Stop();
             hum.Stop();
+            presence.Stop();
+            drag.Stop();
             StopAgent();
         }
 
@@ -249,11 +273,13 @@ namespace PHYSXR.Ghost
                 agent.velocity = Vector3.zero;
             }
             hum.Stop();
+            drag.Stop();
             if (hide)
             {
                 visual.SetVisible(false);
                 SetSolid(false);
                 breath.Stop();
+                presence.Stop();
             }
         }
 
@@ -327,6 +353,11 @@ namespace PHYSXR.Ghost
 
             if (Dormant)
                 return;
+
+            UpdatePresenceAudio();
+            // By default the head holds on the player; behaviours that search
+            // or stagger clear it below.
+            visual.SetLookTarget(player.position + Vector3.up * EyeHeight);
 
             switch (Phase)
             {
@@ -410,7 +441,7 @@ namespace PHYSXR.Ghost
             if (DistanceToPlayer > TrailFar || (AgentMoving && DistanceToPlayer > (TrailNear + TrailFar) * 0.5f))
                 MoveToward(player.position, SpeedTrail, TrailNear);
             else
-                StopAndFace();
+                StopAndFace(IdleTurnRate);
             visual.SetPose(AgentMoving ? HollowVisual.Pose.Drift : HollowVisual.Pose.Watch);
         }
 
@@ -433,16 +464,23 @@ namespace PHYSXR.Ghost
                     arrived = true;
                     arrivedAtMs = behaviourElapsedMs;
                 }
+                // Searching: it looks where it is going, not at the player.
+                visual.SetLookTarget(null);
                 visual.SetPose(HollowVisual.Pose.Drift);
                 return;
             }
 
             StopAgent();
             if (behaviourElapsedMs - arrivedAtMs < InvestigateLingerMs)
+            {
+                visual.SetLookTarget(null);
                 transform.rotation = Quaternion.RotateTowards(transform.rotation,
                     Quaternion.Euler(0f, transform.eulerAngles.y + Mathf.Sin(Time.time * 1.5f) * 40f, 0f), 60f * Time.deltaTime);
+            }
             else
-                FacePlayer();
+            {
+                FacePlayer(IdleTurnRate);
+            }
             visual.SetPose(HollowVisual.Pose.Investigate);
         }
 
@@ -458,7 +496,7 @@ namespace PHYSXR.Ghost
                 return;
             }
 
-            StopAndFace();
+            StopAndFace(IdleTurnRate);
             visual.SetPose(HollowVisual.Pose.Protect, 3f);
         }
 
@@ -475,7 +513,7 @@ namespace PHYSXR.Ghost
                 return;
             }
 
-            StopAndFace();
+            StopAndFace(IdleTurnRate);
             visual.SetPose(HollowVisual.Pose.Watch);
         }
 
@@ -545,6 +583,7 @@ namespace PHYSXR.Ghost
         {
             if (PhaseElapsedMs < StaggerMs)
             {
+                visual.SetLookTarget(null);
                 StopAgent();
                 visual.SetPose(HollowVisual.Pose.Stagger, 10f);
                 return;
@@ -624,19 +663,28 @@ namespace PHYSXR.Ghost
             }
         }
 
-        private void StopAndFace()
+        private void StopAndFace(float degreesPerSecond = 240f)
         {
             StopAgent();
-            FacePlayer();
+            FacePlayer(degreesPerSecond);
         }
 
-        private void FacePlayer()
+        private void FacePlayer(float degreesPerSecond = 240f)
         {
             agent.updateRotation = false;
             Vector3 to = player.position - transform.position;
             to.y = 0f;
             if (to.sqrMagnitude > 0.01f)
-                transform.rotation = Quaternion.RotateTowards(transform.rotation, Quaternion.LookRotation(to), 240f * Time.deltaTime);
+                transform.rotation = Quaternion.RotateTowards(transform.rotation, Quaternion.LookRotation(to), degreesPerSecond * Time.deltaTime);
+        }
+
+        // Presence follows visibility; the drag follows ground speed.
+        private void UpdatePresenceAudio()
+        {
+            float seen = visual.Visibility;
+            float moving = agent.isOnNavMesh ? Mathf.Clamp01(agent.velocity.magnitude / 2.2f) : 0f;
+            presence.volume = presenceVolume * seen;
+            drag.volume = Mathf.MoveTowards(drag.volume, dragVolume * moving * seen, Time.deltaTime * 1.5f);
         }
 
         private void RefreshDistance()

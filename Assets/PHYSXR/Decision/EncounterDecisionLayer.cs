@@ -114,6 +114,11 @@ namespace PHYSXR.Decision
 
         public RuleBasedDecisionProvider Inner => inner;
 
+        // The inner provider's rule for the most recent call (R1-R8, or HYST
+        // when its dwell retained the previous action). Telemetry only; this
+        // layer's own LastRuleId ("INNER", "S", "E4", ...) is unchanged.
+        public string InnerRuleId => inner.LastRuleId;
+
         // The action this layer returned last, or null before the first call.
         public GhostAction? PreviousAction => previousAction;
 

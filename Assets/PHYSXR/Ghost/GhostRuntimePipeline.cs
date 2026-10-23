@@ -50,6 +50,29 @@ namespace PHYSXR.Ghost
     // numbers it with an increasing decision ID, and carries the rule ID and
     // the causing physical event ID. The decision itself is identical in both
     // modes; only what is recorded differs.
+    //
+    // EVENT ATTRIBUTION (change-only mode). An accepted physical event reaches
+    // the rules as WorldState's 3 s disturbance pulse, which carries its ID
+    // (causeEventId). Only R3 and R5 read the pulse, so a decision is
+    // attributed to the event (cause_evt) only when the encounter layer passed
+    // the inner result through ("INNER") and that result came from R3 or R5,
+    // or from the inner dwell retaining the action this same event already
+    // caused. Decisions made while the pulse merely happens to be active
+    // (PROTECT, a surge RETREAT, an encounter WARN) are not attributed.
+    //
+    // Each event the decision layer sees also gets exactly one
+    // PHYS_EVENT_OUTCOME record:
+    //   ACTED          the event produced a decision (written at that decision)
+    //   OUTRANKED      R3's or R5's conditions held, but another rule's
+    //                  decision was selected (a higher-priority rule, an
+    //                  encounter rule, or the dwell)
+    //   NOT_QUALIFIED  neither R3's nor R5's conditions held (e.g. the player
+    //                  is in the threat zone, or confidence is LOW)
+    // OUTRANKED and NOT_QUALIFIED describe the first decision that saw the
+    // event, and are written when its pulse ends, the run turns terminal or
+    // the run restarts, so an event that acts later in its pulse is ACTED.
+    // Records carry the selected action, the winning rule and the inner rule.
+    // Telemetry only: none of this is read by any decision.
     public class GhostRuntimePipeline
     {
         private readonly IExplainableDecisionProvider decisionProvider;
@@ -60,6 +83,17 @@ namespace PHYSXR.Ghost
         private string lastEmittedRule;
         private string lastEmittedReason;
         private bool terminalRecorded;
+
+        public const string OutcomeActed = "ACTED";
+        public const string OutcomeOutranked = "OUTRANKED";
+        public const string OutcomeNotQualified = "NOT_QUALIFIED";
+
+        // Event attribution state (see EVENT ATTRIBUTION above).
+        private long trackedEventId;
+        private bool trackedResolved;
+        private GhostAction? trackedActedAction;
+        private TelemetryRecord pendingOutcome;
+        private long lastRunTimestamp;
 
         public ITelemetrySink TelemetrySink { get; set; }
 
@@ -157,8 +191,22 @@ namespace PHYSXR.Ghost
 
             GhostAction action = decisionProvider.Decide(worldState);
             LastAction = action;
+            lastRunTimestamp = timestamp;
             if (ChangeOnlyTelemetry)
-                EmitDecisionIfChanged(worldState, timestamp, action);
+            {
+                long eventId = worldState?.physical?.causeEventId ?? 0L;
+                if (eventId != trackedEventId)
+                {
+                    FlushPendingOutcome(timestamp);
+                    trackedEventId = eventId;
+                    trackedResolved = false;
+                    trackedActedAction = null;
+                }
+
+                bool caused = IsCausedByTrackedEvent(action);
+                EmitDecisionIfChanged(timestamp, action, caused ? trackedEventId : 0L);
+                TrackEventOutcome(timestamp, action, caused);
+            }
             else
                 Emit(TelemetryEventType.DecisionMade, timestamp, ghostAction: action, reason: decisionProvider.LastDecisionReason);
 
@@ -173,7 +221,7 @@ namespace PHYSXR.Ghost
             return executionState;
         }
 
-        private void EmitDecisionIfChanged(WorldState worldState, long timestamp, GhostAction action)
+        private void EmitDecisionIfChanged(long timestamp, GhostAction action, long cause)
         {
             string rule = LastRuleId;
             string reason = decisionProvider.LastDecisionReason;
@@ -190,7 +238,6 @@ namespace PHYSXR.Ghost
             if (TelemetrySink == null)
                 return;
 
-            long cause = worldState?.physical?.causeEventId ?? 0L;
             try
             {
                 TelemetrySink.Record(new TelemetryRecord
@@ -206,6 +253,99 @@ namespace PHYSXR.Ghost
                     relatedId = cause != 0L ? cause : (long?)null,
                     detail = previous.HasValue ? "prev=" + previous.Value : "prev=NONE"
                 });
+            }
+            catch
+            {
+                // Telemetry must never affect the decision pipeline.
+            }
+        }
+
+        // The inner R1-R8 provider behind the pipeline's provider, if any.
+        private RuleBasedDecisionProvider InnerRules =>
+            (decisionProvider as EncounterDecisionLayer)?.Inner ?? (decisionProvider as RuleBasedExplainableAdapter)?.Provider;
+
+        // True when the encounter layer (if present) passed the inner result through.
+        private bool InnerResultSelected =>
+            decisionProvider is RuleBasedExplainableAdapter || LastRuleId == "INNER";
+
+        private bool IsCausedByTrackedEvent(GhostAction action)
+        {
+            RuleBasedDecisionProvider inner = InnerRules;
+            if (trackedEventId == 0L || inner == null || !InnerResultSelected)
+                return false;
+
+            string rule = inner.LastRuleId;
+            if (rule == "R3" || rule == "R5")
+                return true;
+
+            // The dwell holding the action this event already caused.
+            return rule == RuleBasedDecisionProvider.HysteresisRuleId && trackedActedAction == action;
+        }
+
+        private void TrackEventOutcome(long timestamp, GhostAction action, bool caused)
+        {
+            if (trackedEventId == 0L || trackedResolved)
+                return;
+
+            if (caused)
+            {
+                trackedActedAction = action;
+                trackedResolved = true;
+                pendingOutcome = null;
+                EmitOutcome(BuildOutcome(timestamp, action, OutcomeActed));
+                return;
+            }
+
+            if (pendingOutcome == null)
+            {
+                RuleBasedDecisionProvider inner = InnerRules;
+                bool eligible = inner != null && inner.LastDisturbanceRuleEligible;
+                pendingOutcome = BuildOutcome(timestamp, action, eligible ? OutcomeOutranked : OutcomeNotQualified);
+            }
+        }
+
+        // Writes the outcome of an event that never acted. Called when its
+        // pulse ends (or another event replaces it), at the terminal gate and
+        // at a checkpoint restart.
+        private void FlushPendingOutcome(long timestamp)
+        {
+            if (pendingOutcome != null && !trackedResolved)
+            {
+                pendingOutcome.timestamp = timestamp;
+                EmitOutcome(pendingOutcome);
+            }
+
+            trackedResolved = true;
+            pendingOutcome = null;
+        }
+
+        private TelemetryRecord BuildOutcome(long timestamp, GhostAction action, string outcome)
+        {
+            RuleBasedDecisionProvider inner = InnerRules;
+            return new TelemetryRecord
+            {
+                timestamp = timestamp,
+                eventType = TelemetryEventType.PhysicalEventRegistered,
+                type = "PHYS_EVENT_OUTCOME",
+                ghostAction = action,
+                reason = decisionProvider.LastDecisionReason,
+                ruleId = LastRuleId,
+                decisionId = CurrentDecisionId,
+                relatedId = trackedEventId,
+                detail = "evt=" + trackedEventId + " outcome=" + outcome
+                    + " inner=" + (inner?.LastRuleId ?? string.Empty)
+                    + " candidate=" + (inner?.LastCandidateRuleId ?? string.Empty)
+            };
+        }
+
+        private void EmitOutcome(TelemetryRecord record)
+        {
+            if (TelemetrySink == null)
+                return;
+
+            try
+            {
+                TelemetrySink.Record(record);
             }
             catch
             {
@@ -245,6 +385,7 @@ namespace PHYSXR.Ghost
                 return;
 
             IsTerminalGateEngaged = true;
+            FlushPendingOutcome(lastRunTimestamp);
             behaviourController.Halt();
         }
 
@@ -256,6 +397,9 @@ namespace PHYSXR.Ghost
         // would simply re-latch the gate on the next Run().
         public void RestartFromCheckpoint()
         {
+            FlushPendingOutcome(lastRunTimestamp);
+            trackedEventId = 0L;
+            trackedActedAction = null;
             IsTerminalGateEngaged = false;
             terminalRecorded = false;
             behaviourController.Reset();
@@ -306,6 +450,8 @@ namespace PHYSXR.Ghost
             {
                 this.provider = provider;
             }
+
+            public RuleBasedDecisionProvider Provider => provider;
 
             public string LastDecisionReason => provider.LastDecisionReason;
 

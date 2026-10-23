@@ -249,8 +249,10 @@ namespace PHYSXR.Game.Level
             if (drawingGizmos)
                 return;
 #endif
-            // Lightning through the glass: a cold spot light, dark until the
-            // storm flashes it.
+            // Moonlight and lightning through the glass: a cold spot light,
+            // a dim spill between strikes (StormController), flaring with the
+            // storm. The larger windows in the main sightlines cast shadows,
+            // so a strike throws the frame and mullions across the floor.
             var flash = new GameObject("StormFlash");
             flash.transform.SetParent(w, false);
             flash.transform.SetPositionAndRotation(face + Vector3.up * (sill + height * 0.8f) - inward * 0.05f,
@@ -261,7 +263,9 @@ namespace PHYSXR.Game.Level
             light.range = 8f;
             light.intensity = 0f;
             light.color = new Color(0.72f, 0.8f, 1f);
-            light.shadows = LightShadows.None;
+            bool shadowed = !PresentationProfile.Lightweight && (name == "Entry_SW" || name == "Kitchen_N" || name == "Dining_E");
+            light.shadows = shadowed ? LightShadows.Soft : LightShadows.None;
+            light.shadowNearPlane = 0.1f;
             light.enabled = false;
             stormLights.Add(light);
         }
