@@ -105,12 +105,29 @@ struct FusedProximity {
 //   neither valid                -> NONE, LOW
 // "Less aggressive" is the lower class (NONE < NEAR < VERY_NEAR), the initial
 // policy the spec asks for until it is calibrated against the geometry.
-inline FusedProximity fuseProximity(bool tofValid, Presence tof, bool usValid, Presence us) {
+//
+// The spec's table only defines NEAR vs VERY_NEAR disagreement and leaves the
+// rest to calibration (section 7.1: "should be calibrated against the
+// physical station geometry"). tofPrimary is that calibration switch for the
+// one case it leaves open: both sensors valid, the ToF (primary) sees
+// something and the ultrasonic (secondary evidence) reads NONE. Off, the
+// default, the conservative rule erases the ToF's presence (NONE, LOW). On,
+// the uncorroborated ToF class is kept at LOW, as when the ultrasonic is
+// invalid: the secondary sensor then lowers confidence instead of vetoing
+// the primary. Turn it on only if the calibration shows the ultrasonic
+// missing a hand the ToF sees (e.g. narrower or offset beam). The reverse
+// (ultrasonic alone sees something) stays NONE either way, and confidence
+// is never raised.
+inline FusedProximity fuseProximity(bool tofValid, Presence tof, bool usValid, Presence us,
+                                    bool tofPrimary = false) {
   FusedProximity out;
   if (tofValid && usValid) {
     if (tof == us) {
       out.presence = tof;
       out.confidence = CONFIDENCE_HIGH;
+    } else if (tofPrimary && us == PRESENCE_NONE) {
+      out.presence = tof;
+      out.confidence = CONFIDENCE_LOW;
     } else {
       out.presence = tof < us ? tof : us;
       out.confidence = CONFIDENCE_LOW;

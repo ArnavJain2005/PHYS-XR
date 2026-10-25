@@ -1,0 +1,77 @@
+Mono path[0] = 'C:/Learning/College/CPS/Sem-5/IAVR & ESDP Project/PHYS-XR/PHYS-XR/Builds/M2_Windows/PHYS-XR_Data/Managed'
+Mono config path = 'C:/Learning/College/CPS/Sem-5/IAVR & ESDP Project/PHYS-XR/PHYS-XR/Builds/M2_Windows/MonoBleedingEdge/etc'
+CodeReloadManager initialized
+Input System module state changed to: Initialized.
+[Physics::Module] Initialized fallback backend.
+[Physics::Module] Id: 0xdecafbad
+Initialize engine version: 6000.5.8f1 (5cb7df797b7d)
+[Subsystems] Discovering subsystems at path C:/Learning/College/CPS/Sem-5/IAVR & ESDP Project/PHYS-XR/PHYS-XR/Builds/M2_Windows/PHYS-XR_Data/UnitySubsystems
+[Subsystems] No descriptors matched for  examples in UnitySubsystems/UnityOpenXR/UnitySubsystemsManifest.json.
+[Subsystems] 1 'inputs' descriptors matched in UnitySubsystems/UnityOpenXR/UnitySubsystemsManifest.json
+[Subsystems] 1 'displays' descriptors matched in UnitySubsystems/UnityOpenXR/UnitySubsystemsManifest.json
+[Subsystems] No descriptors matched for  meshings in UnitySubsystems/UnityOpenXR/UnitySubsystemsManifest.json.
+[D3D12 Device Filter] Vendor Name: NVIDIA
+[D3D12 Device Filter] Device Name: NVIDIA GeForce RTX 4060 Laptop GPU
+[D3D12 Device Filter] Driver Version: 32.0.15.8129
+[D3D12 Device Filter] Feature Level: 12.2
+[D3D12 Device Filter] Graphics Memory: 7957 MB
+[D3D12 Device Filter] Processor Count: 24
+[D3D12 Device Filter] Device Type: Discrete
+GfxDevice: creating device client; kGfxThreadingModeSplitJobs
+d3d12: failed to query info queue interface (0x80004002).
+Direct3D:
+    Version:         Direct3D 12 [level 12.2]
+    Renderer:        NVIDIA GeForce RTX 4060 Laptop GPU (ID=0x28e0)
+    Vendor:          NVIDIA
+    VRAM:            7957 MB
+    App VRAM Budget: 7189 MB
+    Driver:          32.0.15.8129
+Begin MonoManager ReloadAssembly
+- Finished resetting the current domain, in  0.709 seconds
+[Physics::Module] Selected backend.
+[Physics::Module] Name: PhysX
+[Physics::Module] Id: 0xf2b8ea05
+[Physics::Module] SDK Version: 4.1.2
+[Physics::Module] Integration Version: 1.0.0
+[Physics::Module] Threading Mode: Multi-Threaded
+<RI> Initializing input.
+Using Windows.Gaming.Input
+UnloadTime: 4.061600 ms
+CAPTURE 00_menu
+[Telemetry] trial capture (VIRTUAL_ONLY) -> C:/Users/<user>/AppData/LocalLow/DefaultCompany/PHYS_XR\telemetry\capture_Windows_20261021T184140Z.jsonl
+[Sensors] USB serial link AUTO @ 115200 starting
+[Sensors] condition VIRTUAL_ONLY, OFF (virtual only)  USB AUTO DISCONNECTED
+Unloading 5 Unused Serialized files (Serialized files now loaded: 0)
+UnloadTime: 0.554800 ms
+Unloading 5 unused Assets to reduce memory usage. Loaded Objects now: 7473.
+Total: 2.706600 ms (FindLiveObjects: 0.427500 ms CreateObjectMapping: 0.387800 ms MarkObjects: 1.852200 ms  DeleteObjects: 0.038800 ms)
+
+[GameFlow] RUN_START run=1 attempt=1 condition=VIRTUAL_ONLY
+[Sensors] USB serial AUTO DISCONNECTED: no USB COM ports, only Bluetooth (COM3, COM5, COM7, COM8); is the ESP32 plugged in?
+Reduced additional punctual light shadows resolution by 2 to make 6 shadow maps fit in the 2048x2048 shadow atlas. To avoid this, increase shadow atlas size, decrease big shadow resolutions, or reduce the number of shadow maps active in the same frame
+CAPTURE 01_entry_hall_dark
+CAPTURE 02_entry_hall_stairs_clock
+CAPTURE 03_corridor_first_sighting
+CAPTURE 04_kitchen_fuse
+[GameFlow] OBJECTIVE FUSE_PICKUP stage=InstallFuse t=5.7
+[GameFlow] OBJECTIVE FUSE_INSTALLED stage=RestoringPower t=5.7
+[GameFlow] OBJECTIVE POWER_RESTORED stage=ReachExit t=7.6
+CAPTURE 05_utility_powered
+[GameFlow] OBJECTIVE ENCOUNTER_COMMITTED stage=ReachExit t=9.8
+CAPTURE 06_dining_powered
+CAPTURE 07_encounter_close
+CAPTURE 08_front_door_powered
+[GameFlow] RUN_END outcome=success duration_s=13.8
+[GameFlow] OBJECTIVE EXIT_USED stage=Completed t=13.8
+CAPTURE 09_ending_reveal
+CAPTURE 10_ending_subtitles
+CAPTURE 11_end_card
+CAPTURE END
+[Sensors] USB serial AUTO DISCONNECTED: stopped
+[Sensors] USB serial link released
+[Physics::Module] Cleanup current backend.
+[Physics::Module] Id: 0xf2b8ea05
+Input System module state changed to: ShutdownInProgress.
+Input Polling Thread exited.
+Input System module state changed to: Shutdown.
+CodeReloadManager destroyed

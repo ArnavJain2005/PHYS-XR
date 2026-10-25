@@ -44,6 +44,16 @@ namespace PHYSXR.App
     //   -physxr-serial-baud 115200
     // Self-tests keep UDP unless -physxr-transport is given, so they never
     // open or probe COM ports.
+    //
+    // Ghost behaviour (see SensorResponseProfile and EncounterDecisionLayer):
+    //   default               sensor response X2/X3 on (VERY_NEAR -> WARN,
+    //                         shake near the station -> INVESTIGATE)
+    //   -physxr-exhibition    also X1 (single-sensor VERY_NEAR in the threat
+    //                         zone -> PROTECT)
+    //   -physxr-standard-rules no sensor response: R1-R8 and E-rules only
+    //   -physxr-responsiveness-selftest  scripted sensor-response and in-game
+    //                         proximity-attack checks (use with
+    //                         -physxr-condition SIMULATED)
     public class AppBootstrap : MonoBehaviour
     {
         public const string SelfTestArgument = "-physxr-m2-selftest";
@@ -52,6 +62,9 @@ namespace PHYSXR.App
         public const string TransportArgument = "-physxr-transport";
         public const string SerialPortArgument = "-physxr-serial-port";
         public const string SerialBaudArgument = "-physxr-serial-baud";
+        public const string ExhibitionArgument = "-physxr-exhibition";
+        public const string StandardRulesArgument = "-physxr-standard-rules";
+        public const string ResponsivenessSelfTestArgument = "-physxr-responsiveness-selftest";
         private const float PerfInterval = 5f;
 
         private static bool exists;
@@ -62,10 +75,9 @@ namespace PHYSXR.App
         private TelemetryService telemetry;
         private MainMenu menu;
         private Camera menuCamera;
-        private AudioSource menuMusic;
-        private AudioSource menuStorm;
         private bool trialActive;
         private bool encounterDisabled;
+        private PHYSXR.Decision.SensorResponseProfile sensorResponse;
         private float perfStart;
         private int perfFrames;
         private float perfMinFps = float.MaxValue;
@@ -102,6 +114,10 @@ namespace PHYSXR.App
 
             settings = GameSettings.Load();
             ApplyLinkArguments(settings);
+            sensorResponse = HasArgument(StandardRulesArgument)
+                ? null
+                : new PHYSXR.Decision.SensorResponseProfile(protectInThreatZone: HasArgument(ExhibitionArgument));
+            Debug.Log("[AppBootstrap] ghost profile " + (sensorResponse != null ? sensorResponse.ToString() : "standard"));
             settings.ApplyAudio();
             telemetry = new TelemetryService();
             sensors = gameObject.AddComponent<SensorService>();
@@ -121,6 +137,10 @@ namespace PHYSXR.App
                 CaptureTour tour = gameObject.AddComponent<CaptureTour>();
                 tour.MenuCaptured += () => BeginTrial(RunCondition.VIRTUAL_ONLY, "capture");
             }
+            else if (HasArgument(ResponsivenessSelfTestArgument))
+            {
+                gameObject.AddComponent<ResponsivenessSelfTest>();
+            }
             else if (SelfTestRequested(out bool encounterTest))
             {
                 encounterDisabled = !encounterTest;
@@ -133,7 +153,7 @@ namespace PHYSXR.App
 
         private void Start()
         {
-            if (encounterDisabled || GetComponent<EncounterSelfTest>() != null)
+            if (encounterDisabled || GetComponent<EncounterSelfTest>() != null || GetComponent<ResponsivenessSelfTest>() != null)
             {
                 BeginTrial(ConditionFromArgs(RunCondition.VIRTUAL_ONLY), "selftest");
                 return;
@@ -152,23 +172,16 @@ namespace PHYSXR.App
             menuCamera.backgroundColor = Color.black;
             menuCamera.cullingMask = 0;
             go.AddComponent<AudioListener>();
-
-            menuMusic = go.AddComponent<AudioSource>();
-            menuMusic.loop = true;
-            menuMusic.playOnAwake = false;
-            menuMusic.clip = ProceduralAudio.Get(AudioCue.MenuMusic);
-            menuMusic.volume = GameAudio.Level(AudioCue.MenuMusic);
-            menuStorm = go.AddComponent<AudioSource>();
-            menuStorm.loop = true;
-            menuStorm.playOnAwake = false;
-            menuStorm.clip = ProceduralAudio.Get(AudioCue.AmbienceStorm);
-            menuStorm.volume = 0.25f;
+            // Menu music and ambience: MainMenu's MenuSoundscape (single instance, fades).
         }
 
         // Generates the house's textures and sounds a little per frame while
         // the menu is up, so the first load does not stall.
         private IEnumerator WarmUp()
         {
+            // After the title reveal, so its animation never hitches.
+            while (menu != null && menu.Revealing)
+                yield return null;
             foreach (ProceduralTextures.Id id in System.Enum.GetValues(typeof(ProceduralTextures.Id)))
             {
                 ProceduralTextures.Get(id);
@@ -186,16 +199,6 @@ namespace PHYSXR.App
         {
             menu.Show(show);
             menuCamera.gameObject.SetActive(show);
-            if (show)
-            {
-                menuMusic.Play();
-                menuStorm.Play();
-            }
-            else
-            {
-                menuMusic.Stop();
-                menuStorm.Stop();
-            }
         }
 
         private void BeginTrial(RunCondition condition, string trialId)
@@ -209,12 +212,14 @@ namespace PHYSXR.App
                 ? PhysicalTransport.UDP
                 : (PhysicalTransport)Mathf.Clamp(settings.Transport, 0, 1);
             SerialLinkSettings serial = menu.SerialSettings();
-            string summary = string.Format(CultureInfo.InvariantCulture, "sens={0:F3};invert={1};vol={2:F2};bright={3:F2};transport={4};serial={5}",
+            string summary = string.Format(CultureInfo.InvariantCulture, "sens={0:F3};invert={1};vol={2:F2};bright={3:F2};transport={4};serial={5};profile={6}",
                 settings.MouseSensitivity, settings.InvertY, settings.MasterVolume, settings.Brightness,
-                condition == RunCondition.SIMULATED ? "SIMULATED" : transport.ToString(), serial);
+                condition == RunCondition.SIMULATED ? "SIMULATED" : transport.ToString(), serial,
+                sensorResponse != null ? sensorResponse.ToString() : "standard");
             // The trial file must be open before sensing is configured, or the
             // first SOURCE_STATUS record (condition, transport, port) is lost.
             telemetry.BeginTrial(trialId, condition.ToString(), summary);
+            telemetry.Channel.Emit("PROFILE", (sensorResponse != null ? sensorResponse.ToString() : "standard") + " proximityAttack=" + !encounterDisabled);
             sensors.Configure(condition, transport, serial);
             trialActive = true;
             ResetPerf();
@@ -286,7 +291,8 @@ namespace PHYSXR.App
                         Settings = settings,
                         ReturnToMenu = ReturnToMenu,
                         Quit = Quit,
-                        EncounterDisabled = encounterDisabled
+                        EncounterDisabled = encounterDisabled,
+                        SensorResponse = sensorResponse
                     });
                     return;
                 }

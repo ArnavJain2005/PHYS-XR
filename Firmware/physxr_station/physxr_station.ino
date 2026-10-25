@@ -84,6 +84,12 @@ static const ProximityThresholds PROXIMITY = {
     90.0f,  // NEAR exit       >  90 cm
 };
 
+// Fusion when both sensors are valid but only the ToF sees something
+// (physxr_semantics.h, fuseProximity). false = the spec's conservative rule
+// (NONE, LOW). Set true only if calibration shows the ultrasonic missing a
+// hand the ToF sees; the result is then the ToF class at LOW confidence.
+static const bool FUSION_TOF_PRIMARY = false;
+
 static const DisturbanceConfig DISTURBANCE = {
     200,     // calibration samples (2 s at 100 Hz)
     0.03f,   // reject the baseline if the station moved (std-dev > 0.03 g)
@@ -426,7 +432,7 @@ static bool fresh(const SensorTrack& s, uint32_t now, uint32_t windowMs) {
 static void serviceState(uint32_t now) {
   bool tofValid = fresh(tofTrack, now, TOF_FRESH_MS);
   bool usValid = fresh(usTrack, now, US_FRESH_MS);
-  FusedProximity fused = fuseProximity(tofValid, tofClass.current(), usValid, usClass.current());
+  FusedProximity fused = fuseProximity(tofValid, tofClass.current(), usValid, usClass.current(), FUSION_TOF_PRIMARY);
 
   if (fused.presence != sentPresence || fused.confidence != sentConfidence) stateDirty = true;
   bool periodic = due(now, nextStateMs, STATE_PERIOD_MS);

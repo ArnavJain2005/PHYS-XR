@@ -3,6 +3,8 @@
 How the physical station (ESP32 + VL53L0X + HC-SR04 + MPU6050) drives The Hollow, how to set it up in
 Unity, and what has been verified. Firmware details (pins, protocol, calibration): [`Firmware/README.md`](../Firmware/README.md).
 
+> **Status (26 Oct 2026).** The project team has accepted the physical hardware system: the VL53L0X time-of-flight and MPU6050 sensors are calibrated and functional, and the full physical integration was demonstrated on Meta Quest 2 and Meta Quest 3 (team-confirmed). The station runs `physxr_station` firmware 1.0.0 (`#HELLO proto=1;fw=1.0.0;dev=phys-xr-01`, I²C on SCL 23), and 15 live runs from 22-24 Oct are logged in [`Evidence/`](../Evidence/README.md). The text below is kept as the record of the 21 Oct bring-up.
+
 **Status (21 Oct 2026, evening): software complete and re-verified; not yet run with this firmware on the
 physical station.** The firmware compiles against the real Pololu VL53L0X 1.3.1 (repeated: 0 warnings,
 `VL53L0X.cpp` linked). The station's board is now connected as **COM6** (Silicon Labs CP210x) but still runs

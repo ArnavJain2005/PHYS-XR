@@ -1,0 +1,109 @@
+Mono path[0] = 'C:/Learning/College/CPS/Sem-5/IAVR & ESDP Project/PHYS-XR/PHYS-XR/Builds/PHYSXR_Windows/PHYS-XR_Data/Managed'
+Mono config path = 'C:/Learning/College/CPS/Sem-5/IAVR & ESDP Project/PHYS-XR/PHYS-XR/Builds/PHYSXR_Windows/MonoBleedingEdge/etc'
+CodeReloadManager initialized
+Input System module state changed to: Initialized.
+[Physics::Module] Initialized fallback backend.
+[Physics::Module] Id: 0xdecafbad
+Initialize engine version: 6000.5.8f1 (5cb7df797b7d)
+[Subsystems] Discovering subsystems at path C:/Learning/College/CPS/Sem-5/IAVR & ESDP Project/PHYS-XR/PHYS-XR/Builds/PHYSXR_Windows/PHYS-XR_Data/UnitySubsystems
+[Subsystems] No descriptors matched for  examples in UnitySubsystems/UnityOpenXR/UnitySubsystemsManifest.json.
+[Subsystems] 1 'inputs' descriptors matched in UnitySubsystems/UnityOpenXR/UnitySubsystemsManifest.json
+[Subsystems] 1 'displays' descriptors matched in UnitySubsystems/UnityOpenXR/UnitySubsystemsManifest.json
+[Subsystems] No descriptors matched for  meshings in UnitySubsystems/UnityOpenXR/UnitySubsystemsManifest.json.
+[D3D12 Device Filter] Vendor Name: NVIDIA
+[D3D12 Device Filter] Device Name: NVIDIA GeForce RTX 4060 Laptop GPU
+[D3D12 Device Filter] Driver Version: 32.0.15.8129
+[D3D12 Device Filter] Feature Level: 12.2
+[D3D12 Device Filter] Graphics Memory: 7957 MB
+[D3D12 Device Filter] Processor Count: 24
+[D3D12 Device Filter] Device Type: Discrete
+GfxDevice: creating device client; kGfxThreadingModeSplitJobs
+d3d12: failed to query info queue interface (0x80004002).
+Direct3D:
+    Version:         Direct3D 12 [level 12.2]
+    Renderer:        NVIDIA GeForce RTX 4060 Laptop GPU (ID=0x28e0)
+    Vendor:          NVIDIA
+    VRAM:            7957 MB
+    App VRAM Budget: 7189 MB
+    Driver:          32.0.15.8129
+Begin MonoManager ReloadAssembly
+- Finished resetting the current domain, in  0.726 seconds
+[Physics::Module] Selected backend.
+[Physics::Module] Name: PhysX
+[Physics::Module] Id: 0xf2b8ea05
+[Physics::Module] SDK Version: 4.1.2
+[Physics::Module] Integration Version: 1.0.0
+[Physics::Module] Threading Mode: Multi-Threaded
+<RI> Initializing input.
+Using Windows.Gaming.Input
+UnloadTime: 3.211700 ms
+[AppBootstrap] ghost profile sensor-response(confirm=250ms,hold=1500ms,protectInZone=False,investigateDisturbance=True)
+[Sensors] USB serial link COM6 @ 115200 starting
+[Sensors] USB serial COM6 CONNECTING: opening COM6 @ 115200
+[Sensors] USB serial COM6 CONNECTED: port open, waiting for PHYS-XR data
+[Sensors] USB serial COM6 CONNECTED: PHYS-XR station data on COM6
+[Sensors] station #HELLO proto=1;fw=1.0.0;dev=phys-xr-01;boot=1550117940;baud=115200;sda=21;scl=23;trig=25;echo=26;mpu=0x68;tof=0x29
+[Sensors] USB serial COM6 DISCONNECTED: stopped
+[Sensors] USB serial link released
+[Sensors] USB serial link COM6 @ 115200 starting
+[Sensors] USB serial COM6 CONNECTING: opening COM6 @ 115200
+[Sensors] USB serial COM6 CONNECTED: port open, waiting for PHYS-XR data
+[Sensors] USB serial COM6 CONNECTED: PHYS-XR station data on COM6
+[Sensors] station #HELLO proto=1;fw=1.0.0;dev=phys-xr-01;boot=1550117940;baud=115200;sda=21;scl=23;trig=25;echo=26;mpu=0x68;tof=0x29
+[Telemetry] trial T20261023-1617 (PHYSICAL_PLUS_VIRTUAL) -> C:/Users/<user>/AppData/LocalLow/DefaultCompany/PHYS_XR\telemetry\T20261023-1617_Windows_20261023T111033Z.jsonl
+[Sensors] condition PHYSICAL_PLUS_VIRTUAL, USB COM6 CONNECTED
+Unloading 5 Unused Serialized files (Serialized files now loaded: 0)
+UnloadTime: 1.528500 ms
+Unloading 36 unused Assets to reduce memory usage. Loaded Objects now: 7827.
+Total: 5.568000 ms (FindLiveObjects: 1.032300 ms CreateObjectMapping: 0.393700 ms MarkObjects: 3.984500 ms  DeleteObjects: 0.157000 ms)
+
+[GameFlow] RUN_START run=1 attempt=1 condition=PHYSICAL_PLUS_VIRTUAL
+Reduced additional punctual light shadows resolution by 2 to make 9 shadow maps fit in the 2048x2048 shadow atlas. To avoid this, increase shadow atlas size, decrease big shadow resolutions, or reduce the number of shadow maps active in the same frame
+[GameFlow] DEATH attempt=1
+[GameFlow] RUN_RESTART from stage=FindFuse state=Dead
+Unloading 4 Unused Serialized files (Serialized files now loaded: 0)
+UnloadTime: 7.161100 ms
+Unloading 12 unused Assets to reduce memory usage. Loaded Objects now: 7864.
+Total: 3.078000 ms (FindLiveObjects: 0.388500 ms CreateObjectMapping: 0.433200 ms MarkObjects: 2.152000 ms  DeleteObjects: 0.103900 ms)
+
+[GameFlow] RUN_START run=2 attempt=1 condition=PHYSICAL_PLUS_VIRTUAL
+[GameFlow] DEATH attempt=1
+Unloading 2 Unused Serialized files (Serialized files now loaded: 0)
+UnloadTime: 3.035900 ms
+Unloading 22 unused Assets to reduce memory usage. Loaded Objects now: 3973.
+Total: 3.347500 ms (FindLiveObjects: 0.279700 ms CreateObjectMapping: 0.347600 ms MarkObjects: 2.362500 ms  DeleteObjects: 0.357600 ms)
+
+[Telemetry] trial T20261023-1617 (PHYSICAL_PLUS_VIRTUAL) -> C:/Users/<user>/AppData/LocalLow/DefaultCompany/PHYS_XR\telemetry\T20261023-1617_Windows_20261023T111241Z.jsonl
+[Sensors] condition PHYSICAL_PLUS_VIRTUAL, USB COM6 CONNECTED
+Unloading 3 Unused Serialized files (Serialized files now loaded: 0)
+UnloadTime: 0.127500 ms
+Unloading 13 unused Assets to reduce memory usage. Loaded Objects now: 7835.
+Total: 2.424200 ms (FindLiveObjects: 0.245200 ms CreateObjectMapping: 0.421800 ms MarkObjects: 1.702100 ms  DeleteObjects: 0.054900 ms)
+
+[GameFlow] RUN_START run=3 attempt=1 condition=PHYSICAL_PLUS_VIRTUAL
+[GameFlow] PAUSE
+[GameFlow] RESUME
+[GameFlow] OBJECTIVE FUSE_PICKUP stage=InstallFuse t=21.5
+[GameFlow] OBJECTIVE FUSE_INSTALLED stage=RestoringPower t=29.7
+[GameFlow] OBJECTIVE POWER_RESTORED stage=ReachExit t=31.6
+[GameFlow] OBJECTIVE ENCOUNTER_COMMITTED stage=ReachExit t=36.5
+[GameFlow] DEATH attempt=1
+[GameFlow] CHECKPOINT_RESTART attempt=2
+Unloading 3 Unused Serialized files (Serialized files now loaded: 0)
+UnloadTime: 2.022000 ms
+Unloading 12 unused Assets to reduce memory usage. Loaded Objects now: 7865.
+Total: 3.318600 ms (FindLiveObjects: 0.390600 ms CreateObjectMapping: 0.437600 ms MarkObjects: 2.377400 ms  DeleteObjects: 0.112600 ms)
+
+[GameFlow] RUN_START run=3 attempt=2 condition=PHYSICAL_PLUS_VIRTUAL from=checkpoint
+[GameFlow] OBJECTIVE ENCOUNTER_COMMITTED stage=ReachExit t=3.9
+[GameFlow] RUN_END outcome=success duration_s=50.4
+[GameFlow] OBJECTIVE EXIT_USED stage=Completed t=10.4
+[GameFlow] QUIT
+[Sensors] USB serial COM6 DISCONNECTED: stopped
+[Sensors] USB serial link released
+[Physics::Module] Cleanup current backend.
+[Physics::Module] Id: 0xf2b8ea05
+Input System module state changed to: ShutdownInProgress.
+Input Polling Thread exited.
+Input System module state changed to: Shutdown.
+CodeReloadManager destroyed

@@ -3,6 +3,7 @@ using System.Collections;
 using System.IO;
 using PHYSXR.Game.Gameplay;
 using PHYSXR.Game.Level;
+using PHYSXR.Ghost;
 using UnityEngine;
 
 namespace PHYSXR.Game.Dev
@@ -57,6 +58,14 @@ namespace PHYSXR.Game.Dev
             yield return View(house, new Vector3(0f, 0.05f, -6.6f), 0f, 4f, "01_entry_hall_dark");
             yield return View(house, new Vector3(1.5f, 0.05f, -2f), 215f, 6f, "02_entry_hall_stairs_clock");
             flow.TriggerFirstSighting(house.Anchors.FirstSighting);
+            // The first-sighting lunge (a non-lethal feint): catch the frame
+            // the ghost bursts forward and screams.
+            house.Player.Respawn(new Vector3(-4f, 0.05f, 1.2f), 0f);
+            house.Player.Motor.Look(new Vector2(0f, -4f));
+            for (float t = 0f; t < 6f && house.Ghost.Visual.CurrentPose != HollowVisual.Pose.Lunge; t += Time.deltaTime)
+                yield return null;
+            yield return new WaitForSeconds(0.12f);
+            yield return Shot("03a_sighting_lunge");
             yield return View(house, new Vector3(-4f, 0.05f, 1.2f), 0f, 4f, "03_corridor_first_sighting", 1.8f);
             // The same figure from further back: does it read at a distance?
             yield return View(house, new Vector3(-4f, 0.05f, -1.6f), 0f, 3f, "03b_corridor_distance", 0.8f);

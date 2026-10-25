@@ -1,0 +1,34 @@
+{"ts":13,"type":"PROFILE","trial":"selftest","cond":"VIRTUAL_ONLY","plat":"Windows","attempt":1,"frame":0,"detail":"sensor-response(confirm=250ms,hold=1500ms,protectInZone=False,investigateDisturbance=True) proximityAttack=False"}
+{"ts":19,"type":"SOURCE_STATUS","trial":"selftest","cond":"VIRTUAL_ONLY","plat":"Windows","attempt":1,"frame":0,"detail":"from=NONE to=UNAVAILABLE condition=VIRTUAL_ONLY transport=UDP udp=47800"}
+{"ts":4124,"type":"FLOW","trial":"selftest","cond":"VIRTUAL_ONLY","plat":"Windows","attempt":0,"frame":1,"detail":"event=RUN_START run=1 attempt=1 condition=VIRTUAL_ONLY"}
+{"ts":4135,"type":"DECISION","trial":"selftest","cond":"VIRTUAL_ONLY","plat":"Windows","attempt":1,"frame":2,"action":"FOLLOW","rule":"INNER","reason":"FOLLOW: no active threat or event requiring intervention","dec":1,"detail":"prev=NONE"}
+{"ts":4201,"type":"PERF","trial":"selftest","cond":"VIRTUAL_ONLY","plat":"Windows","attempt":1,"frame":3,"detail":"fps_mean=0.6 fps_min=0.2 mono_mb=6.5"}
+{"ts":9204,"type":"PERF","trial":"selftest","cond":"VIRTUAL_ONLY","plat":"Windows","attempt":1,"frame":303,"detail":"fps_mean=59.9 fps_min=58.8 mono_mb=5.1"}
+{"ts":14211,"type":"PERF","trial":"selftest","cond":"VIRTUAL_ONLY","plat":"Windows","attempt":1,"frame":602,"detail":"fps_mean=59.7 fps_min=27.9 mono_mb=5.0"}
+{"ts":17015,"type":"OBJECTIVE","trial":"selftest","cond":"VIRTUAL_ONLY","plat":"Windows","attempt":1,"frame":769,"detail":"event=FUSE_PICKUP stage=InstallFuse t=12.8"}
+{"ts":17026,"type":"DECISION","trial":"selftest","cond":"VIRTUAL_ONLY","plat":"Windows","attempt":1,"frame":770,"action":"WARN","rule":"W","reason":"WARN[W]: mandatory scripted warning beat (inner candidate WARN)","dec":2,"detail":"prev=FOLLOW"}
+{"ts":17026,"type":"BEHAVIOUR","trial":"selftest","cond":"VIRTUAL_ONLY","plat":"Windows","attempt":1,"frame":770,"action":"WARN","exec":"Warning","rule":"W","dec":2,"detail":"event=NOT_SHOWN reason=DORMANT state=Warning"}
+{"ts":17078,"type":"FLOW","trial":"selftest","cond":"VIRTUAL_ONLY","plat":"Windows","attempt":1,"frame":773,"detail":"event=PAUSE"}
+{"ts":17277,"type":"FLOW","trial":"selftest","cond":"VIRTUAL_ONLY","plat":"Windows","attempt":1,"frame":785,"detail":"event=RESUME"}
+{"ts":19213,"type":"PERF","trial":"selftest","cond":"VIRTUAL_ONLY","plat":"Windows","attempt":1,"frame":901,"detail":"fps_mean=59.8 fps_min=33.5 mono_mb=5.1"}
+{"ts":21207,"type":"DECISION","trial":"selftest","cond":"VIRTUAL_ONLY","plat":"Windows","attempt":1,"frame":1019,"action":"FOLLOW","rule":"INNER","reason":"FOLLOW: no active threat or event requiring intervention","dec":3,"detail":"prev=WARN"}
+{"ts":24174,"type":"OBJECTIVE","trial":"selftest","cond":"VIRTUAL_ONLY","plat":"Windows","attempt":1,"frame":1197,"detail":"event=FUSE_INSTALLED stage=RestoringPower t=19.8"}
+{"ts":24206,"type":"DECISION","trial":"selftest","cond":"VIRTUAL_ONLY","plat":"Windows","attempt":1,"frame":1198,"action":"RETREAT","rule":"S","reason":"RETREAT: sufficiently high threat without active player-risk condition","dec":4,"detail":"prev=FOLLOW"}
+{"ts":24206,"type":"BEHAVIOUR","trial":"selftest","cond":"VIRTUAL_ONLY","plat":"Windows","attempt":1,"frame":1198,"action":"RETREAT","exec":"Retreating","rule":"S","dec":4,"detail":"event=NOT_SHOWN reason=DORMANT state=Retreating"}
+{"ts":24222,"type":"PERF","trial":"selftest","cond":"VIRTUAL_ONLY","plat":"Windows","attempt":1,"frame":1199,"detail":"fps_mean=59.5 fps_min=24.9 mono_mb=5.2"}
+{"ts":26075,"type":"OBJECTIVE","trial":"selftest","cond":"VIRTUAL_ONLY","plat":"Windows","attempt":1,"frame":1310,"detail":"event=POWER_RESTORED stage=ReachExit t=21.7"}
+{"ts":26075,"type":"FLOW","trial":"selftest","cond":"VIRTUAL_ONLY","plat":"Windows","attempt":1,"frame":1310,"detail":"event=CHECKPOINT_SAVE stage=ReachExit"}
+{"ts":27176,"type":"DECISION","trial":"selftest","cond":"VIRTUAL_ONLY","plat":"Windows","attempt":1,"frame":1376,"action":"FOLLOW","rule":"INNER","reason":"FOLLOW: no active threat or event requiring intervention","dec":5,"detail":"prev=RETREAT"}
+{"ts":29229,"type":"PERF","trial":"selftest","cond":"VIRTUAL_ONLY","plat":"Windows","attempt":1,"frame":1499,"detail":"fps_mean=59.9 fps_min=58.3 mono_mb=5.3"}
+{"ts":34235,"type":"PERF","trial":"selftest","cond":"VIRTUAL_ONLY","plat":"Windows","attempt":1,"frame":1799,"detail":"fps_mean=59.9 fps_min=56.9 mono_mb=5.5"}
+{"ts":37898,"type":"RUN_END","trial":"selftest","cond":"VIRTUAL_ONLY","plat":"Windows","attempt":1,"frame":2018,"detail":"outcome=success duration_s=33.5 deaths=0 attempt=1 lantern_uses=0 lantern_hits=0"}
+{"ts":37899,"type":"OBJECTIVE","trial":"selftest","cond":"VIRTUAL_ONLY","plat":"Windows","attempt":1,"frame":2018,"detail":"event=EXIT_USED stage=Completed t=33.5"}
+{"ts":38100,"type":"FLOW","trial":"selftest","cond":"VIRTUAL_ONLY","plat":"Windows","attempt":1,"frame":2029,"detail":"event=RUN_RESTART stage=Completed state=Succeeded"}
+{"ts":38188,"type":"FLOW","trial":"selftest","cond":"VIRTUAL_ONLY","plat":"Windows","attempt":1,"frame":2029,"detail":"event=RUN_START run=2 attempt=1 condition=VIRTUAL_ONLY"}
+{"ts":38189,"type":"DECISION","trial":"selftest","cond":"VIRTUAL_ONLY","plat":"Windows","attempt":1,"frame":2030,"action":"FOLLOW","rule":"INNER","reason":"FOLLOW: no active threat or event requiring intervention","dec":1,"detail":"prev=NONE"}
+{"ts":38359,"type":"OBJECTIVE","trial":"selftest","cond":"VIRTUAL_ONLY","plat":"Windows","attempt":1,"frame":2041,"detail":"event=FUSE_PICKUP stage=InstallFuse t=0.2"}
+{"ts":38359,"type":"FLOW","trial":"selftest","cond":"VIRTUAL_ONLY","plat":"Windows","attempt":1,"frame":2041,"detail":"event=PAUSE"}
+{"ts":38359,"type":"FLOW","trial":"selftest","cond":"VIRTUAL_ONLY","plat":"Windows","attempt":1,"frame":2041,"detail":"event=RUN_RESTART stage=InstallFuse state=Paused"}
+{"ts":38359,"type":"RUN_END","trial":"selftest","cond":"VIRTUAL_ONLY","plat":"Windows","attempt":1,"frame":2041,"detail":"outcome=restart duration_s=0.2 deaths=0 attempt=1 lantern_uses=0 lantern_hits=0"}
+{"ts":38426,"type":"FLOW","trial":"selftest","cond":"VIRTUAL_ONLY","plat":"Windows","attempt":1,"frame":2041,"detail":"event=RUN_START run=3 attempt=1 condition=VIRTUAL_ONLY"}
+{"ts":38427,"type":"DECISION","trial":"selftest","cond":"VIRTUAL_ONLY","plat":"Windows","attempt":1,"frame":2042,"action":"FOLLOW","rule":"INNER","reason":"FOLLOW: no active threat or event requiring intervention","dec":1,"detail":"prev=NONE"}

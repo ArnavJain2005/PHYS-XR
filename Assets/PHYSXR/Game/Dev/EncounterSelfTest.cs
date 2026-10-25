@@ -17,7 +17,10 @@ namespace PHYSXR.Game.Dev
     // house, the real decision pipeline, the real NavMesh ghost and the real
     // lantern, driven through ScriptedPlayerInput (Technical Spec tests T14,
     // T15, T17, T18, plus the surge RETREAT, the first-sighting lunge (E5),
-    // the readable modal, sprint and jump, the ghost's solid body, and - with
+    // the readable modal, sprint and jump, the ghost's solid body, the attack's
+    // sound (A01-A05: one scream per attack, timed to the lunge; no scream on
+    // a cancelled windup; a cancelled scream is cut; the impact only on a
+    // real hit; nothing left playing after restarts), and - with
     // "-physxr-condition SIMULATED" - a sensor event during a pause).
     //
     // Enabled only by "-physxr-selftest" (or PHYS-XR > Run Encounter
@@ -35,6 +38,44 @@ namespace PHYSXR.Game.Dev
         private bool sawWindup;
         private readonly List<string> failures = new List<string>();
 
+        // Ghost sounds as they start, with the attack and phase they fell in.
+        private struct GhostSoundEvent
+        {
+            public GhostSound Sound;
+            public int Attack;
+            public GhostPhase Phase;
+            public long PhaseMs;
+            public GhostExecutionState? Behaviour;
+        }
+
+        private readonly List<GhostSoundEvent> ghostSounds = new List<GhostSoundEvent>();
+        private int strikeHits;
+
+        private void ListenToGhost(GhostMotionController ghost)
+        {
+            ghost.SoundPlayed += sound => ghostSounds.Add(new GhostSoundEvent
+            {
+                Sound = sound, Attack = ghost.AttackCount, Phase = ghost.Phase, PhaseMs = ghost.PhaseElapsedMs, Behaviour = ghost.Behaviour
+            });
+            ghost.StrikeHit += () => strikeHits++;
+        }
+
+        private int Count(GhostSound sound, int attack)
+        {
+            int n = 0;
+            foreach (GhostSoundEvent e in ghostSounds)
+                if (e.Sound == sound && e.Attack == attack) n++;
+            return n;
+        }
+
+        private int Count(GhostSound sound)
+        {
+            int n = 0;
+            foreach (GhostSoundEvent e in ghostSounds)
+                if (e.Sound == sound) n++;
+            return n;
+        }
+
         private IEnumerator Start()
         {
             Application.targetFrameRate = 60;
@@ -47,6 +88,7 @@ namespace PHYSXR.Game.Dev
             var input = new ScriptedPlayerInput();
             house.Player.SetInput(input);
             GameFlowController flow = house.FlowController;
+            ListenToGhost(house.Ghost);
 
             Check("S01_StartState", house.Ghost.Dormant && !house.Ghost.BodySolid && !flow.Flow.EncounterCommitted && flow.World != null
                 && flow.GhostRuntime.IsInitialized && house.HasNavMesh,
@@ -96,6 +138,18 @@ namespace PHYSXR.Game.Dev
             flow.StrikeFeinted -= onFeint;
             Check("S04d_SightingAttackOnce", repeats == 0 && !flow.Director.FirstSightingAttackPending(flow.GameClockMs) && flow.Director.FirstSightingUsed,
                 "windup frames after=" + repeats);
+
+            // A01: that attack screamed exactly once, inside the windup's
+            // burst (its last 0.36-0.54 s), and whooshed once on the strike.
+            int sighting = house.Ghost.AttackCount;
+            GhostSoundEvent scream = default;
+            foreach (GhostSoundEvent e in ghostSounds)
+                if (e.Sound == GhostSound.Scream && e.Attack == sighting) scream = e;
+            Check("A01_AttackScreamOnceAtLunge", sighting >= 1 && Count(GhostSound.Scream, sighting) == 1
+                && scream.Phase == GhostPhase.WINDUP && scream.PhaseMs >= GhostMotionController.WindupMs - 600 && scream.PhaseMs <= GhostMotionController.WindupMs
+                && Count(GhostSound.StrikeWhiff, sighting) == 1,
+                "attack=" + sighting + " screams=" + Count(GhostSound.Scream, sighting) + " at=" + scream.Phase + "+" + scream.PhaseMs + "ms whoosh="
+                + Count(GhostSound.StrikeWhiff, sighting));
             input.Stop();
 
             // Objective, then the surge. Stand at the fuse box, as a player
@@ -173,6 +227,14 @@ namespace PHYSXR.Game.Dev
             Check("T14b_E0Retreat", flow.GhostRuntime.LastAction == GhostAction.RETREAT && flow.GhostRuntime.LastRuleId == "E0",
                 flow.GhostRuntime.LastAction + " [" + flow.GhostRuntime.LastRuleId + "]");
 
+            // A02: interrupted in the coil, before the lunge: no scream, no
+            // whoosh, no impact; the lantern's recoil cry instead.
+            int interruptedEarly = house.Ghost.AttackCount;
+            Check("A02_CancelledBeforeLungeNoScream", Count(GhostSound.Scream, interruptedEarly) == 0
+                && Count(GhostSound.StrikeWhiff, interruptedEarly) == 0 && Count(GhostSound.StrikeImpact, interruptedEarly) == 0
+                && Count(GhostSound.LanternRecoil, interruptedEarly) == 1,
+                "screams=" + Count(GhostSound.Scream, interruptedEarly) + " recoil=" + Count(GhostSound.LanternRecoil, interruptedEarly));
+
             bool struck = false;
 
             // Next attack no sooner than 11.5 s after the hit.
@@ -188,11 +250,52 @@ namespace PHYSXR.Game.Dev
             Check("T14c_NextAttackAfter11_5s", nextWindup > 0f && nextWindup - hitTime >= 11.4f && !struck,
                 "gap=" + (nextWindup - hitTime).ToString("F2") + "s");
 
-            // T17: let the strike land.
-            yield return WaitUntil(() => flow.Flow.IsDead, 12f);
+            // A03: this time let it lunge and scream, then drive it back with
+            // the lantern before the strike: the scream must be cut, and no
+            // whoosh or impact may follow.
+            int lateCancel = house.Ghost.AttackCount;
+            for (float t = 0f; t < 1.4f && Count(GhostSound.Scream, lateCancel) == 0 && house.Ghost.Phase == GhostPhase.WINDUP; t += Time.deltaTime)
+            {
+                Aim(house, input, house.Ghost.ChestPosition);
+                yield return null;
+            }
+            bool screamedInWindup = Count(GhostSound.Scream, lateCancel) == 1 && house.Ghost.Phase == GhostPhase.WINDUP;
+            input.PressDefendNextFrame();
+            for (int i = 0; i < 6 && house.Ghost.Phase != GhostPhase.INTERRUPTED; i++)
+            {
+                Aim(house, input, house.Ghost.ChestPosition);
+                yield return null;
+            }
+            bool lateInterrupted = house.Ghost.Phase == GhostPhase.INTERRUPTED;
+            yield return Wait(0.35f);
+            Check("A03_CancelledScreamIsCut", screamedInWindup && lateInterrupted && !house.Ghost.AttackVoicePlaying
+                && Count(GhostSound.StrikeWhiff, lateCancel) == 0 && Count(GhostSound.StrikeImpact, lateCancel) == 0,
+                "screamed=" + screamedInWindup + " interrupted=" + lateInterrupted + " voice=" + house.Ghost.AttackVoicePlaying
+                + " lantern=" + house.Lantern.LastResult);
+
+            // T17: let the next strike land.
+            yield return WaitUntil(() => flow.Flow.IsDead, 35f);
             Check("T17a_StrikeKills", flow.Flow.IsDead && flow.Session.Deaths == 1 && flow.GhostRuntime.IsHalted,
                 "dead=" + flow.Flow.IsDead + " halted=" + flow.GhostRuntime.IsHalted);
             Check("S10_DeathClosesModalAndBlocksInput", !flow.ReadableOpen && !flow.Flow.AcceptsGameplayInput, "modal=" + flow.ReadableOpen);
+
+            // A04: the killing attack: one scream, one whoosh, one impact.
+            int lethal = house.Ghost.AttackCount;
+            Check("A04_LethalAttackScreamWhooshImpact", Count(GhostSound.Scream, lethal) == 1
+                && Count(GhostSound.StrikeWhiff, lethal) == 1 && Count(GhostSound.StrikeImpact, lethal) == 1,
+                "attack=" + lethal + " screams=" + Count(GhostSound.Scream, lethal) + " whoosh=" + Count(GhostSound.StrikeWhiff, lethal)
+                + " impact=" + Count(GhostSound.StrikeImpact, lethal));
+
+            // A05: over the whole run, every scream fell in an attack windup
+            // (never while investigating, warning or following), and every
+            // impact matches a strike that actually connected.
+            int strayScreams = 0;
+            foreach (GhostSoundEvent e in ghostSounds)
+                if (e.Sound == GhostSound.Scream && (e.Phase != GhostPhase.WINDUP || e.Behaviour == GhostExecutionState.Investigating))
+                    strayScreams++;
+            Check("A05_ScreamsOnlyInAttacksImpactsOnlyOnHits", strayScreams == 0 && Count(GhostSound.StrikeImpact) == strikeHits && strikeHits >= 1,
+                "stray screams=" + strayScreams + " impacts=" + Count(GhostSound.StrikeImpact) + " hits=" + strikeHits
+                + " screams=" + Count(GhostSound.Scream) + " attacks=" + house.Ghost.AttackCount);
 
             // The ghost is halted where it struck, still visible and solid:
             // walk the body straight at it and it must stop at its surface.
@@ -221,6 +324,7 @@ namespace PHYSXR.Game.Dev
             // T18: ten restarts in a row - no duplicates, no material/mesh growth.
             long memoryBefore = GC.GetTotalMemory(true);
             int materialsBefore = Resources.FindObjectsOfTypeAll<Material>().Length;
+            int sourcesBefore = FindObjectsByType<AudioSource>().Length;
             for (int i = 0; i < 10; i++)
             {
                 old = house;
@@ -233,6 +337,8 @@ namespace PHYSXR.Game.Dev
             long memoryAfter = GC.GetTotalMemory(true);
             int materialsAfter = Resources.FindObjectsOfTypeAll<Material>().Length;
             CheckSingletons("T18a_NoDuplicatesAfter10Restarts");
+            int sourcesAfter = FindObjectsByType<AudioSource>().Length;
+            Check("T18e_AudioSourcesBounded", sourcesAfter <= sourcesBefore, "audio sources " + sourcesBefore + " -> " + sourcesAfter);
             Check("T18b_NoMaterialLeak", materialsAfter <= materialsBefore + 2, "materials " + materialsBefore + " -> " + materialsAfter);
             Check("T18c_ManagedMemoryFlat", memoryAfter <= memoryBefore * 1.15 + 2 * 1024 * 1024,
                 "mono " + (memoryBefore / 1048576.0).ToString("F1") + " -> " + (memoryAfter / 1048576.0).ToString("F1") + " MB");

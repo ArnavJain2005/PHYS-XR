@@ -22,7 +22,7 @@ The design (synopsis, Technical Implementation Specification) and the implementa
 | Aspect | Design intent | Implemented | Consequence |
 |---|---|---|---|
 | Transport | ESP32 → Unity over local Wi-Fi/UDP | **USB serial at 115200 baud is the station's link**; UDP 47800 kept and used by `esp32_sim.py` | Desktop-only serial (kernel32). A Quest build needs the UDP path or another transport ([Phase 6](TechnicalSpec_MilestoneStatus.md#phase-6--optional-research-extensions)) |
-| Platform | Meta Quest mixed reality | **Windows desktop**, keyboard and mouse, screen-space UI | XR spec items T22–T24 not started |
+| Platform | Meta Quest mixed reality | **PC VR through OpenXR**, demonstrated by the team on Meta Quest 2 and Quest 3 with Touch controllers (`DesktopInputAdapter`), plus Windows desktop with keyboard and mouse | Untethered (standalone Quest) builds would need the UDP path or another transport |
 | Sensors | Distance sensor + push button (light sensor optional) | **VL53L0X ToF + HC-SR04 ultrasonic + MPU6050** | Proximity with a confidence level, plus disturbance; no button or light input |
 
 ### Implemented runtime architecture
@@ -75,7 +75,7 @@ flowchart TD
 
 | Layer | Owns | Must never |
 |---|---|---|
-| Firmware | Raw sampling, validity, filtering, per-sensor class, fusion, disturbance qualification, event identity | Send raw values in a state line (they appear only in `#DIAG`) |
+| Firmware | Raw sampling, validity, filtering, per-sensor class, fusion, disturbance qualification, event identity | Put raw readings in a state line (they appear only in `#DIAG` diagnostic lines, which never enter `PhysicalState`) |
 | Communication / PhysicalWorld | Framing, validation, ordering, dedup, arrival-time freshness, resync, blackout, masking | Choose a ghost action |
 | WorldStateSystem | Building the decision input. Physical fields are neutral unless the source is FRESH and the trial is not virtual-only | Read sensors directly |
 | Decision | Pure, deterministic C# on an injected clock | Touch Unity APIs, sockets or randomness |
@@ -83,7 +83,7 @@ flowchart TD
 | Game / App | Objectives, house, player, lantern, UI, session, settings, per-frame composition | Reach into Ghost internals (it supplies assets through `IGhostPresentationAssets`) |
 | Telemetry | Recording | Influence anything (a full or failing sink is silent) |
 
-The semantic boundary is the core design rule. **No ToF millimetres, echo microseconds or accelerometer samples reach `WorldState`.** The decision layer sees `presence ∈ {NONE, NEAR, VERY_NEAR}`, `confidence ∈ {LOW, HIGH}` and a disturbance flag, and nothing else from the physical world.
+The semantic boundary is the core design rule. Raw measurements (ToF millimetres, echo microseconds, accelerometer samples) are used inside the firmware; its `#DIAG` lines expose some of them for bring-up and telemetry, but **they never reach `PhysicalState`, `WorldState` or the decision rules.** The decision layer sees `presence ∈ {NONE, NEAR, VERY_NEAR}`, `confidence ∈ {LOW, HIGH}` and a disturbance flag, and nothing else from the physical world.
 
 ### Physical event to gameplay: sequence
 
@@ -192,7 +192,7 @@ Legacy APIs (`HandleRawPacket`, the one-argument `WorldStateManager`) are kept u
 | Flow (plain C#) | `GameFlow` (run state `Playing/Paused/Succeeded/Dead`; stages `FindFuse → InstallFuse → RestoringPower → ReachExit → Completed`), `GameSession` (checkpoint, attempts), `EncounterDirector`, `PlayerLocomotion` |
 | Gameplay | `GameFlowController` (per-frame composition, `BridgeSensing`), `FusePickup`, `FuseBox`, `PowerSystem`, `ExitDoor`, `LockedDoor`, `ReadableNote`, `DefensiveAbility` (lantern), `GameTriggerVolume`, `EndingSequence` |
 | Level | `BlackthornGreybox*.cs`: five-room house built from code at load, runtime NavMesh |
-| Art and audio | `ProceduralTextures`, `HouseMaterials`, `MeshKit`, `HorrorPostFx`, `StormController`, `ProceduralAudio` (39 cues); see [`Docs/ASSETS.md`](ASSETS.md) |
+| Art and audio | `ProceduralTextures`, `HouseMaterials`, `MeshKit`, `HorrorPostFx`, `StormController`, `ProceduralAudio` (48 cues); see [`Docs/ASSETS.md`](ASSETS.md) |
 | Dev tools | `M2RouteSelfTest`, `EncounterSelfTest`, `CaptureTour`, `ScriptedPlayerInput` |
 </details>
 

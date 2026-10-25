@@ -1,0 +1,300 @@
+Mono path[0] = 'C:/Learning/College/CPS/Sem-5/IAVR & ESDP Project/PHYS-XR/PHYS-XR/Builds/PHYSXR_Windows_Final/PHYS-XR_Data/Managed'
+Mono config path = 'C:/Learning/College/CPS/Sem-5/IAVR & ESDP Project/PHYS-XR/PHYS-XR/Builds/PHYSXR_Windows_Final/MonoBleedingEdge/etc'
+CodeReloadManager initialized
+Input System module state changed to: Initialized.
+[Physics::Module] Initialized fallback backend.
+[Physics::Module] Id: 0xdecafbad
+Initialize engine version: 6000.5.8f1 (5cb7df797b7d)
+[Subsystems] Discovering subsystems at path C:/Learning/College/CPS/Sem-5/IAVR & ESDP Project/PHYS-XR/PHYS-XR/Builds/PHYSXR_Windows_Final/PHYS-XR_Data/UnitySubsystems
+[Subsystems] No descriptors matched for  examples in UnitySubsystems/UnityOpenXR/UnitySubsystemsManifest.json.
+[Subsystems] 1 'inputs' descriptors matched in UnitySubsystems/UnityOpenXR/UnitySubsystemsManifest.json
+[Subsystems] 1 'displays' descriptors matched in UnitySubsystems/UnityOpenXR/UnitySubsystemsManifest.json
+[Subsystems] No descriptors matched for  meshings in UnitySubsystems/UnityOpenXR/UnitySubsystemsManifest.json.
+Forcing GfxDevice: Null
+GfxDevice: creating device client; kGfxThreadingModeNonThreaded
+NullGfxDevice:
+    Version:  NULL 1.0 [1.0]
+    Renderer: Null Device
+    Vendor:   Unity Technologies
+Begin MonoManager ReloadAssembly
+- Finished resetting the current domain, in  0.042 seconds
+[Physics::Module] Selected backend.
+[Physics::Module] Name: PhysX
+[Physics::Module] Id: 0xf2b8ea05
+[Physics::Module] SDK Version: 4.1.2
+[Physics::Module] Integration Version: 1.0.0
+[Physics::Module] Threading Mode: Multi-Threaded
+XRGeneral Settings awakening...
+Microsoft Media Foundation video decoding to texture disabled: graphics device is Null, only Direct3D 11 and Direct3D 12 (only on desktop) are supported for hardware-accelerated video decoding.
+[XR] Time interace not found - delta time prediction disabled.
+[Subsystems] OpenXR XR Plugin successfully registered Provider for OpenXR Display
+[Subsystems] OpenXR XR Plugin successfully registered Provider for OpenXR Input
+[Subsystems] OpenXR XR Plugin successfully registered Provider for OpenXR Display
+Loading OpenXR loader library at path: openxr_loader
+[Subsystems] Loading plugin UnityOpenXR for subsystem OpenXR Display...
+[XR] [10952] [02:29:15.776][Info   ] Available Layers: (0)
+[XR] [10952] [02:29:15.792][Error  ] xrGetSystem: XR_ERROR_FORM_FACTOR_UNAVAILABLE
+[XR] [10952] [02:29:15.793][Info   ] 
+
+==== Start Unity OpenXR Diagnostic Report ====
+
+
+[XR] [10952] [02:29:15.793][Info   ] ==== Report Reason: Uncaught Exception ====
+
+
+[XR] [10952] [02:29:15.793][Info   ] ==== OpenXR Settings ====
+[XR] [10952] [02:29:15.793][Info   ] 
+[XR] [10952] [02:29:15.793][Info   ] Symmetric Projection: False
+[XR] [10952] [02:29:15.793][Info   ] Stereo Rendering Mode: SinglePassInstanced
+[XR] [10952] [02:29:15.793][Info   ] Latency Optimization: PrioritizeRendering
+[XR] [10952] [02:29:15.793][Info   ] Color Submission Modes: kRenderTextureFormatGroup8888
+[XR] [10952] [02:29:15.793][Info   ] Depth Submission Mode: None
+[XR] [10952] [02:29:15.793][Info   ] Space Warp Motion Vector Texture Format: RGBA16f
+[XR] [10952] [02:29:15.793][Info   ] Optimize Buffer Discards: False
+[XR] [10952] [02:29:15.793][Info   ] Multiview Render Regions Optimization Mode: None
+[XR] [10952] [02:29:15.793][Info   ] Use OpenXR Predicted Time: True
+[XR] [10952] [02:29:15.793][Info   ] Foveated Rendering API: SRPFoveation
+[XR] [10952] [02:29:15.793][Info   ] 
+[XR] [10952] [02:29:15.793][Info   ] ==== OpenXR Provider Info ====
+[XR] [10952] [02:29:15.793][Info   ] 
+[XR] [10952] [02:29:15.793][Info   ] Provider Version: 324c489
+[XR] [10952] [02:29:15.793][Info   ] App: PHYS-XR #1521753221
+[XR] [10952] [02:29:15.793][Info   ] Engine: 6000.5.8f1 #89162753
+[XR] [10952] [02:29:15.793][Info   ] 
+[XR] [10952] [02:29:15.793][Info   ] ==== OpenXR Runtime Info ====
+[XR] [10952] [02:29:15.793][Info   ] 
+[XR] [10952] [02:29:15.793][Info   ] Available Runtime Extensions: (36)
+[XR] [10952] [02:29:15.793][Info   ]   XR_KHR_D3D11_enable: Version=11
+[XR] [10952] [02:29:15.793][Info   ]   XR_KHR_D3D12_enable: Version=11
+[XR] [10952] [02:29:15.793][Info   ]   XR_KHR_opengl_enable: Version=12
+[XR] [10952] [02:29:15.793][Info   ]   XR_KHR_vulkan_enable: Version=10
+[XR] [10952] [02:29:15.793][Info   ]   XR_KHR_vulkan_enable2: Version=4
+[XR] [10952] [02:29:15.793][Info   ]   XR_KHR_composition_layer_depth: Version=6
+[XR] [10952] [02:29:15.793][Info   ]   XR_KHR_win32_convert_performance_counter_time: Version=1
+[XR] [10952] [02:29:15.793][Info   ]   XR_KHR_convert_timespec_time: Version=1
+[XR] [10952] [02:29:15.793][Info   ]   XR_KHR_composition_layer_cube: Version=8
+[XR] [10952] [02:29:15.793][Info   ]   XR_KHR_composition_layer_cylinder: Version=4
+[XR] [10952] [02:29:15.793][Info   ]   XR_KHR_composition_layer_equirect: Version=3
+[XR] [10952] [02:29:15.793][Info   ]   XR_KHR_visibility_mask: Version=2
+[XR] [10952] [02:29:15.793][Info   ]   XR_KHR_composition_layer_color_scale_bias: Version=5
+[XR] [10952] [02:29:15.793][Info   ]   XR_KHR_maintenance1: Version=1
+[XR] [10952] [02:29:15.793][Info   ]   XR_EXT_win32_appcontainer_compatible: Version=1
+[XR] [10952] [02:29:15.793][Info   ]   XR_EXT_debug_utils: Version=5
+[XR] [10952] [02:29:15.793][Info   ]   XR_OCULUS_recenter_event: Version=1
+[XR] [10952] [02:29:15.794][Info   ]   XR_OCULUS_audio_device_guid: Version=1
+[XR] [10952] [02:29:15.794][Info   ]   XR_FB_color_space: Version=3
+[XR] [10952] [02:29:15.794][Info   ]   XR_FB_display_refresh_rate: Version=1
+[XR] [10952] [02:29:15.794][Info   ]   XR_META_performance_metrics: Version=2
+[XR] [10952] [02:29:15.794][Info   ]   XR_META_headset_id: Version=2
+[XR] [10952] [02:29:15.794][Info   ]   XR_OCULUS_ovrsession_handle: Version=1
+[XR] [10952] [02:29:15.794][Info   ]   XR_EXT_local_floor: Version=1
+[XR] [10952] [02:29:15.794][Info   ]   XR_EXT_active_action_set_priority: Version=1
+[XR] [10952] [02:29:15.794][Info   ]   XR_EXT_future: Version=2
+[XR] [10952] [02:29:15.794][Info   ]   XR_EXT_palm_pose: Version=3
+[XR] [10952] [02:29:15.794][Info   ]   XR_EXT_haptic_parametric: Version=1
+[XR] [10952] [02:29:15.794][Info   ]   XR_FB_haptic_amplitude_envelope: Version=1
+[XR] [10952] [02:29:15.794][Info   ]   XR_FB_haptic_pcm: Version=1
+[XR] [10952] [02:29:15.794][Info   ]   XR_FB_touch_controller_pro: Version=1
+[XR] [10952] [02:29:15.794][Info   ]   XR_META_touch_controller_plus: Version=1
+[XR] [10952] [02:29:15.794][Info   ]   XR_FB_touch_controller_proximity: Version=1
+[XR] [10952] [02:29:15.794][Info   ]   XR_OCULUS_external_camera: Version=1
+[XR] [10952] [02:29:15.794][Info   ]   XR_META_detached_controllers: Version=1
+[XR] [10952] [02:29:15.794][Info   ]   XR_LOGITECH_mx_ink_stylus_interaction: Version=1
+[XR] [10952] [02:29:15.794][Info   ] 
+[XR] [10952] [02:29:15.794][Info   ] Available Layers: (0)
+[XR] [10952] [02:29:15.794][Info   ] 
+[XR] [10952] [02:29:15.794][Info   ] Runtime Name: Oculus
+[XR] [10952] [02:29:15.794][Info   ] Runtime Version: 1.208.0
+[XR] [10952] [02:29:15.794][Info   ] 
+[XR] [10952] [02:29:15.794][Info   ] ==== OpenXR API Spec Version ====
+[XR] [10952] [02:29:15.794][Info   ] 
+[XR] [10952] [02:29:15.794][Info   ] XrInstance Created with OpenXR API Version: 1.1.54
+[XR] [10952] [02:29:15.794][Info   ] 
+[XR] [10952] [02:29:15.794][Info   ] ==== OpenXR Exception Thrown ====
+[XR] [10952] [02:29:15.794][Info   ] 
+[XR] [10952] [02:29:15.794][Info   ] Error: XrResult failure [XR_ERROR_FORM_FACTOR_UNAVAILABLE]
+[XR] [10952] [02:29:15.794][Info   ]     Origin: result
+[XR] [10952] [02:29:15.794][Info   ]     Source: C:\build\output\unity\xr.sdk.openxr\com.unity.xr.openxr\NativePlugin~\Source\unity_session.cpp:328
+[XR] [10952] [02:29:15.794][Info   ] 
+[XR] [10952] [02:29:15.794][Info   ] 
+[XR] [10952] [02:29:15.794][Info   ] ==== Std Exception Thrown ====
+[XR] [10952] [02:29:15.794][Info   ] 
+[XR] [10952] [02:29:15.794][Info   ] Function: Display_Initialize
+[XR] [10952] [02:29:15.794][Info   ] Message: XrResult failure [XR_ERROR_FORM_FACTOR_UNAVAILABLE]
+[XR] [10952] [02:29:15.794][Info   ]     Origin: result
+[XR] [10952] [02:29:15.794][Info   ]     Source: C:\build\output\unity\xr.sdk.openxr\com.unity.xr.openxr\NativePlugin~\Source\unity_session.cpp:328
+[XR] [10952] [02:29:15.794][Info   ] 
+[XR] [10952] [02:29:15.794][Info   ] ==== Last 20 non-XR_SUCCESS returns ====
+[XR] [10952] [02:29:15.794][Info   ] [FAILURE] xrGetSystem: XR_ERROR_FORM_FACTOR_UNAVAILABLE (1x)
+[XR] [10952] [02:29:15.794][Info   ] 
+[XR] [10952] [02:29:15.794][Info   ] ==== Last 20 Events ====
+[XR] [10952] [02:29:15.794][Info   ] 
+
+==== End Unity OpenXR Diagnostic Report ====
+
+
+[Subsystems] Failed to initialize subsystem OpenXR Display [error: 1]
+[XR] [10952] [02:29:15.800][Info   ] 
+
+==== Start Unity OpenXR Diagnostic Report ====
+
+
+[XR] [10952] [02:29:15.800][Info   ] ==== Report Reason: System Shutdown ====
+
+
+[XR] [10952] [02:29:15.800][Info   ] ==== OpenXR Settings ====
+[XR] [10952] [02:29:15.800][Info   ] 
+[XR] [10952] [02:29:15.800][Info   ] Symmetric Projection: False
+[XR] [10952] [02:29:15.800][Info   ] Stereo Rendering Mode: SinglePassInstanced
+[XR] [10952] [02:29:15.800][Info   ] Latency Optimization: PrioritizeRendering
+[XR] [10952] [02:29:15.800][Info   ] Color Submission Modes: kRenderTextureFormatGroup8888
+[XR] [10952] [02:29:15.800][Info   ] Depth Submission Mode: None
+[XR] [10952] [02:29:15.801][Info   ] Space Warp Motion Vector Texture Format: RGBA16f
+[XR] [10952] [02:29:15.801][Info   ] Optimize Buffer Discards: False
+[XR] [10952] [02:29:15.801][Info   ] Multiview Render Regions Optimization Mode: None
+[XR] [10952] [02:29:15.801][Info   ] Use OpenXR Predicted Time: True
+[XR] [10952] [02:29:15.801][Info   ] Foveated Rendering API: SRPFoveation
+[XR] [10952] [02:29:15.801][Info   ] 
+[XR] [10952] [02:29:15.801][Info   ] ==== OpenXR Provider Info ====
+[XR] [10952] [02:29:15.801][Info   ] 
+[XR] [10952] [02:29:15.801][Info   ] Provider Version: 324c489
+[XR] [10952] [02:29:15.801][Info   ] App: PHYS-XR #1521753221
+[XR] [10952] [02:29:15.801][Info   ] Engine: 6000.5.8f1 #89162753
+[XR] [10952] [02:29:15.801][Info   ] 
+[XR] [10952] [02:29:15.801][Info   ] ==== OpenXR Runtime Info ====
+[XR] [10952] [02:29:15.801][Info   ] 
+[XR] [10952] [02:29:15.801][Info   ] Available Runtime Extensions: (36)
+[XR] [10952] [02:29:15.801][Info   ]   XR_KHR_D3D11_enable: Version=11
+[XR] [10952] [02:29:15.801][Info   ]   XR_KHR_D3D12_enable: Version=11
+[XR] [10952] [02:29:15.801][Info   ]   XR_KHR_opengl_enable: Version=12
+[XR] [10952] [02:29:15.801][Info   ]   XR_KHR_vulkan_enable: Version=10
+[XR] [10952] [02:29:15.801][Info   ]   XR_KHR_vulkan_enable2: Version=4
+[XR] [10952] [02:29:15.801][Info   ]   XR_KHR_composition_layer_depth: Version=6
+[XR] [10952] [02:29:15.801][Info   ]   XR_KHR_win32_convert_performance_counter_time: Version=1
+[XR] [10952] [02:29:15.801][Info   ]   XR_KHR_convert_timespec_time: Version=1
+[XR] [10952] [02:29:15.801][Info   ]   XR_KHR_composition_layer_cube: Version=8
+[XR] [10952] [02:29:15.801][Info   ]   XR_KHR_composition_layer_cylinder: Version=4
+[XR] [10952] [02:29:15.801][Info   ]   XR_KHR_composition_layer_equirect: Version=3
+[XR] [10952] [02:29:15.801][Info   ]   XR_KHR_visibility_mask: Version=2
+[XR] [10952] [02:29:15.801][Info   ]   XR_KHR_composition_layer_color_scale_bias: Version=5
+[XR] [10952] [02:29:15.801][Info   ]   XR_KHR_maintenance1: Version=1
+[XR] [10952] [02:29:15.801][Info   ]   XR_EXT_win32_appcontainer_compatible: Version=1
+[XR] [10952] [02:29:15.801][Info   ]   XR_EXT_debug_utils: Version=5
+[XR] [10952] [02:29:15.801][Info   ]   XR_OCULUS_recenter_event: Version=1
+[XR] [10952] [02:29:15.801][Info   ]   XR_OCULUS_audio_device_guid: Version=1
+[XR] [10952] [02:29:15.801][Info   ]   XR_FB_color_space: Version=3
+[XR] [10952] [02:29:15.801][Info   ]   XR_FB_display_refresh_rate: Version=1
+[XR] [10952] [02:29:15.801][Info   ]   XR_META_performance_metrics: Version=2
+[XR] [10952] [02:29:15.801][Info   ]   XR_META_headset_id: Version=2
+[XR] [10952] [02:29:15.801][Info   ]   XR_OCULUS_ovrsession_handle: Version=1
+[XR] [10952] [02:29:15.801][Info   ]   XR_EXT_local_floor: Version=1
+[XR] [10952] [02:29:15.801][Info   ]   XR_EXT_active_action_set_priority: Version=1
+[XR] [10952] [02:29:15.801][Info   ]   XR_EXT_future: Version=2
+[XR] [10952] [02:29:15.801][Info   ]   XR_EXT_palm_pose: Version=3
+[XR] [10952] [02:29:15.801][Info   ]   XR_EXT_haptic_parametric: Version=1
+[XR] [10952] [02:29:15.801][Info   ]   XR_FB_haptic_amplitude_envelope: Version=1
+[XR] [10952] [02:29:15.801][Info   ]   XR_FB_haptic_pcm: Version=1
+[XR] [10952] [02:29:15.801][Info   ]   XR_FB_touch_controller_pro: Version=1
+[XR] [10952] [02:29:15.801][Info   ]   XR_META_touch_controller_plus: Version=1
+[XR] [10952] [02:29:15.801][Info   ]   XR_FB_touch_controller_proximity: Version=1
+[XR] [10952] [02:29:15.801][Info   ]   XR_OCULUS_external_camera: Version=1
+[XR] [10952] [02:29:15.801][Info   ]   XR_META_detached_controllers: Version=1
+[XR] [10952] [02:29:15.801][Info   ]   XR_LOGITECH_mx_ink_stylus_interaction: Version=1
+[XR] [10952] [02:29:15.801][Info   ] 
+[XR] [10952] [02:29:15.801][Info   ] Available Layers: (0)
+[XR] [10952] [02:29:15.801][Info   ] 
+[XR] [10952] [02:29:15.801][Info   ] Runtime Name: Oculus
+[XR] [10952] [02:29:15.801][Info   ] Runtime Version: 1.208.0
+[XR] [10952] [02:29:15.801][Info   ] 
+[XR] [10952] [02:29:15.801][Info   ] ==== OpenXR API Spec Version ====
+[XR] [10952] [02:29:15.801][Info   ] 
+[XR] [10952] [02:29:15.801][Info   ] XrInstance Created with OpenXR API Version: 1.1.54
+[XR] [10952] [02:29:15.801][Info   ] 
+[XR] [10952] [02:29:15.801][Info   ] ==== OpenXR Exception Thrown ====
+[XR] [10952] [02:29:15.801][Info   ] 
+[XR] [10952] [02:29:15.801][Info   ] Error: XrResult failure [XR_ERROR_FORM_FACTOR_UNAVAILABLE]
+[XR] [10952] [02:29:15.801][Info   ]     Origin: result
+[XR] [10952] [02:29:15.801][Info   ]     Source: C:\build\output\unity\xr.sdk.openxr\com.unity.xr.openxr\NativePlugin~\Source\unity_session.cpp:328
+[XR] [10952] [02:29:15.801][Info   ] 
+[XR] [10952] [02:29:15.801][Info   ] 
+[XR] [10952] [02:29:15.801][Info   ] ==== Std Exception Thrown ====
+[XR] [10952] [02:29:15.801][Info   ] 
+[XR] [10952] [02:29:15.801][Info   ] Function: Display_Initialize
+[XR] [10952] [02:29:15.801][Info   ] Message: XrResult failure [XR_ERROR_FORM_FACTOR_UNAVAILABLE]
+[XR] [10952] [02:29:15.801][Info   ]     Origin: result
+[XR] [10952] [02:29:15.801][Info   ]     Source: C:\build\output\unity\xr.sdk.openxr\com.unity.xr.openxr\NativePlugin~\Source\unity_session.cpp:328
+[XR] [10952] [02:29:15.801][Info   ] 
+[XR] [10952] [02:29:15.801][Info   ] ==== Last 20 non-XR_SUCCESS returns ====
+[XR] [10952] [02:29:15.801][Info   ] [FAILURE] xrGetSystem: XR_ERROR_FORM_FACTOR_UNAVAILABLE (1x)
+[XR] [10952] [02:29:15.801][Info   ] 
+[XR] [10952] [02:29:15.801][Info   ] ==== Last 20 Events ====
+[XR] [10952] [02:29:15.801][Info   ] 
+
+==== End Unity OpenXR Diagnostic Report ====
+
+
+[XR] XR_META_performance_metrics: Attempted to stop before session ready
+UnloadTime: 0.743000 ms
+[AppBootstrap] ghost profile sensor-response(confirm=250ms,hold=1500ms,protectInZone=False,investigateDisturbance=True)
+[Telemetry] trial selftest (VIRTUAL_ONLY) -> C:/Users/<user>/AppData/LocalLow/DefaultCompany/PHYS_XR\telemetry\selftest_Windows_20261025T205916Z.jsonl
+[Sensors] condition VIRTUAL_ONLY, OFF (virtual only)  UDP 47800 (not bound)
+Unloading 6 Unused Serialized files (Serialized files now loaded: 0)
+M2SELFTEST BEGIN
+UnloadTime: 0.316600 ms
+Unloading 36 unused Assets to reduce memory usage. Loaded Objects now: 8449.
+Total: 1.981600 ms (FindLiveObjects: 0.239300 ms CreateObjectMapping: 0.418300 ms MarkObjects: 1.290000 ms  DeleteObjects: 0.033800 ms)
+
+[GameFlow] RUN_START run=1 attempt=1 condition=VIRTUAL_ONLY
+M2SELFTEST PASS C01_StartState | pos=(0.00, 0.05, -5.50) stage=FindFuse state=Playing powered=False run=1 attempt=1 timeScale=1
+M2SELFTEST PASS C06a_ExitTargeted | target=FrontDoor
+M2SELFTEST PASS C06b_ExitRefusedBeforePower | Refused(ExitLocked): The front door is locked. Its lock has no power.
+M2SELFTEST PASS C06c_ExitRefusalLeavesState | FindFuse/Playing
+M2SELFTEST PASS C03_FuseBoxRefusedBeforeFuse | Refused(FuseRequired): The fuse box has an empty slot. You need a fuse.
+M2SELFTEST PASS C02a_FuseTargeted | target=Fuse
+[GameFlow] OBJECTIVE FUSE_PICKUP stage=InstallFuse t=12.8
+M2SELFTEST PASS C02b_FuseCollected | Accepted: Picked up a fuse.
+M2SELFTEST PASS C11a_RepeatPickupRefused | Refused(FuseAlreadyCollected): You already have the fuse.
+[GameFlow] PAUSE
+M2SELFTEST PASS C09a_Paused | timeScale=0
+M2SELFTEST PASS C09b_PauseBlocksGameplay | Refused(GameplayInactive): 
+[GameFlow] RESUME
+M2SELFTEST PASS C09c_Resumed | timeScale=1
+M2SELFTEST PASS C04a_FuseBoxTargeted | target=FuseBox
+[GameFlow] OBJECTIVE FUSE_INSTALLED stage=RestoringPower t=19.8
+M2SELFTEST PASS C04b_FuseInstalled | Accepted: Fuse installed.
+[GameFlow] OBJECTIVE POWER_RESTORED stage=ReachExit t=21.7
+M2SELFTEST PASS C05a_PowerRestored | stage=ReachExit
+M2SELFTEST PASS C05b_LightingChanged | main=8/8 emergency=0 ambient=RGBA(0.078, 0.074, 0.077, 2.300)
+M2SELFTEST PASS C05c_ExitIndicatorUnlocked | indicator
+M2SELFTEST PASS C11b_RepeatInstallRefused | Refused(FuseAlreadyInstalled): The fuse is already installed. / Refused(FuseAlreadyInstalled): The fuse is already installed.
+[GameFlow] RUN_END outcome=success duration_s=33.5
+[GameFlow] OBJECTIVE EXIT_USED stage=Completed t=33.5
+M2SELFTEST PASS C07_ExitSucceedsAfterPower | Accepted: You escaped Blackthorn House.
+M2SELFTEST PASS C12_RouteUnder150s | scripted route 33.5 s; RunSeconds=33.5
+M2SELFTEST PASS C08_SuccessDisablesGameplay | Refused(GameplayInactive): 
+[GameFlow] RUN_RESTART from stage=Completed state=Succeeded
+Unloading 5 Unused Serialized files (Serialized files now loaded: 0)
+UnloadTime: 18.889100 ms
+Unloading 2 unused Assets to reduce memory usage. Loaded Objects now: 8505.
+Total: 2.566000 ms (FindLiveObjects: 0.423100 ms CreateObjectMapping: 0.524900 ms MarkObjects: 1.603700 ms  DeleteObjects: 0.014000 ms)
+
+[GameFlow] RUN_START run=2 attempt=1 condition=VIRTUAL_ONLY
+M2SELFTEST PASS C10a_RestartAfterSuccess | pos=(0.00, 0.05, -5.50) stage=FindFuse state=Playing powered=False run=2 attempt=1 timeScale=1
+[GameFlow] OBJECTIVE FUSE_PICKUP stage=InstallFuse t=0.2
+[GameFlow] PAUSE
+M2SELFTEST PASS C10b_MidRunSetup | InstallFuse/Paused
+[GameFlow] RUN_RESTART from stage=InstallFuse state=Paused
+Unloading 3 Unused Serialized files (Serialized files now loaded: 0)
+UnloadTime: 4.337500 ms
+Unloading 15 unused Assets to reduce memory usage. Loaded Objects now: 8505.
+Total: 2.167600 ms (FindLiveObjects: 0.268900 ms CreateObjectMapping: 0.488300 ms MarkObjects: 1.142300 ms  DeleteObjects: 0.268000 ms)
+
+[GameFlow] RUN_START run=3 attempt=1 condition=VIRTUAL_ONLY
+M2SELFTEST PASS C10c_RestartWhilePausedMidRun | pos=(0.00, 0.05, -5.50) stage=FindFuse state=Playing powered=False run=3 attempt=1 timeScale=1
+M2SELFTEST END passed=23 failed=0
+[Physics::Module] Cleanup current backend.
+[Physics::Module] Id: 0xf2b8ea05
+Input System module state changed to: ShutdownInProgress.
+Input Polling Thread exited.
+Input System module state changed to: Shutdown.
+CodeReloadManager destroyed

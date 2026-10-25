@@ -1,0 +1,425 @@
+=== SimulatedPhysicalStateSourceTests ===
+PASS: NoneLowNoDisturbance_ProducesExpectedState
+PASS: NearHighNoDisturbance_ProducesExpectedState
+PASS: VeryNearHighDisturbance_ProducesExpectedState
+PASS: Timestamp_IsPreserved
+PASS: SuppliedValues_AreNotModified
+Total: 5, Passed: 5, Failed: 0
+=== CommunicationTests ===
+PASS: COMM-01_ValidPacket_ParsesToExpectedPhysicalState
+PASS: COMM-02_MalformedPacket_IsRejected
+PASS: COMM-03_InvalidEnumValue_IsRejected
+PASS: COMM-04_OlderSequenceNumber_CannotOverwriteNewerState
+PASS: COMM-05_DuplicateEventId_IsRejected
+PASS: COMM-06_StalePacket_PreservesPriorStateAndReportsStaleStatus
+PASS: COMM-06b_SequenceOrderingAndDuplicateEventsStillEnforced
+PASS: COMM-07_CommunicationFailure_NeverProducesGhostAction
+PASS: COMM-08_SimulatedAndCommunicationPaths_ShareOneStateModel
+Total: 9, Passed: 9, Failed: 0
+=== WorldStateManagerTests ===
+PASS: WORLD-01_PhysicalState_IsIncorporated
+PASS: WORLD-02_PlayerState_IsIncorporated
+PASS: WORLD-03_VirtualState_IsIncorporated
+PASS: WORLD-04_GhostState_IsIncorporated
+PASS: WORLD-05_SnapshotContainsAllFourDomains
+PASS: WORLD-06_UpdatingPhysicalState_ChangesSubsequentSnapshot
+PASS: WORLD-07_NoDecisionLogicOrGhostActionSelection
+PASS: WORLD-08_ConstructionIsDeterministicForIdenticalInputs
+PASS: WORLD-09_ReturnedSnapshotCannotCorruptManagerState
+PASS: WSM-PAUSE-01_SuspendedEvent_StartsNoPulse
+PASS: WSM-PAUSE-02_EventDuringLongPause_NoPulseAfterResume
+PASS: WSM-PAUSE-03_PulseFromPlay_KeepsRemainingGameTimeAcrossPause
+PASS: WSM-PAUSE-04_NotSuspended_PulseUnchanged_LegacyIgnores
+Total: 13, Passed: 13, Failed: 0
+=== RuleBasedDecisionProviderTests ===
+PASS: DEC-01_NormalState_ProducesFollow
+PASS: DEC-02_CriticalPlayerRisk_ProducesProtect
+PASS: DEC-03_CriticalThreatOutsideThreatZone_ProducesRetreat
+PASS: DEC-04_QualifiedPhysicalDisturbance_ProducesInvestigate
+PASS: DEC-05_LowConfidenceNear_ProducesWarn
+PASS: DEC-06_DisturbanceWithoutProximity_ProducesWarn
+PASS: DEC-07_VirtualEvent_ProducesWarn
+PASS: DEC-08_ElevatedVirtualThreat_ProducesWarn
+PASS: DEC-09_PlayerRiskOutranksPhysicalInvestigation
+PASS: DEC-10_PlayerRiskOutranksElevatedVirtualThreat
+PASS: DEC-11_IdenticalState_ProducesIdenticalAction
+PASS: DEC-12_ReasonMatchesSelectedRule
+PASS: DEC-13_MovementAndGhostCurrentState_DoNotAffectResult
+Total: 13, Passed: 13, Failed: 0
+=== GhostActionExecutorTests ===
+PASS: GHOSTEXEC-01_Follow_MapsToFollowing
+PASS: GHOSTEXEC-02_Warn_MapsToWarning
+PASS: GHOSTEXEC-03_Investigate_MapsToInvestigating
+PASS: GHOSTEXEC-04_Protect_MapsToProtecting
+PASS: GHOSTEXEC-05_Retreat_MapsToRetreating
+PASS: GHOSTEXEC-06_AllFiveActionsAreHandled
+PASS: GHOSTEXEC-07_UnrecognizedAction_ThrowsRatherThanSilentlyDefaulting
+PASS: GHOSTEXEC-08_RepeatedExecution_IsDeterministic
+PASS: GHOSTEXEC-09_ExecuteDoesNotAlterSuppliedAction
+Total: 9, Passed: 9, Failed: 0
+=== GhostBehaviourControllerTests ===
+PASS: GHOSTCTRL-01_AllFiveStates_CanBeApplied
+PASS: GHOSTCTRL-02_CurrentState_ReflectsEachAppliedState
+PASS: GHOSTCTRL-03_ReapplyingSameState_IsSafeAndDeterministic
+PASS: GHOSTCTRL-04_SwitchingBetweenStates_WorksCorrectly
+PASS: GHOSTCTRL-05_InvalidState_ThrowsArgumentOutOfRangeException
+PASS: GHOSTCTRL-06_ApplyState_DoesNotAlterSuppliedValue
+Total: 6, Passed: 6, Failed: 0
+=== TelemetryTests ===
+PASS: TEL-01_SingleRecord_IsStoredAndRetrievable
+PASS: TEL-02_MultipleRecords_PreserveInsertionOrder
+PASS: TEL-03_RecordingNull_IsSafeNoOp
+PASS: TEL-04_DefaultValuedRecord_IsStoredAsIs
+PASS: TEL-05_AllSixEventTypes_CanBeRepresented
+PASS: TEL-06_DecisionEventFields_ArePreservedExactly
+PASS: TEL-07_GhostExecutionStateChangeFields_ArePreserved
+PASS: TEL-08_IndependentSinks_DoNotShareState
+PASS: TEL-09_RecordDoesNotMutateSuppliedRecord
+Total: 9, Passed: 9, Failed: 0
+=== GhostRuntimePipelineTests ===
+PASS: GHOSTPIPE-01_RunsWithNoTelemetrySink
+PASS: GHOSTPIPE-02_RecordsWorldStateEvaluated
+PASS: GHOSTPIPE-03_RecordsDecisionMade
+PASS: GHOSTPIPE-04_DecisionTelemetry_ContainsGhostAction
+PASS: GHOSTPIPE-05_DecisionTelemetry_ContainsLastDecisionReason
+PASS: GHOSTPIPE-06_RecordsGhostActionExecuted
+PASS: GHOSTPIPE-07_RecordsResultingGhostExecutionState
+PASS: GHOSTPIPE-08_MultipleRuns_PreserveTelemetryInsertionOrder
+PASS: GHOSTPIPE-09_TelemetryDoesNotChangeResultingBehaviour
+PASS: GHOSTPIPE-10_SameWorldState_ProducesSameGhostAction
+PASS: GHOSTPIPE-11_FailingSink_DoesNotAlterPipelineResult
+Total: 11, Passed: 11, Failed: 0
+=== EndToEndSimulationTests ===
+PASS: E2E-01_NormalPhysicalState_ProducesFollow
+PASS: E2E-02_NearbyDisturbanceHighConfidence_ProducesInvestigate
+PASS: E2E-03_PlayerAtRisk_ProducesProtect
+PASS: E2E-04_CriticalVirtualThreatOutsideThreatZone_ProducesRetreat
+PASS: E2E-05_UncertainPhysicalCondition_ProducesWarn
+PASS: E2E-06_IndependentHarnesses_SameInput_ProduceSameOutput
+Total: 6, Passed: 6, Failed: 0
+=== DecisionHistoryTests ===
+PASS: DH-01_FreshContext_HasNoPreviousAction
+PASS: DH-02_FirstAction_EstablishesPreviousAction
+PASS: DH-03_RepeatedSameAction_AccumulatesTimeInState
+PASS: DH-04_ActionTransition_ResetsTimeInCurrentAction
+PASS: DH-05_RelevantEvent_UpdatesTimeSinceLastEvent
+PASS: DH-06_RepeatedOccurrenceWindow_RemainsBounded
+PASS: DH-07_Reset_CompletelyClearsHistory
+PASS: DH-08_IdenticalInputs_ProduceIdenticalContext
+PASS: DH-09_TwoInstances_DoNotShareState
+PASS: DH-10_SustainedDisturbance_ProducesSingleOccurrence
+PASS: DH-11_DistinctDisturbanceOccurrences_ProduceTwoEntries
+PASS: DH-12_DuplicateTimestampRisingEdges_BothRecordedInWindow
+PASS: DH-13_Reset_ClearsDisturbanceEdgeStateToo
+PASS: DH-14_ActionReEntry_StartsFreshDurationInterval
+PASS: DH-15_BackwardTimestamp_ProducesNegativeDurationWithoutCorrection
+Total: 15, Passed: 15, Failed: 0
+=== RuleBasedDecisionProviderTemporalContextTests ===
+PASS: PDC-01_FreshProvider_TemporalContextIsNeutral
+PASS: PDC-02_Decide_RecordsActionAndTimestampFromWorldState
+PASS: PDC-03_Decide_RecordsRelevantEventFromDisturbance
+PASS: PDC-04_Reset_ClearsTemporalContextOnly
+PASS: PDC-05_TemporalContextTracking_DoesNotChangeDecisionOutput
+PASS: PDC-06_TwoProviders_DoNotShareTemporalContext
+PASS: PDC-07_IdenticalWorldStateSequenceWithDisturbanceEdges_ProducesIdenticalContextAndOutput
+Total: 7, Passed: 7, Failed: 0
+=== RuleBasedDecisionProviderHysteresisTests ===
+PASS: HYST-01_ProtectCandidate_AlwaysImmediate
+PASS: HYST-02_RetreatCandidate_AlwaysImmediate
+PASS: HYST-03_FollowCandidateBeforeDwell_WarnRetained
+PASS: HYST-04_FollowCandidateAfterDwell_FollowApplied
+PASS: HYST-05_ProtectExitBeforeDwell_ProtectRetained
+PASS: HYST-06_RetreatExitBeforeDwell_RetreatRetained
+PASS: HYST-07_ProtectToRetreat_Immediate
+PASS: HYST-08_WarnToInvestigate_ImmediateNotGated
+PASS: HYST-09_FirstDecisionEver_CandidateImmediate
+PASS: HYST-10_FirstDecisionAfterReset_CandidateImmediate
+PASS: HYST-11_SuppressedTransition_HistoryReflectsRetainedAction
+PASS: HYST-12_ConsecutiveSuppressedTicks_DoNotResetEntryTimestamp
+PASS: HYST-13_SustainedCalmPeriod_EventuallyReachesFollow
+PASS: HYST-14_Determinism_IdenticalSequenceProducesIdenticalResults
+PASS: DEC-01_NormalState_ProducesFollow
+PASS: DEC-02_CriticalPlayerRisk_ProducesProtect
+PASS: DEC-03_CriticalThreatOutsideThreatZone_ProducesRetreat
+PASS: DEC-04_QualifiedPhysicalDisturbance_ProducesInvestigate
+PASS: DEC-05_LowConfidenceNear_ProducesWarn
+PASS: DEC-06_DisturbanceWithoutProximity_ProducesWarn
+PASS: DEC-07_VirtualEvent_ProducesWarn
+PASS: DEC-08_ElevatedVirtualThreat_ProducesWarn
+PASS: DEC-09_PlayerRiskOutranksPhysicalInvestigation
+PASS: DEC-10_PlayerRiskOutranksElevatedVirtualThreat
+PASS: DEC-11_IdenticalState_ProducesIdenticalAction
+PASS: DEC-12_ReasonMatchesSelectedRule
+PASS: DEC-13_MovementAndGhostCurrentState_DoNotAffectResult
+Total: 13, Passed: 13, Failed: 0
+PASS: HYST-15_ExistingDecisionRuleSuite_StillPasses
+PASS: HYST-16_SuppressedReason_HasExpectedFormat
+PASS: HYST-17_ZeroDwell_ReproducesPreHysteresisBehaviour
+PASS: HYST-18_BackwardTimestampDuringHoldoff_DoesNotCrash
+Total: 18, Passed: 18, Failed: 0
+=== EncounterDecisionLayerTests ===
+PASS: WB-01_Beat_PresenceNone_ProducesWarn
+PASS: WB-02_Beat_NearHighNoDisturbance_ProducesWarn
+PASS: WB-03_NoBeat_NearHighNoDisturbance_KeepsExistingFollow
+PASS: WB-04a_Beat_GenuineProtect_ProtectWins
+PASS: WB-04b_Beat_GenuineRetreat_RetreatWins
+PASS: WB-05_Beat_VeryNearHighOutsideThreatZone_ProducesWarn
+PASS: WB-06_Beat_DefensiveInterruption_InterruptionWins
+PASS: WB-07_Beat_GameplayTerminal_NoWarnOverride
+PASS: WB-08_EventActiveWithoutBeat_NearHigh_KeepsExistingFollow
+PASS: WB-09_Beat_Investigate_BeatWarns_InnerStillEvaluated
+PASS: WB-10_BeatReasonNamesRuleAndInnerCandidate
+PASS: WB-11_WorldStateManagerCopiesNewFields
+PASS: WB-12_SameInputSameOutput_Deterministic
+EncounterDecisionLayerTests: 13 passed, 0 failed
+=== RuntimePipelineIntegrationTests ===
+PASS: RT-01_Beat_PresenceNone_PipelineReturnsWarning
+PASS: RT-02_Beat_NearHighNoDisturbance_PipelineReturnsWarning
+PASS: RT-03_NoBeat_SamePhysicalConditions_KeepsExistingFollow
+PASS: RT-04_Telemetry_RecordsFinalWarnAndRuleWReason
+PASS: RT-05_GenuineProtect_BeatsScriptedWarning
+PASS: RT-06_GenuineRetreat_BeatsScriptedWarning
+PASS: RT-07_InterruptedPhase_ProducesRetreatViaE0
+PASS: RT-08_ActionReasonExecutionStateTelemetry_AreConsistent
+PASS: RT-09_IndependentInstances_SameInput_SameDecision
+      (RT-10 compared 96 inputs)
+PASS: RT-10_NoFlags_ChainEqualsStandaloneR1toR8_OverInputGrid
+PASS: RT-11_BeatEnd_ReturnsToInnerDecision_InnerHistoryStaysCoherent
+PASS: RT-12_EventActiveAlone_IsNotAWarningBeat
+PASS: PRI1-S1_SafeKnock_InvestigatesOnce_AttributedActed_ThenFollows
+PASS: PRI1-X3_SingleSensorKnock_SensorResponseInvestigates_AttributedActed
+PASS: PRI1-S2_SameKnockInDanger_HigherPriorityWins_ExplainedNotAttributed
+PASS: PRI1-S3_InterruptedInvestigation_ReevaluatesFromCurrentState
+PASS: PRI1-DET_SameSequence_SameRecords_TelemetryDoesNotChangeDecisions
+RuntimePipelineIntegrationTests: 17 passed, 0 failed
+=== TerminalGateTests ===
+PASS: TERM-01_Terminal_BlocksAllExecutionAndApply_Over600Ticks
+PASS: TERM-02_WarningBeat_CannotResumeGhostBehaviour_EvenIfTerminalFlagClears
+PASS: TERM-03_ObservedTerminalFlag_LatchesGateWithoutSession
+PASS: TERM-04_HaltedController_RefusesDirectApplyState
+PASS: TERM-05_Terminal_DecisionNotEvaluated_HysteresisHistoryUntouched
+PASS: TERM-06_Terminal_TelemetryShowsGateNotDecision
+PASS: TERM-07_EachTerminalReason_Gates_NoneRejected_FirstReasonWins
+PASS: TERM-08_EnterTerminal_WritesWorldState_AndClearsBeat
+PASS: TERM-09_Restart_ClearsGateFlagsAndControllerAndResumesNormally
+PASS: TERM-10_Restart_ResetsHysteresisHistory
+PASS: TERM-11_PipelineRestartAlone_WithStaleFlag_RelatchesImmediately
+PASS: TERM-12_Restart_ClearsInterruptedPhaseAndBeat
+PASS: TERM-13_SecondRun_CanReachTerminalAgain
+PASS: TERM-14_Session_RejectsNullDependencies
+PASS: TERM-15_PhysicalStateSurvivesRestart
+TerminalGateTests: 15 passed, 0 failed
+=== GameFlowTests ===
+PASS: FLOW-01_InitialState_PowerOffExitLockedFuseAvailable
+PASS: FLOW-02_Fuse_CollectedExactlyOnce
+PASS: FLOW-03_FuseBox_RefusesBeforeFuse_NoStateChange
+PASS: FLOW-04_FuseBox_InstallsCarriedFuse_AwaitsPowerConfirmation
+PASS: FLOW-05_PowerConfirmation_OnlyAcceptedAfterInstall
+PASS: FLOW-06_Exit_RefusedInEveryStageBeforePower
+PASS: FLOW-07_Exit_SucceedsAfterPower_HistoryInOrder
+PASS: FLOW-08_Succeeded_RejectsAllGameplayAndPause
+PASS: FLOW-09_Pause_BlocksInteractions_ResumeRestores
+PASS: FLOW-10_RepeatedInteractions_AfterPower_AreIdempotent
+PASS: FLOW-11_Events_FireOncePerTransition
+PASS: FLOW-12_PowerConfirmation_AcceptedWhilePaused
+PASS: FLOW-13_FreshFlowAfterCompletedRun_IsCleanInitialState
+PASS: FLOW-14_Session_NewRunIncrementsRun_AttemptBackToOne
+PASS: FLOW-15_RandomRequestSequences_PreserveInvariants
+PASS: FLOW-16_RefusalsAlwaysCarryPlayerMessage
+GameFlowTests: 16 passed, 0 failed
+=== DefectRegressionTests ===
+PASS: P1-01_Legacy_FrozenSensorTimestamp_StaysInWarn
+PASS: P1-02_Clock_FrozenSensorTimestamp_DeescalatesAfterDwell
+PASS: P1-03_Clock_ProtectExitsAfterDwellDespiteFrozenTimestamp
+PASS: P1-04_Clock_DwellNotElapsed_StillRetains
+PASS: P1-05_Clock_EncounterLayer_UsesSameClock
+PASS: P2-01_Legacy_SilentSensor_KeepsVeryNearInWorldState
+PASS: P2-02_Gated_StaleSource_NeutralPhysicalState
+PASS: P2-03_Gated_FreshSource_LivePresencePassesThrough
+PASS: P2-04_Gated_VirtualOnlyMask_NeutralEvenWhenFresh
+PASS: P2-05_Gated_RawDisturbanceFlagIgnored_PulseOnlyFromEvents
+PASS: P2-06_Gated_PulseEndsAfter3s_AndCarriesCauseEvent
+PASS: P2-07_Gated_StaleSource_NoProtectFromOldVeryNear
+PASS: P3-01_Reboot_NewBootSequenceOneAccepted
+PASS: P3-02_LegacyPackets_SingleSequenceUnchanged
+PASS: P3-03_PacketFromEarlierBoot_RejectedOldBoot
+PASS: P3-04_VersionAndForeignDevice_Rejected
+PASS: P4-01_SameEventIdNewBoot_Accepted
+PASS: P4-02_SameEventIdSameBoot_Duplicate
+PASS: P4-03_LowerEventIdSameBoot_OldEvent
+PASS: P5-01_DeviceMillis_AcceptedOnArrivalTime
+PASS: P5-02_Legacy_DeviceMillis_JudgedStale
+PASS: P5-03_FreshStaleUnavailable_FromArrivalTime
+PASS: P5-04_LateTransit_RejectedStalePacket_NotCommitted
+PASS: Q-01_QueueMode_SocketPathDoesNotInvokeHandlers
+PASS: Q-02_QueueMode_BoundedCapacity_DropsOldest
+PASS: Q-03_OversizedDatagram_BadSize
+DefectRegressionTests: 26 passed, 0 failed
+=== EncounterRuleTests ===
+PASS: ENC-E0a_Interrupted_Retreats
+PASS: ENC-E0b_NormalPhase_NoE0
+PASS: ENC-E0c_Interrupted_OutranksProtectAndBeat
+PASS: ENC-E1a_AttackPhases_HoldAttack
+PASS: ENC-E1b_NormalPhase_NoE1
+PASS: ENC-E1c_AttackInProgress_OutranksProtectAndBeat_NotTerminal
+PASS: ENC-E2a_ProtectCap_After6s_TreatedAsFollow
+PASS: ENC-E2b_ProtectUnder6s_StaysProtect
+PASS: ENC-E2c_Refractory10s_ThenProtectAgain
+PASS: ENC-E3a_CommittedWarnedClose_Attacks
+PASS: ENC-E3b_EachConditionMissing_NoAttack
+PASS: ENC-E3c_ProtectAndBeat_PreventAttack
+PASS: ENC-E3d_NoPhysicalInputCanCauseAttack
+PASS: ENC-E5a_FirstSighting_AttacksBeforeCommit
+PASS: ENC-E5b_GraceCooldownOrNoFlag_NoAttack
+PASS: ENC-E5c_ProtectBeatTerminalInterrupt_Outrank
+PASS: ENC-E5d_PhysicalInputWithoutFlag_NeverAttacks
+PASS: ENC-E4a_CommittedInBand_Warns
+PASS: ENC-E4b_NotCommittedOrOutOfBand_NoE4
+PASS: ENC-E4c_YieldsToInvestigateAndRetreat
+PASS: ENC-DWELL_BandExit_WarnHeld1500ms
+PASS: ENC-RESET_ClearsTelegraphAndCap
+PASS: ENC-T11_Oscillation_NoWarnShorterThanDwell
+PASS: ENC-T14_InterruptDuringWindup_RetreatsAndNextAttackAfter11_5s
+PASS: ENC-FLOW_AttackMiss_RecoverCooldownThenFreshTelegraph
+EncounterRuleTests: 25 passed, 0 failed
+=== SensorScenarioTests ===
+PASS: SENS-T01_VirtualOnly_NoPhysicalRuleFires_EventsMasked
+PASS: SENS-T02a_Simulated_VeryNearInThreatZone_ProtectSameFrame
+PASS: SENS-T02b_Simulated_NearDisturbance_InvestigateForPulsePlusDwell
+PASS: SENS-T04_DuplicateEvent_OneAcceptedFourDuplicate_OnePulse
+PASS: SENS-T05_OldEventId_Rejected
+PASS: SENS-T06_StaleTransitAndOldEvent_Rejected
+PASS: SENS-T07_InvalidPackets_MatchingReasons_NoException
+PASS: SENS-T08_OutOfOrder_RejectedAndStateFromNewest
+PASS: SENS-T09_Disconnection_StaleThenUnavailable_ResyncBeforeEvents
+PASS: SENS-T10_Reboot_LoggedAccepted_EventAfterResync
+PASS: SENS-BLACKOUT_RestartBlackout1s
+PASS: WSM-PAUSE-05_EventDuringPause_NoReactionOnResume_NextEventInvestigates
+SensorScenarioTests: 12 passed, 0 failed
+=== SerialTransportTests ===
+PASS: SER-01_Framer_PartialMultipleCrlfAndEmptyLines
+PASS: SER-02_Framer_OversizedLineDiscardedAndCounted
+PASS: SER-03_Classifier_ContractDiagLegacyNoise
+PASS: SER-04_Validator_AcceptsFirmwareGoldenLines
+PASS: SER-05_Validator_RejectsBadFieldsVersionNumbersAndSize
+PASS: SER-06_Diagnostics_ParseAgesAndMalformed
+PASS: SER-07_Receiver_MissingPort_FaultedRetriesLogsOnce
+PASS: SER-08_Receiver_ConnectsFramesStampsAndRoutes
+PASS: SER-09_Receiver_DeviceError_ReconnectsWithoutGluingLines
+PASS: SER-10_Receiver_PortRemovedSilently_DisconnectedThenReplug
+PASS: SER-11_Receiver_PortInUse_ClearMessage
+PASS: SER-12_Receiver_RepeatedStartStop_NoLeakedThreadsOrHandles
+PASS: SER-13_Receiver_Auto_ProbesSkipsBluetoothPicksStation
+PASS: SER-14_Receiver_Auto_NoPortsOrNoStation_Reported
+PASS: SER-15_Receiver_UnsupportedPlatform_Faulted
+PASS: SER-16_Receiver_BoundedQueue_DropsOldestAndCounts
+  COM ports present: none
+PASS: SER-17_Win32_MissingPortAndNames
+PASS: SER-18a_EndToEnd_NearDisturbance_Investigate_OnePulse
+PASS: SER-18b_EndToEnd_VeryNearHighInThreatZone_Protect
+PASS: SER-18c_EndToEnd_NearLow_Warn
+PASS: SER-18d_EndToEnd_DiagAndLegacyOnly_NeverChangeState
+PASS: SER-18e_EndToEnd_LinkLost_StaleUnavailableNeutral
+PASS: SER-18f_EndToEnd_Reboot_ResyncBeforeEvents
+PASS: SER-18g_EndToEnd_SerialAndSimulatorDecideIdentically
+PASS: SER-18h_EndToEnd_PhysicalFloodCannotStartAttack
+PASS: SER-19_RawPrintable_EscapesControlBytesAndTruncates
+PASS: SER-20_RawCapture_OffByDefault_NothingQueued_NoWritePath
+PASS: SER-21_RawCapture_On_EscapedLinesSameCounters
+PASS: SER-22_RawCapture_FloodBoundedByQueueSizeAndRate
+SerialTransportTests: 29 passed, 0 failed
+=== SensorResponseProfileTests ===
+PASS: EXH-01_ProfileOff_VeryNearLow_UnchangedFollow
+PASS: EXH-02_ToFOnlyVeryNear_WarnX2_AfterConfirm_ConfidenceStaysLow
+PASS: EXH-03_BlipShorterThanConfirm_NoReaction
+PASS: EXH-04_HoldThenRelease_NoFlicker
+PASS: EXH-05_CrossingsBothWays_NearVeryNearNone
+PASS: EXH-06_ToFOnlyNear_R4Unchanged
+PASS: EXH-07_ThreatZone_ProtectX1_CappedByE2
+PASS: EXH-08_HighConfidence_R1Wins_X2OutsideZone
+PASS: EXH-09_StaleAndUnavailable_NoNewReaction
+PASS: EXH-10_VirtualOnlyMasked_NoReaction
+PASS: EXH-11_Shake_R5Warn_DuplicatesIgnored
+PASS: EXH-12_Reboot_StateUsedAtOnce_EventsResync
+PASS: EXH-13_NeverCausesAttack
+PASS: EXH-14_DefaultProfile_NoProtectInZone_Warns
+PASS: EXH-15_Reset_ClearsSensorResponseState
+PASS: SR-16_ShakeNear_InvestigateX3_Once_ThenWarnR4
+PASS: SR-17_ShakeVeryNear_InvestigateX3_HighConfidenceKeepsR3
+PASS: SR-18_InvestigateDisabledOrStandard_ShakeNearWarns
+PASS: SR-19_ShakeMaskedOrNothingNear_NoX3
+PASS: SR-20_SensorsNeverAttack_ProximityOn
+PASS: SR-21_X3HeldForPulse_ToFFlickerAndHysteresis
+PASS: SR-22_X3Held_R1R2R3StillWin
+PASS: SR-23_X3Held_EndsWhenLinkGoesStale
+PASS: SR-24_X3Held_SecondShakeExtendsSearch
+PASS: SR-25_NearHeldThenVeryNear_NoFollowGap_EscalatesToX2
+PASS: SR-26_InThreatZone_NearToVeryNearHigh_ProtectR1NextLine
+PASS: SR-27_LinkLostAndBack_NotFrozen_ReactsAgain_EventAfterResync
+PASS: E6-01_OutsideZone_NoProximityReaction
+PASS: E6-02_ThreatZone_WarnE6_NoAttackOutOfReach
+PASS: E6-03_TooClose_AttackAfterTelegraph
+PASS: E6-04_Cooldown_BlocksAttack_NoPerFrameRepeat
+PASS: E6-05_GraceBeatTerminalInterrupted_NoAttack
+PASS: E6-06_ProximityOff_LegacyFollow
+PASS: E6-07_VirtualOnlyMasked_StillAttacks
+PASS: E6-08_ShakeInZone_InvestigateDelaysAttack
+PASS: E6-09_Committed_E3NotE6
+SensorResponseProfileTests: 36 passed, 0 failed
+=== TelemetryJsonLinesTests ===
+PASS: TELJ-01_Sink_WritesOneEscapedJsonLinePerRecord
+PASS: TELJ-02_Sink_FullQueue_DropsAndReports_NeverThrows
+PASS: TELJ-03_Sink_UnwritablePath_FaultsQuietly
+PASS: TELJ-04_ChangeOnly_OneDecisionPerChange_WithIdsRuleAndCause
+PASS: TELJ-05_ChangeOnly_HysteresisNumbersDoNotSpamRecords
+PASS: TELJ-06_T13_Determinism_TelemetryOnVsNullSink
+TelemetryJsonLinesTests: 6 passed, 0 failed
+=== GameFlowEncounterTests ===
+PASS: FLOW-17_Death_OnlyFromPlaying_Once
+PASS: FLOW-18_Dead_RefusesInteractionsAndPause
+PASS: FLOW-19_CheckpointFlow_StartsAtReachExitWithHistory
+PASS: FLOW-20_CheckpointFlow_RejectsUnstableStages
+PASS: FLOW-21_CommitEncounter_OnlyAfterPowerAndOnce
+PASS: FLOW-22_CommitEncounter_ChangesObjectiveText
+PASS: FLOW-23_Session_CheckpointRestartIncrementsAttempt
+PASS: FLOW-24_Session_NoCheckpoint_FallsBackToNewRun
+PASS: FLOW-25_Session_NewRunClearsCheckpointDeathsAndTime
+PASS: FLOW-26_RandomSequencesWithDeathAndCommit_PreserveInvariants
+GameFlowEncounterTests: 10 passed, 0 failed
+=== EncounterDirectorTests ===
+PASS: DIR-01_Bands_HaveHysteresis
+PASS: DIR-02_Threat_BaselineNearAfterFuseAndSurge
+PASS: DIR-03_Beat_Lasts4s_SetsEventAndWarningBeat
+PASS: DIR-04_RestartGrace_3s
+PASS: DIR-05_Chain_NearAfterFuse_R7Warn_SurgeRetreat
+PASS: DIR-06_Chain_GraceBlocksAttackThenAllows
+PASS: DIR-07_FirstSighting_OneShotWindow_EndsBeat
+PASS: DIR-08_Chain_SightingAttacksOnce_E5
+EncounterDirectorTests: 8 passed, 0 failed
+=== PlayerLocomotionTests ===
+PASS: LOCO-01_Walk_Default
+PASS: LOCO-02_Sprint_OnlyHeldAndMovingForward
+PASS: LOCO-03_Stamina_Lasts4s_ThenExhausted
+PASS: LOCO-04_Exhausted_NoSprintUntil25Percent
+PASS: LOCO-05_Regen_WaitsDelay_FullIn3s
+PASS: LOCO-06_Reset_FullBar
+PASS: LOCO-07_Jump_GroundedOnly_NoAirJump
+PASS: LOCO-08_Jump_TakeoffReachesHeight
+PlayerLocomotionTests: 8 passed, 0 failed
+=== SensorPanelModelTests ===
+PASS: PANEL-01_Connected_ValidReadings_ShownWithClassAndAge
+PASS: PANEL-02_InvalidSonar_NoValidReading_NeverZero
+PASS: PANEL-03_NeverValid_SaysSo
+PASS: PANEL-04_TofFar_NothingInRange
+PASS: PANEL-05_DiagnosticsOlderThan2s_Stale
+PASS: PANEL-06_NoDiagYet_NoData
+PASS: PANEL-07_Faulted_ShowsLinkError
+PASS: PANEL-08_OldSketch_Notice
+PASS: PANEL-09_ConnectedNoData_NoticeAfter3s
+PASS: PANEL-10_Pins_ParsedFromHello
+PASS: PANEL-11_ImuStages_AndStationError
+PASS: PANEL-12_NonSerialModes_ListNoReadings
+PASS: PANEL-13_EveryStateHasAWord
+SensorPanelModelTests: 13 passed, 0 failed
+
+SUITES RUN: 26, TOTAL FAILED: 0

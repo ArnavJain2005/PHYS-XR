@@ -52,6 +52,7 @@ namespace PHYSXR.Testing
             Run("RT-11_BeatEnd_ReturnsToInnerDecision_InnerHistoryStaysCoherent", RT11);
             Run("RT-12_EventActiveAlone_IsNotAWarningBeat", RT12);
             Run("PRI1-S1_SafeKnock_InvestigatesOnce_AttributedActed_ThenFollows", Pri1S1);
+            Run("PRI1-X3_SingleSensorKnock_SensorResponseInvestigates_AttributedActed", Pri1X3);
             Run("PRI1-S2_SameKnockInDanger_HigherPriorityWins_ExplainedNotAttributed", Pri1S2);
             Run("PRI1-S3_InterruptedInvestigation_ReevaluatesFromCurrentState", Pri1S3);
             Run("PRI1-DET_SameSequence_SameRecords_TelemetryDoesNotChangeDecisions", Pri1Det);
@@ -478,6 +479,25 @@ namespace PHYSXR.Testing
             r5.Frames(140);
             AssertOutcome(r5.SingleOutcome(2), GhostRuntimePipeline.OutcomeActed, GhostAction.WARN, "INNER", "R5", "S1/R5");
             AssertEq(1, r5.Episodes(GhostAction.WARN), "one WARN episode");
+        }
+
+        // The same knock with only the ToF seeing someone (confidence LOW, as
+        // the real station reports): the sensor-response INVESTIGATE (X3)
+        // replaces R4 WARN and is credited to the event.
+        private static void Pri1X3()
+        {
+            var rig = new GameRig { Presence = PresenceLevel.NEAR, Confidence = ConfidenceLevel.LOW };
+            ((EncounterDecisionLayer)rig.Pipeline.DecisionProvider).SensorResponse = new SensorResponseProfile();
+            rig.Frames(20);
+            AssertEq(GhostAction.WARN, rig.Actions[rig.Actions.Count - 1], "R4 WARN before the knock");
+            rig.Knock(3);
+            rig.Frames(140);
+
+            AssertEq(1, rig.Episodes(GhostAction.INVESTIGATE), "one INVESTIGATE episode for one knock");
+            AssertEq("Warning>Investigating>Warning", rig.StateSequence(), "WARN, INVESTIGATE for the pulse, WARN again");
+            TelemetryRecord investigate = rig.OfType("DECISION").Find(d => d.ghostAction == GhostAction.INVESTIGATE);
+            AssertTrue(investigate != null && investigate.causeEventId == 3 && investigate.ruleId == "X3", "the X3 decision is attributed to evt 3");
+            AssertOutcome(rig.SingleOutcome(3), GhostRuntimePipeline.OutcomeActed, GhostAction.INVESTIGATE, "X3", "R4", "X3");
         }
 
         // Scenario 2: the same knock while the player is in danger, or while a

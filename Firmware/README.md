@@ -9,7 +9,9 @@ ESP32 + VL53L0X (ToF) + HC-SR04 (ultrasonic) + MPU6050, sending the semantic
 | `physxr_station/physxr_semantics.h` | Portable semantic core (proximity classes, fusion, disturbance detector, line format); no Arduino dependency |
 | `tests/semantics_test.cpp` | Host test of the semantic core (runs on a PC, no ESP32) |
 
-Status: **written and compile-checked, not yet run on the physical station.** The station's board is
+> **Status (26 Oct 2026).** The project team has accepted the physical hardware system: the VL53L0X time-of-flight and MPU6050 sensors are calibrated and functional, and the full physical integration was demonstrated on Meta Quest 2 and Meta Quest 3 (team-confirmed). The station runs `physxr_station` firmware 1.0.0 (`#HELLO proto=1;fw=1.0.0;dev=phys-xr-01`, I²C on SCL 23), and 15 live runs from 22-24 Oct are logged in [`Evidence/`](../Evidence/README.md). The text below is kept as the record of the 21 Oct bring-up.
+
+Status (21 Oct 2026): **written and compile-checked, not yet run on the physical station.** The station's board is
 connected to the development PC (COM6) but still runs an old bench sketch; `physxr_station` has not been
 flashed. See "What has and has not been verified" at the end.
 
@@ -192,6 +194,13 @@ every 2 s after 10 consecutive failures.
 the less aggressive class, LOW. One valid → its class, LOW. Neither → NONE, LOW. Raw distances are never
 averaged. An invalid or stale sensor can never produce presence.
 
+The spec's table defines only the NEAR/VERY_NEAR disagreement and leaves the rest to calibration. One case
+has a switch, `FUSION_TOF_PRIMARY` (default `false`): both valid, the ToF (primary) sees NEAR or VERY_NEAR,
+the ultrasonic (secondary) reads NONE. `false` keeps the conservative rule (NONE, LOW); `true` keeps the ToF
+class at LOW, so the ultrasonic lowers confidence instead of vetoing the primary sensor. Set it only if
+calibration shows the ultrasonic missing a hand the ToF sees. The ultrasonic alone never creates presence
+either way, and confidence is never raised (host test `testFusionToFPrimary`).
+
 **MPU6050 (local disturbance).** Accelerometer only (±2 g, DLPF 44 Hz, 100 Hz), gyro unused (Hardware Spec
 §6). On power-up the station must stay still for 2 s: the stationary |A| baseline and noise are measured;
 if the noise exceeds 0.03 g the station moved and calibration repeats; a baseline outside 0.7–1.3 g is a
@@ -217,6 +226,8 @@ calibration on the mounted station). They are constants at the top of `physxr_st
    `onFloorG` if untouched events occur; lower it (or `qualifySamples`) if real movements are missed.
 4. Record the final values, the date, and the mounting geometry in the table below and in your report.
 
+The team calibrated the ToF and MPU thresholds on the mounted station (accepted 26 Oct 2026). The calibrated values have not yet been written into this table.
+
 | Parameter | Starting value | Calibrated value | Date / geometry |
 |---|---|---|---|
 | VERY_NEAR enter / exit | 30 / 35 cm | | |
@@ -224,6 +235,7 @@ calibration on the mounted station). They are constants at the top of `physxr_st
 | Disturbance ON floor | 0.08 g (or 6 × noise) | | |
 | Qualify samples | 3 (30 ms) | | |
 | Re-arm interval | 1.5 s | | |
+| `FUSION_TOF_PRIMARY` | false | | |
 
 ## 6. Troubleshooting
 

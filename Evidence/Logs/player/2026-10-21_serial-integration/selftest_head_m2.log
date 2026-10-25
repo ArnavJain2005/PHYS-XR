@@ -1,0 +1,90 @@
+Mono path[0] = 'C:/Learning/College/CPS/Sem-5/IAVR & ESDP Project/PHYS-XR/PHYS-XR/Builds/PHYSXR_Windows/PHYS-XR_Data/Managed'
+Mono config path = 'C:/Learning/College/CPS/Sem-5/IAVR & ESDP Project/PHYS-XR/PHYS-XR/Builds/PHYSXR_Windows/MonoBleedingEdge/etc'
+CodeReloadManager initialized
+Input System module state changed to: Initialized.
+[Physics::Module] Initialized fallback backend.
+[Physics::Module] Id: 0xdecafbad
+Initialize engine version: 6000.5.8f1 (5cb7df797b7d)
+[Subsystems] Discovering subsystems at path C:/Learning/College/CPS/Sem-5/IAVR & ESDP Project/PHYS-XR/PHYS-XR/Builds/PHYSXR_Windows/PHYS-XR_Data/UnitySubsystems
+[Subsystems] No descriptors matched for  examples in UnitySubsystems/UnityOpenXR/UnitySubsystemsManifest.json.
+[Subsystems] 1 'inputs' descriptors matched in UnitySubsystems/UnityOpenXR/UnitySubsystemsManifest.json
+[Subsystems] 1 'displays' descriptors matched in UnitySubsystems/UnityOpenXR/UnitySubsystemsManifest.json
+[Subsystems] No descriptors matched for  meshings in UnitySubsystems/UnityOpenXR/UnitySubsystemsManifest.json.
+Forcing GfxDevice: Null
+GfxDevice: creating device client; kGfxThreadingModeNonThreaded
+NullGfxDevice:
+    Version:  NULL 1.0 [1.0]
+    Renderer: Null Device
+    Vendor:   Unity Technologies
+Begin MonoManager ReloadAssembly
+- Finished resetting the current domain, in  0.044 seconds
+[Physics::Module] Selected backend.
+[Physics::Module] Name: PhysX
+[Physics::Module] Id: 0xf2b8ea05
+[Physics::Module] SDK Version: 4.1.2
+[Physics::Module] Integration Version: 1.0.0
+[Physics::Module] Threading Mode: Multi-Threaded
+Microsoft Media Foundation video decoding to texture disabled: graphics device is Null, only Direct3D 11 and Direct3D 12 (only on desktop) are supported for hardware-accelerated video decoding.
+UnloadTime: 2.056400 ms
+[Sensors] condition VIRTUAL_ONLY, OFF (virtual only)  UDP 47800 (not bound)
+[Telemetry] trial selftest (VIRTUAL_ONLY) -> C:/Users/<user>/AppData/LocalLow/DefaultCompany/PHYS_XR\telemetry\selftest_Windows_20261021T141716Z.jsonl
+M2SELFTEST BEGIN
+Unloading 5 Unused Serialized files (Serialized files now loaded: 0)
+UnloadTime: 0.510000 ms
+Unloading 5 unused Assets to reduce memory usage. Loaded Objects now: 7308.
+Total: 2.102300 ms (FindLiveObjects: 0.264800 ms CreateObjectMapping: 0.416800 ms MarkObjects: 1.395500 ms  DeleteObjects: 0.024900 ms)
+
+[GameFlow] RUN_START run=1 attempt=1 condition=VIRTUAL_ONLY
+M2SELFTEST PASS C01_StartState | pos=(0.00, 0.05, -5.50) stage=FindFuse state=Playing powered=False run=1 attempt=1 timeScale=1
+M2SELFTEST PASS C06a_ExitTargeted | target=FrontDoor
+M2SELFTEST PASS C06b_ExitRefusedBeforePower | Refused(ExitLocked): The front door is locked. Its lock has no power.
+M2SELFTEST PASS C06c_ExitRefusalLeavesState | FindFuse/Playing
+M2SELFTEST PASS C03_FuseBoxRefusedBeforeFuse | Refused(FuseRequired): The fuse box has an empty slot. You need a fuse.
+M2SELFTEST PASS C02a_FuseTargeted | target=Fuse
+[GameFlow] OBJECTIVE FUSE_PICKUP stage=InstallFuse t=12.8
+M2SELFTEST PASS C02b_FuseCollected | Accepted: Picked up a fuse.
+M2SELFTEST PASS C11a_RepeatPickupRefused | Refused(FuseAlreadyCollected): You already have the fuse.
+[GameFlow] PAUSE
+M2SELFTEST PASS C09a_Paused | timeScale=0
+M2SELFTEST PASS C09b_PauseBlocksGameplay | Refused(GameplayInactive): 
+[GameFlow] RESUME
+M2SELFTEST PASS C09c_Resumed | timeScale=1
+M2SELFTEST PASS C04a_FuseBoxTargeted | target=FuseBox
+[GameFlow] OBJECTIVE FUSE_INSTALLED stage=RestoringPower t=19.8
+M2SELFTEST PASS C04b_FuseInstalled | Accepted: Fuse installed.
+[GameFlow] OBJECTIVE POWER_RESTORED stage=ReachExit t=21.7
+M2SELFTEST PASS C05a_PowerRestored | stage=ReachExit
+M2SELFTEST PASS C05b_LightingChanged | main=8/8 emergency=0 ambient=RGBA(0.060, 0.055, 0.050, 1.000)
+M2SELFTEST PASS C05c_ExitIndicatorUnlocked | indicator
+M2SELFTEST PASS C11b_RepeatInstallRefused | Refused(FuseAlreadyInstalled): The fuse is already installed. / Refused(FuseAlreadyInstalled): The fuse is already installed.
+[GameFlow] RUN_END outcome=success duration_s=33.5
+[GameFlow] OBJECTIVE EXIT_USED stage=Completed t=33.5
+M2SELFTEST PASS C07_ExitSucceedsAfterPower | Accepted: You escaped Blackthorn House.
+M2SELFTEST PASS C12_RouteUnder150s | scripted route 33.5 s; RunSeconds=33.5
+M2SELFTEST PASS C08_SuccessDisablesGameplay | Refused(GameplayInactive): 
+[GameFlow] RUN_RESTART from stage=Completed state=Succeeded
+Unloading 5 Unused Serialized files (Serialized files now loaded: 0)
+UnloadTime: 14.074700 ms
+Unloading 2 unused Assets to reduce memory usage. Loaded Objects now: 7353.
+Total: 2.961100 ms (FindLiveObjects: 0.386000 ms CreateObjectMapping: 0.445300 ms MarkObjects: 2.114700 ms  DeleteObjects: 0.014800 ms)
+
+[GameFlow] RUN_START run=2 attempt=1 condition=VIRTUAL_ONLY
+M2SELFTEST PASS C10a_RestartAfterSuccess | pos=(0.00, 0.05, -5.50) stage=FindFuse state=Playing powered=False run=2 attempt=1 timeScale=1
+[GameFlow] OBJECTIVE FUSE_PICKUP stage=InstallFuse t=0.2
+[GameFlow] PAUSE
+M2SELFTEST PASS C10b_MidRunSetup | InstallFuse/Paused
+[GameFlow] RUN_RESTART from stage=InstallFuse state=Paused
+Unloading 3 Unused Serialized files (Serialized files now loaded: 0)
+UnloadTime: 2.836800 ms
+Unloading 12 unused Assets to reduce memory usage. Loaded Objects now: 7353.
+Total: 2.067800 ms (FindLiveObjects: 0.235400 ms CreateObjectMapping: 0.424600 ms MarkObjects: 1.108200 ms  DeleteObjects: 0.299100 ms)
+
+[GameFlow] RUN_START run=3 attempt=1 condition=VIRTUAL_ONLY
+M2SELFTEST PASS C10c_RestartWhilePausedMidRun | pos=(0.00, 0.05, -5.50) stage=FindFuse state=Playing powered=False run=3 attempt=1 timeScale=1
+M2SELFTEST END passed=23 failed=0
+[Physics::Module] Cleanup current backend.
+[Physics::Module] Id: 0xf2b8ea05
+Input System module state changed to: ShutdownInProgress.
+Input Polling Thread exited.
+Input System module state changed to: Shutdown.
+CodeReloadManager destroyed

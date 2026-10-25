@@ -105,6 +105,14 @@ namespace PHYSXR.Ghost
         // Outputs of the most recent decision, for presentation and the dev overlay.
         public GhostAction? LastAction { get; private set; }
 
+        // The physical event the most recent caused decision answered (see
+        // EVENT ATTRIBUTION), or 0 before any. It changes when a further
+        // event re-arms a search that is already running, which leaves the
+        // action, rule and reason (and so the DECISION record) unchanged;
+        // presentation reads it to show that new event. Change-only mode
+        // only, like the attribution itself.
+        public long LastCausedEventId { get; private set; }
+
         public string LastReason => decisionProvider.LastDecisionReason;
 
         public string LastRuleId => (decisionProvider as IRuleIdentifiedDecisionProvider)?.LastRuleId ?? string.Empty;
@@ -204,6 +212,8 @@ namespace PHYSXR.Ghost
                 }
 
                 bool caused = IsCausedByTrackedEvent(action);
+                if (caused)
+                    LastCausedEventId = trackedEventId;
                 EmitDecisionIfChanged(timestamp, action, caused ? trackedEventId : 0L);
                 TrackEventOutcome(timestamp, action, caused);
             }
@@ -271,7 +281,13 @@ namespace PHYSXR.Ghost
         private bool IsCausedByTrackedEvent(GhostAction action)
         {
             RuleBasedDecisionProvider inner = InnerRules;
-            if (trackedEventId == 0L || inner == null || !InnerResultSelected)
+            if (trackedEventId == 0L || inner == null)
+                return false;
+
+            // The sensor-response INVESTIGATE (X3) answers the disturbance pulse.
+            if (LastRuleId == "X3")
+                return true;
+            if (!InnerResultSelected)
                 return false;
 
             string rule = inner.LastRuleId;
@@ -400,6 +416,7 @@ namespace PHYSXR.Ghost
             FlushPendingOutcome(lastRunTimestamp);
             trackedEventId = 0L;
             trackedActedAction = null;
+            LastCausedEventId = 0L;
             IsTerminalGateEngaged = false;
             terminalRecorded = false;
             behaviourController.Reset();

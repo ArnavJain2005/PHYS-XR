@@ -9,6 +9,8 @@ there is evidence, and the evidence is named.
 Branch: `demo/warning-beat-arbitration`. Unity `6000.5.8f1`, URP 17.5.0, Input System 1.20.0.
 Last updated 21 Oct 2026 (game implementation pass on top of `d9ef09d`; gameplay bug-fix pass `1b7a475` with team-reported manual acceptance; ESP32 USB-serial integration). On 22 Oct 2026 the README's detailed status, issue register and roadmap moved to the end of this file ([Detailed status, open issues and roadmap](#detailed-status-open-issues-and-roadmap)).
 
+> **Status (26 Oct 2026).** The project team has accepted the physical hardware system: the VL53L0X time-of-flight and MPU6050 sensors are calibrated and functional, and the full physical integration was demonstrated on Meta Quest 2 and Meta Quest 3 (team-confirmed). The rows below that predate this are kept as recorded and marked where superseded. Also on 26 Oct: an attack-telegraph defect (a sensor-driven WARN counting toward the 1.5 s warning of E3/E6) was fixed with an encounter-specific telegraph and seven regression tests; the final tree passes 382/382 harness tests (26 suites), 53/53 firmware host checks and the four player self-tests (responsiveness 24/24, route 23/23, encounter 40/40, simulated 42/42). Evidence: [`Evidence/README.md`](../Evidence/README.md), [`TESTING_AND_EVALUATION.md`](TESTING_AND_EVALUATION.md#re-verification-26-oct-2026).
+
 ## Milestone summary
 
 | Milestone | Status | Evidence / what is missing |
@@ -20,8 +22,8 @@ Last updated 21 Oct 2026 (game implementation pass on top of `d9ef09d`; gameplay
 | M4 Attack, lantern, death, checkpoint | Done (automated) | `EncounterSelfTest` 34/34 (T14, T15, T17, T18, T20, plus the bug-fix pass: readable modal, sprint/jump, first-sighting E5, solid ghost body). |
 | M5 Simulated physical input | Done in software | `SimulatedSensorStation` → real validator/pipeline; hotkeys; `SensorScenarioTests` 12/12 (11 before WSM-PAUSE-05 was added with F1, `ec4af1e`); encounter self-test under SIMULATED 36/36 (34 plus the F1 pause checks P01/P02). |
 | M6 Telemetry + analysis | Done in software | `JsonLinesTelemetrySink`, all section G record types, `Tools/analyze_telemetry.py`, T13 determinism test. |
-| M7 ESP32 on Windows | **Software done; hardware run pending** | Transport is USB serial (the project's link; final report §3.3), UDP kept. I-1 addressed in software: `Firmware/physxr_station` emits contract v1 at 115200 baud (host test 47/47; ESP32 compile with the real Pololu VL53L0X 1.3.1, 0 warnings). `SerialLineReceiver` → same `SensorFeed`/validator/pipeline; `SerialTransportTests` 29/29. A player in USB-serial mode against the real board (COM6, old bench sketch still flashed) passed 34/34 with 0 packets accepted and 0 physical decisions. **Not run with `physxr_station` on the physical station.** Checklist: [`HARDWARE_ACCEPTANCE.md`](HARDWARE_ACCEPTANCE.md). |
-| M8 / M9 Quest | Not started | Desktop only (I-2, I-3). |
+| M7 ESP32 on Windows | **Accepted by the team (26 Oct 2026)**; the 21 Oct record follows | Transport is USB serial (the project's link; final report §3.3), UDP kept. I-1 addressed in software: `Firmware/physxr_station` emits contract v1 at 115200 baud (host test 47/47; ESP32 compile with the real Pololu VL53L0X 1.3.1, 0 warnings). `SerialLineReceiver` → same `SensorFeed`/validator/pipeline; `SerialTransportTests` 29/29. A player in USB-serial mode against the real board (COM6, old bench sketch still flashed) passed 34/34 with 0 packets accepted and 0 physical decisions. **Not run with `physxr_station` on the physical station.** Checklist: [`HARDWARE_ACCEPTANCE.md`](HARDWARE_ACCEPTANCE.md). |
+| M8 / M9 Quest | **Demonstrated by the team on Meta Quest 2 and Quest 3 (26 Oct 2026)** | PC VR through OpenXR with Touch-controller input (`DesktopInputAdapter`). No automated headset test and no recording in the repository. |
 | M10 Art, audio, ending | Done with procedural assets | House dressing, lighting states, storm, post-processing, 39 synthesised cues, ending with window silhouette and subtitles. Reviewed from screenshots (capture tour), not in person. |
 | M11 Acceptance + evaluation | Not started | Needs people and hardware. |
 
@@ -123,7 +125,7 @@ under player load (24 suites, 305 passed).
 |---|---|---|
 | T01 Virtual-only | **Pass (software)** | SENS-T01 |
 | T02 Physical + virtual (simulated) | **Pass (software)** | SENS-T02a/b |
-| T03 Real ESP32 | Not run | Firmware and serial link exist and pass software tests (SER-04, SER-18a–h); needs the station: [`HARDWARE_ACCEPTANCE.md`](HARDWARE_ACCEPTANCE.md) A–G |
+| T03 Real ESP32 | **Accepted by the team (26 Oct 2026)**; 15 live runs logged in `Evidence/` (21 Oct entry: not run) | Firmware and serial link exist and pass software tests (SER-04, SER-18a–h); needs the station: [`HARDWARE_ACCEPTANCE.md`](HARDWARE_ACCEPTANCE.md) A–G |
 | T04 Duplicate events | **Pass (software)** | SENS-T04 |
 | T05 Old event ID | **Pass (software)** | SENS-T05 |
 | T06 Stale packets | **Pass (software)** | SENS-T06, P5-04 |
@@ -142,7 +144,7 @@ under player load (24 suites, 305 passed).
 | T19 Fuse and exit | **Pass (player)** | M2 C03–C07 (lights, hum loop and surge sound exist; audio not verified by ear) |
 | T20 Full restart | **Pass (player)** | M2 C10a/c, EncounterSelfTest T20 |
 | T21 Windows input | **Partial (team-reported manual pass)** | On `1b7a475` the team reported PASS for E open/close of readables, sprint and jump, and pause and recovery (see Manual acceptance). Not reported: mouse feel, cursor lock across focus changes, settings sliders |
-| T22–T24 Quest | Not run | No Quest build |
+| T22–T24 Quest | **Demonstrated (team-confirmed, 26 Oct 2026)** | Meta Quest 2 and Quest 3 with the physical station; the individual T22–T24 checks were not recorded |
 | T25 Under five minutes | Not run | Scripted route 33.5 s; needs first-time players |
 | T26 Latency | Not run | Needs hardware and video. `ts`/`tEvent` (T0/T1) and arrival `t2` are logged per line (`PKT_RX`, `PHYS_EVENT`) |
 | T27 Telemetry correlation | Partial | The analyzer joins caused decisions to events and behaviours; no physical-event trial was logged yet |
@@ -220,7 +222,7 @@ These come from the project synopsis (*PHYS-XR: Embodied AI for Mixed-Reality Ga
 | Real end-to-end physical loop | — | — | **Blocked** on station wiring checks | [Phase 1–2](#phase-1--hardware-and-communication-reliability) |
 | Latency measurement (T26) | Timestamps logged (`t1_dev`, `t2`, `tEvent`, `ts`) | — | **Planned** | Needs hardware + video |
 | Virtual-only vs physical-plus-virtual study | Conditions and logging exist | — | **Planned** | [Phase 4](#phase-4--telemetry-and-experimental-evaluation) |
-| Meta Quest / XR | OpenXR 1.18.0 and XR Management 4.7.0 are in the committed `Packages/manifest.json`; no XR rig, input adapter or Quest build exists | — | **Planned (not started)** | [Phase 6](#phase-6--optional-research-extensions) |
+| Meta Quest / XR | OpenXR 1.17.1, XR Interaction Toolkit 3.5.1 and the Oculus Touch profile in the project; Touch input in `DesktopInputAdapter` | Team demonstration on Quest 2 and Quest 3 (26 Oct 2026) | **Demonstrated** | Comfort and VR presentation polish |
 | RL decision provider | `IDecisionProvider` seam only | — | **Planned** | Optional research extension |
 | Third-party art, Git LFS | Not imported (licences unconfirmed) | [`Docs/ASSETS.md`](ASSETS.md) | **Not started** by decision | Only if needed |
 
@@ -267,17 +269,17 @@ The five levels are kept separate on purpose: passing a test is not the same as 
 
 | ID | Issue | Evidence | Impact | Priority | Next action | Done when |
 |---|---|---|---|---|---|---|
-| L1 | **Station never run with `physxr_station`** | Board on COM6 runs an old bench sketch; 0 contract lines ever accepted | The central physical→agent claim is unproven | **P0** | Checklist A → B → C | `#HELLO dev=phys-xr-01` seen and `FRESH` in game |
-| L2 | **ECHO 5 V into GPIO 26: protection unmeasured** | "Reported present" only | Can damage the ESP32 | **P0 (safety)** | Meter check A1 (USB unplugged), C4 powered | GPIO 26 ≤ 3.3 V recorded with photo |
-| L3 | **SCL 22 vs 23 unresolved; TRIG/ECHO 25/26 vs poster 5/18** | Conflicting sources | No I²C devices, or no ultrasonic | P0 | Continuity A2/A5; compare with `#HELLO scl=` | Pins recorded in `Firmware/README.md` §1 |
-| L4 | **Ultrasonic never ranged** (`SONAR No echo` under the old sketch) | 21 Oct read-only capture | Confidence stuck LOW → R1 and R3 cannot fire on hardware | P0 | A4/A5/C4: 5 V supply, wiring, divider orientation, obstruction | `us_ok=1` with a plausible `us_cm` |
-| L5 | **Thresholds uncalibrated**; ToF read 42–52 mm with nothing intended in view | Firmware constants; old-sketch reading | False NEAR/VERY_NEAR, false or missed knocks | P1 | Clear the ToF field of view; `Firmware/README.md` §5 calibration; D2–D9 | 5 min idle → 0 events; 20 taps → 20 events |
-| L6 | **Event → visible behaviour join not demonstrated** | 22 Oct SIMULATED run: 2 decisions caused by events, `caused_joined=0`. The self-test knock (P02) happens while the ghost is still **dormant**, so the decision is made but no `BEHAVIOUR START` follows. P02 checks the decision, not the visible response | T27 evidence missing; a reviewer cannot yet trace knock → visible ghost reaction in a log | P1 | Add a self-test (or run the demo script) with the knock after the ghost manifests; re-run the analyzer | `caused_joined ≥ 1` in a logged trial (simulated, then hardware) |
+| L1 | **Closed by team hardware acceptance (26 Oct 2026).** **Station never run with `physxr_station`** | Board on COM6 runs an old bench sketch; 0 contract lines ever accepted | The central physical→agent claim is unproven | **P0** | Checklist A → B → C | `#HELLO dev=phys-xr-01` seen and `FRESH` in game |
+| L2 | **Closed by team hardware acceptance (26 Oct 2026).** **ECHO 5 V into GPIO 26: protection unmeasured** | "Reported present" only | Can damage the ESP32 | **P0 (safety)** | Meter check A1 (USB unplugged), C4 powered | GPIO 26 ≤ 3.3 V recorded with photo |
+| L3 | **Closed by team hardware acceptance (26 Oct 2026).** **SCL 22 vs 23 unresolved; TRIG/ECHO 25/26 vs poster 5/18** | Conflicting sources | No I²C devices, or no ultrasonic | P0 | Continuity A2/A5; compare with `#HELLO scl=` | Pins recorded in `Firmware/README.md` §1 |
+| L4 | **Closed by team hardware acceptance (26 Oct 2026).** **Ultrasonic never ranged** (`SONAR No echo` under the old sketch) | 21 Oct read-only capture | Confidence stuck LOW → R1 and R3 cannot fire on hardware | P0 | A4/A5/C4: 5 V supply, wiring, divider orientation, obstruction | `us_ok=1` with a plausible `us_cm` |
+| L5 | **Closed by team hardware acceptance (26 Oct 2026).** **Thresholds uncalibrated**; ToF read 42–52 mm with nothing intended in view | Firmware constants; old-sketch reading | False NEAR/VERY_NEAR, false or missed knocks | P1 | Clear the ToF field of view; `Firmware/README.md` §5 calibration; D2–D9 | 5 min idle → 0 events; 20 taps → 20 events |
+| L6 | **Largely resolved (26 Oct 2026):** in 15 live station runs, 44 of 70 knock-caused decisions are followed by a logged `BEHAVIOUR START` (`Evidence/`). Original entry: **Event → visible behaviour join not demonstrated** | 22 Oct SIMULATED run: 2 decisions caused by events, `caused_joined=0`. The self-test knock (P02) happens while the ghost is still **dormant**, so the decision is made but no `BEHAVIOUR START` follows. P02 checks the decision, not the visible response | T27 evidence missing; a reviewer cannot yet trace knock → visible ghost reaction in a log | P1 | Add a self-test (or run the demo script) with the knock after the ghost manifests; re-run the analyzer | `caused_joined ≥ 1` in a logged trial (simulated, then hardware) |
 | L7 | **Intermittent player self-test early exit** | 4 runs exited 1 with no `SELFTEST END`; one coincided with a Windows low-virtual-memory event | Flaky evidence and demo risk | P2 | Re-run with the Editor closed and free commit recorded per run | 20 consecutive passes with memory logged, or a reproduced cause |
 | L8 | **No live latency or reliability numbers** | No hardware trial | No quantitative claim possible | P1 (after L1) | [Phase 4](#phase-4--telemetry-and-experimental-evaluation) protocol | Median and spread for T0→T4 per hop with n reported |
 | L9 | **Manual acceptance incomplete** | Team-reported pass on 5 items only | Feel, difficulty, audio balance unknown | P2 | T21 remaining items, T25 first-time players, audio by ear | Recorded results with tester names and dates |
-| L10 | **Desktop only; no Quest build** | No XR rig or input adapter | Deviates from the synopsis' primary platform | P3 (after the MVP loop) | [Phase 6](#phase-6--optional-research-extensions) | Quest build passes T22–T24 |
-| L11 | **No dashboard** | None in repo (a "Dashboard & Live Telemetry" workstream is assigned; see [Team](../README.md#team-acknowledgements-and-licence)) | Observers rely on the F1 overlay | P3 | [Phase 5](#phase-5--dashboard-and-demonstration-readiness) | Reads telemetry, never the COM port |
+| L10 | **Closed (26 Oct 2026): demonstrated on Meta Quest 2 and Quest 3 (team-confirmed).** Original entry: **Desktop only; no Quest build** | No XR rig or input adapter | Deviates from the synopsis' primary platform | P3 (after the MVP loop) | [Phase 6](#phase-6--optional-research-extensions) | Quest build passes T22–T24 |
+| L11 | **No dashboard** | None in repo (a "Dashboard & Live Telemetry" workstream is assigned; see [Team](../README.md#team-and-ownership)) | Observers rely on the F1 overlay | P3 | [Phase 5](#phase-5--dashboard-and-demonstration-readiness) | Reads telemetry, never the COM port |
 | L12 | **Boundaries by convention** | No `.asmdef`, no Unity Test Runner bridge | Accidental cross-layer references possible | P3 | Add asmdefs per namespace | Compile fails on a forbidden reference |
 | L13 | ~~Doc drift~~ **Resolved 22 Oct 2026** | `DEMO_SCRIPT.md` quoted 310 tests and the milestone doc `SensorScenarioTests` 11/11 | — | — | Both now state 314 and 12/12, with the date; dated historical 310 figures elsewhere were left as recorded | Counts match the harness |
 | L14 | **Procedural art only** | Third-party kits not imported (licences unconfirmed, no LFS) | Visual fidelity limited | P4 | Only if needed: confirm licences, add LFS | Asset register updated |
@@ -305,7 +307,7 @@ flowchart LR
 
 | Category | Phase | Done when (short form; full criteria below) |
 |---|---|---|
-| **Immediate prerequisites** | [0 Baseline](#phase-0--baseline-stabilization) | Clean-checkout build; 314/314, 47/47, 23/23, 36/36 in repeated runs |
+| **Immediate prerequisites** | [0 Baseline](#phase-0--baseline-stabilization) | Clean-checkout build; 382/382, 53/53, 23/23, 42/42 in repeated runs |
 | | [1 Hardware and link](#phase-1--hardware-and-communication-reliability) | Wiring measured and safe; `#HELLO` seen; per-sensor checks and calibration recorded; 20 taps → 20 accepted events |
 | | [2 Physical-to-ghost](#phase-2--physical-to-virtual-integration) | One logged, filmed hardware trial each for R1, R3, R4, R5, with `cause_evt` joined to a visible behaviour |
 | **System hardening** | [3 Decision hardening](#phase-3--ghost-decision-system-hardening) | Replay test on recorded hardware sequences; thresholds re-checked via parameters, not rule changes |
@@ -319,7 +321,7 @@ flowchart LR
 - **Work packages:** (a) confirm that a clean checkout of the committed configuration builds without any machine-local package or XR setting; (b) build one player from a clean checkout and record its commit; (c) re-run harness, host test and the three self-tests with free memory logged (L7); (d) doc drift (L13): done 22 Oct 2026; (e) confirm no `PHYS-XR.exe` survives a normal quit (checklist F19).
 - **Files:** `Docs/*`, `Builds/` (local), `Packages/manifest.json` (owner's decision).
 - **Dependencies:** none. **Priority:** P0. **Risks:** memory-related flakiness masks real failures.
-- **Acceptance / exit:** clean-checkout build; 314/314; 47/47; M2 23/23; SIMULATED 36/36 in 5 consecutive runs; build commit written next to the executable.
+- **Acceptance / exit:** clean-checkout build; 382/382; 53/53; M2 23/23; SIMULATED 42/42 in 5 consecutive runs; build commit written next to the executable.
 
 #### Phase 1 — Hardware and communication reliability
 

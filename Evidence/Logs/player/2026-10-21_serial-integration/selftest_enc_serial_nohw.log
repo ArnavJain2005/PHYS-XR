@@ -1,0 +1,175 @@
+Mono path[0] = 'C:/Learning/College/CPS/Sem-5/IAVR & ESDP Project/PHYS-XR/PHYS-XR/Builds/PHYSXR_Windows/PHYS-XR_Data/Managed'
+Mono config path = 'C:/Learning/College/CPS/Sem-5/IAVR & ESDP Project/PHYS-XR/PHYS-XR/Builds/PHYSXR_Windows/MonoBleedingEdge/etc'
+CodeReloadManager initialized
+Input System module state changed to: Initialized.
+[Physics::Module] Initialized fallback backend.
+[Physics::Module] Id: 0xdecafbad
+Initialize engine version: 6000.5.8f1 (5cb7df797b7d)
+[Subsystems] Discovering subsystems at path C:/Learning/College/CPS/Sem-5/IAVR & ESDP Project/PHYS-XR/PHYS-XR/Builds/PHYSXR_Windows/PHYS-XR_Data/UnitySubsystems
+[Subsystems] No descriptors matched for  examples in UnitySubsystems/UnityOpenXR/UnitySubsystemsManifest.json.
+[Subsystems] 1 'inputs' descriptors matched in UnitySubsystems/UnityOpenXR/UnitySubsystemsManifest.json
+[Subsystems] 1 'displays' descriptors matched in UnitySubsystems/UnityOpenXR/UnitySubsystemsManifest.json
+[Subsystems] No descriptors matched for  meshings in UnitySubsystems/UnityOpenXR/UnitySubsystemsManifest.json.
+Forcing GfxDevice: Null
+GfxDevice: creating device client; kGfxThreadingModeNonThreaded
+NullGfxDevice:
+    Version:  NULL 1.0 [1.0]
+    Renderer: Null Device
+    Vendor:   Unity Technologies
+Begin MonoManager ReloadAssembly
+- Finished resetting the current domain, in  0.044 seconds
+[Physics::Module] Selected backend.
+[Physics::Module] Name: PhysX
+[Physics::Module] Id: 0xf2b8ea05
+[Physics::Module] SDK Version: 4.1.2
+[Physics::Module] Integration Version: 1.0.0
+[Physics::Module] Threading Mode: Multi-Threaded
+Microsoft Media Foundation video decoding to texture disabled: graphics device is Null, only Direct3D 11 and Direct3D 12 (only on desktop) are supported for hardware-accelerated video decoding.
+UnloadTime: 0.764300 ms
+[Sensors] USB serial link AUTO @ 115200 starting
+[Sensors] condition PHYSICAL_PLUS_VIRTUAL, USB AUTO DISCONNECTED
+[Telemetry] trial selftest (PHYSICAL_PLUS_VIRTUAL) -> C:/Users/<user>/AppData/LocalLow/DefaultCompany/PHYS_XR\telemetry\selftest_Windows_20261021T140543Z.jsonl
+Unloading 5 Unused Serialized files (Serialized files now loaded: 0)
+SELFTEST BEGIN encounter
+[Sensors] USB serial AUTO DISCONNECTED: no USB COM ports, only Bluetooth (COM3, COM5, COM7, COM8); is the ESP32 plugged in?
+UnloadTime: 0.177500 ms
+Unloading 5 unused Assets to reduce memory usage. Loaded Objects now: 7308.
+Total: 2.040000 ms (FindLiveObjects: 0.320500 ms CreateObjectMapping: 0.441400 ms MarkObjects: 1.251100 ms  DeleteObjects: 0.026800 ms)
+
+[GameFlow] RUN_START run=1 attempt=1 condition=PHYSICAL_PLUS_VIRTUAL
+SELFTEST PASS S01_StartState | dormant=True solid=False nav=True
+SELFTEST PASS S02_SingleCameraListenerEventSystem | cameras=1 listeners=1 eventSystems=1 flows=1 ghosts=1
+SELFTEST PASS M01_EOpensReadable | open=True target=Radio
+SELFTEST PASS M02_ModalBlocksControls | moved=0.000 jumps=0 lantern=0
+SELFTEST PASS M03_EClosesReadable | open=False
+SELFTEST PASS M04_ControlsRestored | moved=0.60
+[GameFlow] PAUSE
+[GameFlow] RESUME
+SELFTEST PASS M05_EscAndPauseClose | esc=True pause=True
+SELFTEST PASS J01_SprintFaster | walk=1.80 sprint=3.20 m/s stamina=0.87
+SELFTEST PASS J02_JumpOnceNoAirJump | jumps=1 rise=0.87 airPress=True
+[GameFlow] PAUSE
+SELFTEST PASS J03_PausedNoJumpOrSprint | jumps=1
+[GameFlow] RESUME
+SELFTEST PASS S03_FirstSightingManifests | dormant=False onNav=True
+SELFTEST PASS S04a_SightingDetected | seen=True solid=True
+SELFTEST PASS S04b_SightingAttack_E5Windup | E5=True windup=True last=ATTACK [E1]
+SELFTEST PASS S04c_SightingAttackNotLethal | phase=NORMAL dead=False feints=1
+SELFTEST PASS S04d_SightingAttackOnce | windup frames after=0
+[GameFlow] OBJECTIVE FUSE_PICKUP stage=InstallFuse t=13.8
+[GameFlow] OBJECTIVE FUSE_INSTALLED stage=RestoringPower t=13.8
+SELFTEST PASS S05_FuseInstalled | Accepted: Picked up a fuse. / Accepted: Fuse installed.
+[GameFlow] OBJECTIVE POWER_RESTORED stage=ReachExit t=15.7
+SELFTEST PASS S06_SurgeRetreat | R2 RETREAT seen during the surge
+SELFTEST PASS S07_CheckpointSaved | checkpoint=True
+[GameFlow] OBJECTIVE ENCOUNTER_COMMITTED stage=ReachExit t=16.5
+SELFTEST PASS S08_EncounterCommitted | committed=True
+SELFTEST PASS T15_MissCooldown3s | result=OUT_OF_RANGE
+SELFTEST PASS S09_AttackTelegraphed | windup=True warned=1.97s
+SELFTEST PASS T14a_LanternInterruptsWindup | phase=INTERRUPTED result=hit
+SELFTEST PASS T14b_E0Retreat | RETREAT [E0]
+SELFTEST PASS T14c_NextAttackAfter11_5s | gap=11.52s
+[GameFlow] DEATH attempt=1
+SELFTEST PASS T17a_StrikeKills | dead=True halted=True
+SELFTEST PASS S10_DeathClosesModalAndBlocksInput | modal=False
+SELFTEST PASS B01_GhostBodyBlocksPlayer | closest=0.73 contact=0.65 travelled=1.77
+[GameFlow] CHECKPOINT_RESTART attempt=2
+Unloading 5 Unused Serialized files (Serialized files now loaded: 0)
+UnloadTime: 8.471600 ms
+Unloading 2 unused Assets to reduce memory usage. Loaded Objects now: 7358.
+Total: 2.052600 ms (FindLiveObjects: 0.301500 ms CreateObjectMapping: 0.439100 ms MarkObjects: 1.296700 ms  DeleteObjects: 0.015000 ms)
+
+[GameFlow] RUN_START run=1 attempt=2 condition=PHYSICAL_PLUS_VIRTUAL from=checkpoint
+SELFTEST PASS T17b_CheckpointState | attempt=2 powered=True pos=(5.60, 0.05, 11.00)
+SELFTEST PASS T17c_GraceAndNoEarlyAttack | grace=True
+[GameFlow] CHECKPOINT_RESTART attempt=3
+Unloading 3 Unused Serialized files (Serialized files now loaded: 0)
+UnloadTime: 1.632200 ms
+Unloading 12 unused Assets to reduce memory usage. Loaded Objects now: 7358.
+Total: 1.989600 ms (FindLiveObjects: 0.292100 ms CreateObjectMapping: 0.417900 ms MarkObjects: 1.007900 ms  DeleteObjects: 0.271500 ms)
+
+[GameFlow] RUN_START run=1 attempt=3 condition=PHYSICAL_PLUS_VIRTUAL from=checkpoint
+[GameFlow] CHECKPOINT_RESTART attempt=4
+Unloading 3 Unused Serialized files (Serialized files now loaded: 0)
+UnloadTime: 1.532900 ms
+Unloading 12 unused Assets to reduce memory usage. Loaded Objects now: 7359.
+Total: 1.658900 ms (FindLiveObjects: 0.241900 ms CreateObjectMapping: 0.369300 ms MarkObjects: 0.953000 ms  DeleteObjects: 0.094500 ms)
+
+[GameFlow] RUN_START run=1 attempt=4 condition=PHYSICAL_PLUS_VIRTUAL from=checkpoint
+[GameFlow] CHECKPOINT_RESTART attempt=5
+Unloading 3 Unused Serialized files (Serialized files now loaded: 0)
+UnloadTime: 1.472700 ms
+Unloading 12 unused Assets to reduce memory usage. Loaded Objects now: 7360.
+Total: 1.785200 ms (FindLiveObjects: 0.222200 ms CreateObjectMapping: 0.412800 ms MarkObjects: 1.048800 ms  DeleteObjects: 0.101300 ms)
+
+[GameFlow] RUN_START run=1 attempt=5 condition=PHYSICAL_PLUS_VIRTUAL from=checkpoint
+[GameFlow] CHECKPOINT_RESTART attempt=6
+Unloading 3 Unused Serialized files (Serialized files now loaded: 0)
+UnloadTime: 1.435000 ms
+Unloading 12 unused Assets to reduce memory usage. Loaded Objects now: 7360.
+Total: 2.124300 ms (FindLiveObjects: 0.245200 ms CreateObjectMapping: 0.390000 ms MarkObjects: 1.376500 ms  DeleteObjects: 0.112300 ms)
+
+[GameFlow] RUN_START run=1 attempt=6 condition=PHYSICAL_PLUS_VIRTUAL from=checkpoint
+[GameFlow] CHECKPOINT_RESTART attempt=7
+Unloading 3 Unused Serialized files (Serialized files now loaded: 0)
+UnloadTime: 3.253900 ms
+Unloading 12 unused Assets to reduce memory usage. Loaded Objects now: 7361.
+Total: 2.749700 ms (FindLiveObjects: 0.276400 ms CreateObjectMapping: 0.633400 ms MarkObjects: 1.714800 ms  DeleteObjects: 0.124900 ms)
+
+[GameFlow] RUN_START run=1 attempt=7 condition=PHYSICAL_PLUS_VIRTUAL from=checkpoint
+[GameFlow] CHECKPOINT_RESTART attempt=8
+Unloading 3 Unused Serialized files (Serialized files now loaded: 0)
+UnloadTime: 1.519300 ms
+Unloading 12 unused Assets to reduce memory usage. Loaded Objects now: 7361.
+Total: 2.028900 ms (FindLiveObjects: 0.261300 ms CreateObjectMapping: 0.405400 ms MarkObjects: 1.227000 ms  DeleteObjects: 0.134900 ms)
+
+[GameFlow] RUN_START run=1 attempt=8 condition=PHYSICAL_PLUS_VIRTUAL from=checkpoint
+[GameFlow] CHECKPOINT_RESTART attempt=9
+Unloading 3 Unused Serialized files (Serialized files now loaded: 0)
+UnloadTime: 1.713000 ms
+Unloading 12 unused Assets to reduce memory usage. Loaded Objects now: 7361.
+Total: 1.828900 ms (FindLiveObjects: 0.247400 ms CreateObjectMapping: 0.453600 ms MarkObjects: 1.020000 ms  DeleteObjects: 0.107600 ms)
+
+[GameFlow] RUN_START run=1 attempt=9 condition=PHYSICAL_PLUS_VIRTUAL from=checkpoint
+[GameFlow] CHECKPOINT_RESTART attempt=10
+Unloading 3 Unused Serialized files (Serialized files now loaded: 0)
+UnloadTime: 1.412000 ms
+Unloading 12 unused Assets to reduce memory usage. Loaded Objects now: 7361.
+Total: 1.825500 ms (FindLiveObjects: 0.247000 ms CreateObjectMapping: 0.430500 ms MarkObjects: 1.044500 ms  DeleteObjects: 0.103100 ms)
+
+[GameFlow] RUN_START run=1 attempt=10 condition=PHYSICAL_PLUS_VIRTUAL from=checkpoint
+[GameFlow] CHECKPOINT_RESTART attempt=11
+Unloading 3 Unused Serialized files (Serialized files now loaded: 0)
+UnloadTime: 2.524700 ms
+Unloading 12 unused Assets to reduce memory usage. Loaded Objects now: 7361.
+Total: 1.974700 ms (FindLiveObjects: 0.349600 ms CreateObjectMapping: 0.457300 ms MarkObjects: 1.052600 ms  DeleteObjects: 0.114900 ms)
+
+[GameFlow] RUN_START run=1 attempt=11 condition=PHYSICAL_PLUS_VIRTUAL from=checkpoint
+[GameFlow] CHECKPOINT_RESTART attempt=12
+Unloading 3 Unused Serialized files (Serialized files now loaded: 0)
+UnloadTime: 2.065600 ms
+Unloading 12 unused Assets to reduce memory usage. Loaded Objects now: 7361.
+Total: 1.865700 ms (FindLiveObjects: 0.243600 ms CreateObjectMapping: 0.426200 ms MarkObjects: 1.076700 ms  DeleteObjects: 0.119000 ms)
+
+[GameFlow] RUN_START run=1 attempt=12 condition=PHYSICAL_PLUS_VIRTUAL from=checkpoint
+SELFTEST PASS T18a_NoDuplicatesAfter10Restarts | cameras=1 listeners=1 eventSystems=1 flows=1 ghosts=1
+SELFTEST PASS T18b_NoMaterialLeak | materials 53 -> 53
+SELFTEST PASS T18c_ManagedMemoryFlat | mono 3.9 -> 4.0 MB
+SELFTEST PASS T18d_AttemptCount | attempt=12
+[GameFlow] RUN_RESTART from stage=ReachExit state=Playing
+Unloading 3 Unused Serialized files (Serialized files now loaded: 0)
+UnloadTime: 1.501100 ms
+Unloading 12 unused Assets to reduce memory usage. Loaded Objects now: 7361.
+Total: 1.862600 ms (FindLiveObjects: 0.249900 ms CreateObjectMapping: 0.410400 ms MarkObjects: 1.090800 ms  DeleteObjects: 0.111000 ms)
+
+[GameFlow] RUN_START run=2 attempt=1 condition=PHYSICAL_PLUS_VIRTUAL
+SELFTEST PASS T20_FullRestartClean | attempt=1
+SELFTEST END passed=34 failed=0
+[Sensors] USB serial AUTO DISCONNECTED: stopped
+[Sensors] USB serial link released
+[Physics::Module] Cleanup current backend.
+[Physics::Module] Id: 0xf2b8ea05
+Input System module state changed to: ShutdownInProgress.
+Input Polling Thread exited.
+Input System module state changed to: Shutdown.
+CodeReloadManager destroyed

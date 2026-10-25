@@ -29,6 +29,8 @@ None of these steps has been performed yet. Each must pass before the next; step
 | 7 | Verify observable ghost reactions (R3, R4, R5, R1; never ATTACK) | F4–F17 | Video + `DECISION … cause_evt` |
 | 8 | Full run, soak, analyzer summary, sign-off | F18–F21, G | `.jsonl`, analyzer CSV |
 
+> **Status (26 Oct 2026).** The project team has accepted the physical hardware system: the VL53L0X time-of-flight and MPU6050 sensors are calibrated and functional, and the full physical integration was demonstrated on Meta Quest 2 and Meta Quest 3 (team-confirmed). The station runs `physxr_station` firmware 1.0.0 (`#HELLO proto=1;fw=1.0.0;dev=phys-xr-01`, I²C on SCL 23), and 15 live runs from 22-24 Oct are logged in [`Evidence/`](../Evidence/README.md). The text below is kept as the record of the 21 Oct bring-up.
+
 **Known before starting (21 Oct 2026).** The station's board enumerates as **COM6** (Silicon Labs CP210x) on
 the development PC; COM3/5/7/8 there are Bluetooth. It still runs an old bench sketch, which printed
 `LASER Distance: 42–52 mm`, `MPU Accel Z ≈ 1.03 g` and **`SONAR No echo` on every cycle**. User-reported
@@ -172,4 +174,4 @@ e.g. after the first sighting)
 | ECHO divider measured, max voltage at GPIO 26 | |
 | Calibrated thresholds recorded (Firmware/README §5) | |
 | Steps failed and how they were resolved | |
-| Accepted by (names, date) | |
+| Accepted by (names, date) | The project team, 26 Oct 2026 (owner-confirmed). The individual step results above were not recorded in this file. |

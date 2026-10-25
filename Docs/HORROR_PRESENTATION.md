@@ -7,6 +7,8 @@ How Blackthorn House and The Hollow look and sound, why, and where each piece li
 - [Direction](#direction)
 - [Baseline (before this pass)](#baseline-before-this-pass)
 - [The Hollow](#the-hollow)
+- [The attack](#the-attack)
+- [Ghost audio by state](#ghost-audio-by-state)
 - [Light](#light)
 - [Colour grade and post-processing](#colour-grade-and-post-processing)
 - [Sound and score](#sound-and-score)
@@ -64,7 +66,58 @@ Each part is authored in the local space of the transform it hangs from, so `Hol
 - The arms splay slightly more so the hands clear the robe.
 - Seeded timing: a replay looks the same.
 
-**Sound**: a low presence (sub tones with audible harmonics, wide spread, 1-9 m) whenever it is manifested, and cloth dragging over boards that follows its ground speed.
+**Sound**: a low presence (sub tones with audible harmonics, wide spread, 1-9 m) whenever it is manifested, and cloth dragging over boards that follows its ground speed. Every state's sound is in [Ghost audio by state](#ghost-audio-by-state).
+
+## The attack
+
+The gameplay timing is unchanged: WINDUP 1.2 s (the lantern's window to interrupt), STRIKE 0.3 s (hits within 1.6 m and 60°), RECOVER 2.0 s, cooldown 6 s. What changed is how those seconds are played (`GhostMotionController`, `HollowVisual`):
+
+| Beat | When | Body | Sound | Music |
+|---|---|---|---|---|
+| Coil | WINDUP start until 0.36-0.54 s before its end | Crouches, arms drawn back, head locked on the player, eyes dimmed; creeps at 0.8 m/s; idle sway and glitches stop | one quiet intake of breath (`GhostInhale`) | drops to near silence in about 0.15 s |
+| Lunge | the rest of the WINDUP | Thrown forward and stretched, arms out with one leading, eyes flaring; bursts to 6.5 m/s (acceleration 40 m/s² instead of 12) | **the scream** (`GhostScream`), once, on the burst's first frame, on its own high-priority voice | silent; the scream lands alone |
+| Strike | STRIKE, 0.3 s | Arms close in a clawing reach, leading arm further | whoosh (`StrikeWhiff`) on entry | silent |
+| Hit | the frame the strike connects (`StrikeHit`) | stops | impact (`StrikeImpact`), only here | — |
+| Miss | STRIKE ends without a hit | — | nothing more: the whoosh was the attack | — |
+| Recover | RECOVER, 2.0 s | hunched, head down | breath only | returns over about 2 s, held below its peak by the release rule |
+
+Not every attack is the same: the burst length cycles through 0.46, 0.36 and 0.54 s, the leading arm and head tilt swap sides on alternate attacks, and the scream cycles through three variations (pitch contour and length) with a small pitch offset, all deterministic so replays match.
+
+Cancelled attacks: the lantern can interrupt in the coil or the lunge (never in the strike). Interrupted in the coil, there is no scream, whoosh or impact; interrupted after the scream started, the scream is faded out in about 0.1 s. Either way the ghost cries out in pain (`GhostRecoil`) and staggers. If the strike kills, the scream is left to finish under the death sting; if the ghost is put away (`Halt(hide)`), everything it is saying stops.
+
+The movement stays on the NavMesh agent with the same stopping distance (0.9 m), so the lunge cannot pass through walls, furniture or the player, and nothing teleports. The faster burst means a player who backs away during the coil gains ground early and loses it in the lunge; the strike's range and angle are unchanged.
+
+The first-sighting lunge (E5) that lands before the encounter is committed is a feint: the strike connects, so it plays the impact, but the game does not kill (it plays a softer death sting). The ghost has no health and cannot be damaged or killed, so there is no damage or death vocalisation for it; the lantern recoil is its "hurt" reaction.
+
+## Ghost audio by state
+
+Every sound the ghost makes goes through `GhostMotionController` and raises `SoundPlayed`, which the encounter self-test records (checks A01-A05). Silence is a choice in several rows.
+
+| State or event | Sound | Trigger | Spatial | Repetition | Stop / fade | Validated by |
+|---|---|---|---|---|---|---|
+| Dormant (not in the house) | silence | — | — | — | all voices stopped (`SetDormant`) | T20 (full restart: dormant) |
+| Manifest / appear | `GhostManifest` | first sighting, encounter, restarts | 3D, 2-30 m | per manifestation | one-shot | capture tour |
+| Disappear (flicker out, put away) | `GhostVanish` | `Manifest(flicker)` while visible, `Halt(hide)` | 3D, 2-30 m | per disappearance | one-shot; the loops stop on `Halt(hide)` | not checked automatically |
+| Presence, any manifested state | `GhostPresence` loop | manifested | 3D, 1-9 m, spread 120° (direction deliberately vague) | continuous | follows visibility; stops when dormant/hidden | capture tour |
+| Idle, watching, following | `GhostBreath` loop | manifested | 3D, 1-10 m | continuous | stops when dormant/hidden | capture tour |
+| Moving (trail, stalk, investigate, retreat, lunge) | `GhostDrag` loop | ground speed | 3D, 1-11 m | continuous | volume follows speed (0 at rest), fades 1.5/s | capture tour |
+| Turning | silence | — | — | — | — | — |
+| Investigate: setting off | `GhostThud` | INVESTIGATE starts (often a physical disturbance) | 3D, 2-30 m | per behaviour start | one-shot | A05 (no scream while investigating) |
+| Investigate: searching | `GhostWhisper` loop | arrived and lingering | 3D, 1-8 m | continuous | fades in 0.6/s, out 1.5/s when it leaves or anything else starts | not checked automatically |
+| Warn | `GhostScreech` | WARN starts within 14 m | 3D, 2-30 m | at most every 6 s | one-shot | S09 (telegraph) |
+| Warn: escalation | `GhostScreech` (0.8) + light flicker | a running WARN becomes the VERY_NEAR one (X2) | 3D, 2-30 m | at most every 2 s | one-shot | Q20 (responsiveness self-test) |
+| Protect | `ProtectHum` loop | PROTECT active | 3D, 1.5-12 m | continuous | stops when PROTECT ends | — |
+| Attack: coil | `GhostInhale` | WINDUP entry | 3D, 2-30 m | per attack | one-shot | A01-A04 (per-attack counts) |
+| Attack: lunge | `GhostScream` (3 variations) | first frame of the burst | 3D, 2.5-35 m, priority 0 | exactly once per attack | faded out in 0.1 s if the attack is cancelled; cut when hidden | A01 (once, inside the burst), A02 (none if cancelled before), A03 (cut if cancelled after), A04, A05 (only in windups) |
+| Attack: strike | `StrikeWhiff` (whoosh) | STRIKE entry | 3D, 2-30 m | once per strike | one-shot | A01, A03 (none if cancelled), A04 |
+| Confirmed hit | `StrikeImpact` | `StrikeHit` (strike connected) | 3D, 2-30 m | once per hit | one-shot | A04, A05 (impacts = hits) |
+| Missed strike | silence after the whoosh | STRIKE ends without a hit | — | — | — | A05 (no impact without a hit) |
+| Lantern hit (stagger, its "hurt") | `GhostRecoil` (2 variations) | `TryInterrupt` succeeds | 3D, 2-30 m | per interruption | one-shot | A02 |
+| Retreat | `GhostHiss` | RETREAT starts | 3D, 2-30 m | per behaviour start | one-shot | — |
+| Player death / feint | the game's `DeathSting` (2D), not the ghost's | `GameFlowController` | 2D | — | — | T17a, S04c |
+| Ghost death or defeat | not implemented (the ghost cannot die) | — | — | — | — | — |
+
+Restarts: every ghost voice is a child of the ghost and is destroyed with the scene, so nothing outlives a restart (T18e: the number of `AudioSource`s does not grow over ten restarts).
 
 ## Light
 
@@ -89,7 +142,7 @@ Each part is authored in the local space of the transform it hangs from, so `Hol
 
 ## Sound and score
 
-**Adaptive score** (`TensionScore`, three procedural layers, all original):
+**Adaptive score** (`TensionScore`, three procedural layers, all original). States: exploration (the drone bed, which withdraws to near silence for 14-24 s every 50-90 s when nothing is happening), tension (strings as the ghost is seen closing), investigation (strings held at "unease" while the ghost searches, even out of sight), imminent danger (pulse when it is near or warning), attack (the music drops out, see [The attack](#the-attack)), post-encounter (it cannot climb back past unease for 9 s) and recovery (a slow fall, 0.12/s, never a loop reset):
 
 | Layer | Cue | Audible when |
 |---|---|---|
@@ -126,7 +179,7 @@ Gameplay-visible changes, deliberately small: idle (non-attack) turning toward t
 
 ## Cost and platform notes
 
-Verified on the Windows desktop build only; see [`TechnicalSpec_MilestoneStatus.md`](TechnicalSpec_MilestoneStatus.md) for what has and has not been run. The Quest/XR target (spec T22-T24) has not been started, so nothing here is claimed to be Quest-ready. Known costs to revisit before any headset work:
+The automated checks below ran on the Windows desktop build. The team has since demonstrated the game on Meta Quest 2 and Quest 3 as PC VR (26 Oct 2026, team-confirmed); see [`TechnicalSpec_MilestoneStatus.md`](TechnicalSpec_MilestoneStatus.md). Costs to keep an eye on in a headset:
 
 - Robe cloth: about 5,100 vertices updated on the CPU per frame while the robe is on screen.
 - Three extra shadowed spot lights (window light) in the additional-light shadow atlas.

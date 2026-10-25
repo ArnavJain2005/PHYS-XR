@@ -21,7 +21,15 @@ namespace PHYSXR.Game.Audio
     //    then, so silence is part of the score;
     //  - a swell marks the ghost closing in after a long calm (rate-limited);
     //  - near the top, the house ambience ducks and the storm is muffled more,
-    //    the brief hush before an attack.
+    //    the brief hush before an attack;
+    //  - an attack takes the music away: from the first frame of the windup
+    //    every layer drops to near silence in about 0.15 s, so the coil is
+    //    heard over almost nothing and the scream lands alone. The music
+    //    comes back over about two seconds once the strike is over (the
+    //    post-encounter release then keeps it from leaping straight back up);
+    //  - while the ghost searches (INVESTIGATE, often caused by a physical
+    //    disturbance) the score sits at "unease" even when the ghost is out
+    //    of sight: something is looking, the player does not know where.
     //
     // Presentation only, like HorrorPostFx: it reads the ghost's distance,
     // visibility, behaviour and phase and never feeds anything back.
@@ -45,6 +53,7 @@ namespace PHYSXR.Game.Audio
         private float calmSeconds;
         private float lastSwell = -100f;
         private bool peaked;
+        private float attackGain = 1f;
 
         // 0 silent .. 1 climax (read by AmbientEvents to stay out of the way).
         public float Intensity => intensity;
@@ -80,6 +89,8 @@ namespace PHYSXR.Game.Audio
             float now = Time.time;
             RunState run = flow.Flow.RunState;
             float target = Target(now, out bool attacking);
+            // Down fast for the attack, back slowly after it.
+            attackGain = Mathf.MoveTowards(attackGain, attacking ? 0.1f : 1f, dt * (attacking ? 6f : 0.45f));
 
             if (run == RunState.Dead || run == RunState.Succeeded)
             {
@@ -142,6 +153,8 @@ namespace PHYSXR.Game.Audio
             float t = Mathf.Lerp(0.3f, 0.85f, closeness) * seen;
             if (ghost.Behaviour == GhostExecutionState.Warning)
                 t = Mathf.Max(t, 0.72f);
+            if (ghost.Behaviour == GhostExecutionState.Investigating && ghost.Phase == GhostPhase.NORMAL)
+                t = Mathf.Max(t, 0.5f);
             if (ghost.Phase == GhostPhase.WINDUP || ghost.Phase == GhostPhase.STRIKE)
             {
                 attacking = true;
@@ -158,9 +171,9 @@ namespace PHYSXR.Game.Audio
         {
             float i = intensity;
             float bed = Mathf.SmoothStep(0f, 1f, i / 0.25f) * (0.4f + 0.6f * Mathf.Clamp01(i / 0.6f));
-            drone.volume = GameAudio.Level(AudioCue.ScoreDrone) * bed;
-            strings.volume = GameAudio.Level(AudioCue.ScoreStrings) * Mathf.SmoothStep(0f, 1f, (i - 0.35f) / 0.4f);
-            pulse.volume = GameAudio.Level(AudioCue.ScorePulse) * Mathf.SmoothStep(0f, 1f, (i - 0.65f) / 0.3f);
+            drone.volume = GameAudio.Level(AudioCue.ScoreDrone) * bed * attackGain;
+            strings.volume = GameAudio.Level(AudioCue.ScoreStrings) * Mathf.SmoothStep(0f, 1f, (i - 0.35f) / 0.4f) * attackGain;
+            pulse.volume = GameAudio.Level(AudioCue.ScorePulse) * Mathf.SmoothStep(0f, 1f, (i - 0.65f) / 0.3f) * attackGain;
 
             float duck = Mathf.SmoothStep(0f, 1f, (i - 0.8f) / 0.2f);
             if (houseBed != null)
