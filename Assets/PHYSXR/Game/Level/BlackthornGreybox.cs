@@ -348,6 +348,7 @@ namespace PHYSXR.Game.Level
                 Investigate = new[]
                 {
                     new Vector3(-5f, 0f, -3.5f), new Vector3(3f, 0f, -3f), new Vector3(-4f, 0f, 3f),
+                    new Vector3(-4f, 0f, 5.5f), new Vector3(-4f, 0f, 7.2f),
                     new Vector3(-3f, 0f, 11.5f), new Vector3(3f, 0f, 11.5f), new Vector3(2f, 0f, 4f)
                 },
                 Retreat = new[]

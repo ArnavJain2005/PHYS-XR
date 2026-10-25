@@ -1,7 +1,9 @@
 using System;
 using System.Globalization;
 using System.Text;
+using PHYSXR.Core.Data;
 using PHYSXR.Core.Enums;
+using PHYSXR.Decision;
 using PHYSXR.Game.Audio;
 using PHYSXR.Game.Flow;
 using PHYSXR.Game.Gameplay;
@@ -34,6 +36,7 @@ namespace PHYSXR.Game.UI
         private const float MessageSeconds = 3.5f;
         private const float HintSeconds = 7f;
         private const float ControlsHintSeconds = 14f;
+        private const float ChipRefreshSeconds = 0.1f;
 
         private GameFlowController flow;
         private PlayerInteractor interactor;
@@ -57,6 +60,7 @@ namespace PHYSXR.Game.UI
         private float deathStartedAt = -1f;
         private bool noteShown;
         private float feintAt = -100f;
+        private float nextChipAt;
         private DesktopMotor motor;
         private bool devVisible;
         private bool devInitialized;
@@ -525,10 +529,28 @@ namespace PHYSXR.Game.UI
                 string link = sensors.SourceLabel ?? string.Empty;
                 if (link.Length > 72)
                     link = link.Substring(0, 69) + "...";
-                sensorChip.text = sensors.Condition == RunCondition.VIRTUAL_ONLY
-                    ? "SENSORS  " + link
-                    : "SENSORS  " + link + "  -  " + sensors.Status;
+                if (Time.unscaledTime >= nextChipAt)
+                {
+                    nextChipAt = Time.unscaledTime + ChipRefreshSeconds;
+                    sensorChip.text = sensors.Condition == RunCondition.VIRTUAL_ONLY
+                        ? "SENSORS  " + link
+                        : "SENSORS  " + link + "  -  " + sensors.Status + StationReading(sensors);
+                }
             }
+        }
+
+        // What the rules are receiving from the station right now, so a
+        // demonstrator can see a hand or a shake register without F1: the
+        // gated semantic state (shown only while FRESH, since anything else
+        // reaches the rules as neutral) and the disturbance pulse with the
+        // event that started it. Never raw readings.
+        private string StationReading(IPhysicalInputSource sensors)
+        {
+            if (sensors.Status != PhysicalSourceStatus.FRESH || flow.World == null)
+                return string.Empty;
+            PhysicalState p = flow.World.GetCurrentWorldState().physical;
+            string text = "  -  " + p.presence + "/" + p.confidence;
+            return p.disturbance ? text + "  -  SHAKE #" + p.causeEventId : text;
         }
 
         private string Stats()
@@ -539,6 +561,34 @@ namespace PHYSXR.Game.UI
             return string.Format(CultureInfo.InvariantCulture, "Time {0}:{1:00}     Deaths {2}     Lantern {3}/{4}     Sensors {5}",
                 minutes, seconds, flow.Session?.Deaths ?? 0, lantern != null ? lantern.Hits : 0, lantern != null ? lantern.Uses : 0,
                 flow.Services?.Sensors?.Condition.ToString() ?? "-");
+        }
+
+        // What drove the current decision: the physical station, the player's
+        // position in the game, or the game's own script.
+        private string DecisionCause()
+        {
+            string rule = flow.GhostRuntime.LastRuleId;
+            string inner = (flow.GhostRuntime.Pipeline?.DecisionProvider as EncounterDecisionLayer)?.Inner?.LastRuleId ?? string.Empty;
+            switch (rule)
+            {
+                case "X1": case "X2": case "X3": return "SENSOR (sensor response " + rule + ")";
+                case "E6": return "IN-GAME PROXIMITY (E6)";
+                case "E3": case "E4": return "IN-GAME PROXIMITY, encounter (" + rule + ")";
+                case "E5": return "game: first sighting";
+                case "E1": return "attack in progress (started by " + (flow.AttackStartRule.Length > 0 ? flow.AttackStartRule : "?") + ")";
+                case "E0": return "lantern interrupt";
+                case "W": return "game: warning beat";
+                case "INNER":
+                    // R2 (critical threat, e.g. the surge) reads no sensor.
+                    if (inner == "R1" || inner == "R3" || inner == "R4" || inner == "R5")
+                        return "SENSOR (" + inner + ")";
+                    if (inner == "R2" || inner == "R6" || inner == "R7")
+                        return "game: virtual threat (" + inner + ")";
+                    if (inner == RuleBasedDecisionProvider.HysteresisRuleId)
+                        return "holding the previous action (inner dwell)";
+                    return inner == "R8" ? "none (idle)" : "inner " + inner;
+                default: return "rule " + rule;
+            }
         }
 
         private string DevText()
@@ -565,6 +615,7 @@ namespace PHYSXR.Game.UI
                 b.Append("decision   #").Append(flow.GhostRuntime.CurrentDecisionId).Append(' ').Append(flow.GhostRuntime.LastAction)
                     .Append(" [").Append(flow.GhostRuntime.LastRuleId).Append("] -> ").Append(flow.GhostRuntime.CurrentState).Append('\n');
                 b.Append("reason     ").Append(flow.GhostRuntime.LastReason).Append('\n');
+                b.Append("cause      ").Append(DecisionCause()).Append('\n');
             }
             if (flow.Ghost != null)
             {

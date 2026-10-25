@@ -24,6 +24,16 @@ namespace PHYSXR.Game.Art
             return GameAudio.Clip(Map(sound), 0, out volume);
         }
 
+        public AudioClip Clip(GhostSound sound, int variant, out float volume)
+        {
+            return GameAudio.Clip(Map(sound), variant, out volume);
+        }
+
+        public int Variants(GhostSound sound)
+        {
+            return ProceduralAudio.VariantCount(Map(sound));
+        }
+
         private static AudioCue Map(GhostSound sound)
         {
             switch (sound)
@@ -40,6 +50,10 @@ namespace PHYSXR.Game.Art
                 case GhostSound.ProtectHum: return AudioCue.ProtectHum;
                 case GhostSound.Presence: return AudioCue.GhostPresence;
                 case GhostSound.Drag: return AudioCue.GhostDrag;
+                case GhostSound.Scream: return AudioCue.GhostScream;
+                case GhostSound.LanternRecoil: return AudioCue.GhostRecoil;
+                case GhostSound.Inhale: return AudioCue.GhostInhale;
+                case GhostSound.Vanish: return AudioCue.GhostVanish;
                 default: return AudioCue.GhostHiss;
             }
         }

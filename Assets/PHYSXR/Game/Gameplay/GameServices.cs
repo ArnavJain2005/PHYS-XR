@@ -22,6 +22,11 @@ namespace PHYSXR.Game.Gameplay
         // route can walk the whole house without being attacked.
         public bool EncounterDisabled;
 
+        // How the decision layer turns the physical station's semantic state
+        // into visible ghost behaviour (X1-X3). The app sets the default
+        // profile; null (-physxr-standard-rules) keeps the specified rules.
+        public PHYSXR.Decision.SensorResponseProfile SensorResponse;
+
         public static GameServices Local()
         {
             return new GameServices

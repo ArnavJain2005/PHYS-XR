@@ -46,12 +46,18 @@ namespace PHYSXR.Ghost
             Strike,
             Recover,
             Stagger,
-            Watch
+            Watch,
+            // The attack: Coil is the near-still anticipation (crouched,
+            // arms drawn back, eyes dimmed), Lunge the burst (thrown forward,
+            // stretched, arms out, eyes flaring); then Strike and Recover.
+            Coil,
+            Lunge
         }
 
         private struct PoseValues
         {
-            public float lean, hunch, headTilt, armRaise, armReach, armSpread, eye, agitation, stretch, shake;
+            // asym: one arm leads (+ right, - left); mirrored per attack.
+            public float lean, hunch, headTilt, armRaise, armReach, armSpread, eye, agitation, stretch, shake, asym;
 
             public static PoseValues For(Pose pose)
             {
@@ -62,7 +68,9 @@ namespace PHYSXR.Ghost
                     case Pose.Protect: return new PoseValues { lean = -3, hunch = 0f, headTilt = 0, armRaise = 0.35f, armReach = 0.05f, armSpread = 0.9f, eye = 0.45f, agitation = 0.15f, stretch = 1.02f };
                     case Pose.Recoil: return new PoseValues { lean = -12, hunch = 0.8f, headTilt = -12, armRaise = 0.95f, armReach = 0.2f, armSpread = -0.3f, eye = 0.35f, agitation = 0.6f, stretch = 0.95f };
                     case Pose.Windup: return new PoseValues { lean = -14, hunch = 0.1f, headTilt = 6, armRaise = 1.1f, armReach = 0.1f, armSpread = 0.6f, eye = 2.2f, agitation = 1f, stretch = 1.1f };
-                    case Pose.Strike: return new PoseValues { lean = 38, hunch = 0.2f, headTilt = 0, armRaise = 0.35f, armReach = 1.2f, armSpread = -0.2f, eye = 2.6f, agitation = 1f, stretch = 1.08f };
+                    case Pose.Strike: return new PoseValues { lean = 40, hunch = 0.15f, headTilt = -6, armRaise = 0.4f, armReach = 1.25f, armSpread = -0.25f, eye = 2.8f, agitation = 1f, stretch = 1.1f, asym = 0.5f };
+                    case Pose.Coil: return new PoseValues { lean = -6, hunch = 0.55f, headTilt = 9, armRaise = 0.15f, armReach = -0.15f, armSpread = 0.3f, eye = 0.25f, agitation = 0.04f, stretch = 0.95f };
+                    case Pose.Lunge: return new PoseValues { lean = 34, hunch = 0.05f, headTilt = -12, armRaise = 0.55f, armReach = 1.0f, armSpread = 0.75f, eye = 3.0f, agitation = 1f, stretch = 1.14f, shake = 0.12f, asym = 0.35f };
                     case Pose.Recover: return new PoseValues { lean = 22, hunch = 0.7f, headTilt = 24, armRaise = 0f, armReach = 0.1f, eye = 0.8f, agitation = 0.5f, stretch = 0.98f };
                     case Pose.Stagger: return new PoseValues { lean = -18, hunch = 0.9f, headTilt = -25, armRaise = 1f, armReach = 0.15f, armSpread = -0.4f, eye = 0.2f, agitation = 1f, stretch = 0.92f, shake = 1f };
                     case Pose.Watch: return new PoseValues { lean = 4, hunch = 0.15f, headTilt = 10, armRaise = 0f, armReach = 0f, eye = 0.75f, agitation = 0.25f, stretch = 1f };
@@ -78,7 +86,8 @@ namespace PHYSXR.Ghost
                     headTilt = Mathf.Lerp(a.headTilt, b.headTilt, t), armRaise = Mathf.Lerp(a.armRaise, b.armRaise, t),
                     armReach = Mathf.Lerp(a.armReach, b.armReach, t), armSpread = Mathf.Lerp(a.armSpread, b.armSpread, t),
                     eye = Mathf.Lerp(a.eye, b.eye, t), agitation = Mathf.Lerp(a.agitation, b.agitation, t),
-                    stretch = Mathf.Lerp(a.stretch, b.stretch, t), shake = Mathf.Lerp(a.shake, b.shake, t)
+                    stretch = Mathf.Lerp(a.stretch, b.stretch, t), shake = Mathf.Lerp(a.shake, b.shake, t),
+                    asym = Mathf.Lerp(a.asym, b.asym, t)
                 };
             }
         }
@@ -127,6 +136,7 @@ namespace PHYSXR.Ghost
         private float stillUntil;
         private float nextStill = 6f;
         private float snapUntil;
+        private float attackMirror = 1f;
 
         private static readonly int EmissionColorId = Shader.PropertyToID("_EmissionColor");
 
@@ -420,6 +430,15 @@ namespace PHYSXR.Ghost
             speed = metresPerSecond;
         }
 
+        // Which side leads this attack (+1 or -1): head tilt and the leading
+        // arm swap, so consecutive attacks do not look identical.
+        public void SetAttackMirror(float sign)
+        {
+            attackMirror = sign < 0f ? -1f : 1f;
+        }
+
+        private static bool IsAttackPose(Pose pose) => pose == Pose.Coil || pose == Pose.Lunge || pose == Pose.Strike;
+
         // Where the head looks (world space), or null to let it follow the
         // pose. The head turns toward it ahead of the body.
         public void SetLookTarget(Vector3? worldPoint)
@@ -449,6 +468,11 @@ namespace PHYSXR.Ghost
 
             time += dt;
             PoseValues goal = PoseValues.For(target);
+            if (IsAttackPose(target))
+            {
+                goal.headTilt *= attackMirror;
+                goal.asym *= attackMirror;
+            }
             current = PoseValues.Lerp(current, goal, 1f - Mathf.Exp(-blendSpeed * dt));
 
             UpdateGlitch(goal);
@@ -508,7 +532,8 @@ namespace PHYSXR.Ghost
                 pitch = Mathf.Clamp(-Mathf.Atan2(d.y, Mathf.Max(0.05f, flat)) * Mathf.Rad2Deg, -HeadPitchLimit, HeadPitchLimit);
             }
 
-            float rate = time < snapUntil ? 22f : 7f;
+            // The head locks on hard during the lunge and strike.
+            float rate = time < snapUntil || target == Pose.Lunge || target == Pose.Strike ? 22f : 7f;
             float k = (1f - Mathf.Exp(-rate * dt)) * (1f - stillness);
             lookYaw = Mathf.Lerp(lookYaw, yaw, k);
             lookPitch = Mathf.Lerp(lookPitch, pitch, k);
@@ -543,8 +568,9 @@ namespace PHYSXR.Ghost
 
         private void PoseArm(Transform shoulder, Transform fore, float side, float swing)
         {
-            float raise = current.armRaise * 150f;
-            float reach = current.armReach * 70f;
+            float lead = current.asym * side;
+            float raise = (current.armRaise + lead * 0.2f) * 150f;
+            float reach = (current.armReach + lead * 0.35f) * 70f;
             float spread = current.armSpread * 40f * side;
             float splay = modelled ? ArmSplayModelled : 6f;
             shoulder.localRotation = Quaternion.Euler(-(raise * 0.6f + reach) + swing, 0f, spread + splay * side);

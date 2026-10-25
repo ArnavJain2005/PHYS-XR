@@ -75,6 +75,7 @@ namespace PHYSXR.Ghost
         public string LastRuleId => pipeline.LastRuleId;
         public string LastReason => pipeline.LastReason;
         public long CurrentDecisionId => pipeline.CurrentDecisionId;
+        public long LastCausedEventId => pipeline.LastCausedEventId;
 
         // Optional telemetry sink. Left null by default; telemetry is never
         // required for initialization or for Tick() to function.

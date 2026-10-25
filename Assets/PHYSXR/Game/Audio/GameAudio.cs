@@ -42,7 +42,9 @@ namespace PHYSXR.Game.Audio
             { AudioCue.RadioStatic, 0.35f }, { AudioCue.NoteRustle, 0.5f }, { AudioCue.CandleCrackle, 0.3f },
             { AudioCue.GhostPresence, 0.42f }, { AudioCue.GhostDrag, 0.35f }, { AudioCue.ScoreDrone, 0.34f },
             { AudioCue.ScoreStrings, 0.27f }, { AudioCue.ScorePulse, 0.36f }, { AudioCue.ScoreSwell, 0.42f },
-            { AudioCue.DistantKnock, 0.45f }, { AudioCue.PipeGroan, 0.32f }, { AudioCue.WaterDrip, 0.3f }
+            { AudioCue.DistantKnock, 0.45f }, { AudioCue.PipeGroan, 0.32f }, { AudioCue.WaterDrip, 0.3f },
+            { AudioCue.GhostScream, 0.6f }, { AudioCue.GhostRecoil, 0.6f }, { AudioCue.GhostInhale, 0.35f },
+            { AudioCue.GhostVanish, 0.4f }
         };
 
         public static float Level(AudioCue cue) => Mix.TryGetValue(cue, out float v) ? v : 0.6f;

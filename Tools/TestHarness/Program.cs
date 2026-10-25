@@ -43,10 +43,12 @@ namespace PHYSXR.TestHarness
                 ("EncounterRuleTests", EncounterRuleTests.RunAll),
                 ("SensorScenarioTests", SensorScenarioTests.RunAll),
                 ("SerialTransportTests", SerialTransportTests.RunAll),
+                ("SensorResponseProfileTests", SensorResponseProfileTests.RunAll),
                 ("TelemetryJsonLinesTests", TelemetryJsonLinesTests.RunAll),
                 ("GameFlowEncounterTests", GameFlowEncounterTests.RunAll),
                 ("EncounterDirectorTests", EncounterDirectorTests.RunAll),
                 ("PlayerLocomotionTests", PlayerLocomotionTests.RunAll),
+                ("SensorPanelModelTests", SensorPanelModelTests.RunAll),
             };
 
             int totalFailed = 0;

@@ -52,6 +52,11 @@ namespace PHYSXR.Game.Gameplay
         private bool restarting;
         private bool firstSightingDone;
         private bool sightingSeen;
+
+        // The decision rule that started the current attack (E3, E5 or E6),
+        // captured when the ghost enters WINDUP. Decides whether a landed
+        // strike before the encounter is a feint (E5) or lethal (E6).
+        private GhostPhase lastGhostPhase = GhostPhase.NORMAL;
         private Camera playerView;
         private ReadableNote openNote;
         private bool encounterHintShown;
@@ -121,6 +126,8 @@ namespace PHYSXR.Game.Gameplay
 
         // True once the player has actually seen The Hollow this attempt.
         public bool SightingSeen => sightingSeen;
+
+        public string AttackStartRule { get; private set; } = string.Empty;
 
         public event Action<string> MessageRaised;
         public event Action<string> HintRaised;
@@ -209,6 +216,13 @@ namespace PHYSXR.Game.Gameplay
             if (ghostRuntime != null)
             {
                 ghostRuntime.Initialize(World, () => GameClockMs, Telemetry.Sink);
+                if (ghostRuntime.Pipeline?.DecisionProvider is PHYSXR.Decision.EncounterDecisionLayer layer)
+                {
+                    layer.SensorResponse = services.SensorResponse;
+                    // E6: the ghost attacks a player who comes too close before
+                    // the encounter. Off with the encounter (scripted M2 route).
+                    layer.ProximityAttack = !services.EncounterDisabled;
+                }
                 ghost.Initialize(ghostRuntime, player.transform, anchors, new HollowAssets(), Telemetry,
                     () => Flow.EncounterCommitted, () => Flow.PowerRestored);
                 ghost.StrikeHit += OnStrikeHit;
@@ -287,6 +301,17 @@ namespace PHYSXR.Game.Gameplay
 
             ghostRuntime.Tick();
             ghost.Tick(dt);
+            if (ghost.Phase == GhostPhase.WINDUP && lastGhostPhase != GhostPhase.WINDUP)
+            {
+                // This frame's decision started the attack (E1 continues it from
+                // the next frame), so its rule says why the ghost attacks.
+                AttackStartRule = ghostRuntime.LastRuleId ?? string.Empty;
+                Telemetry.Emit("ATTACK", string.Format(CultureInfo.InvariantCulture,
+                    "event=START rule={0} source={1} distance={2:F2}", AttackStartRule,
+                    AttackStartRule == "E6" || AttackStartRule == "E3" ? "proximity" : AttackStartRule == "E5" ? "first_sighting" : "other",
+                    ghost.StraightDistanceToPlayer));
+            }
+            lastGhostPhase = ghost.Phase;
             UpdateFirstSighting();
             // Never leave the player stuck reading while an attack winds up.
             if (openNote != null && ghost.Phase == GhostPhase.WINDUP)
@@ -605,12 +630,12 @@ namespace PHYSXR.Game.Gameplay
 
         private void OnStrikeHit()
         {
-            // Before the encounter is committed (the first-sighting lunge) a
-            // strike that lands is a feint: it knocks the breath out of the
-            // player but does not kill. The GDD's early ghost is an ambiguous
-            // threat; death belongs to the committed encounter (Technical Spec
-            // section D, E3).
-            if (!Flow.EncounterCommitted)
+            // Before the encounter is committed, the first-sighting lunge (E5)
+            // that lands is a feint: it knocks the breath out of the player but
+            // does not kill (the GDD's early ghost is an ambiguous threat). An
+            // attack the player provoked by coming too close (E6) kills, like a
+            // committed-encounter attack (E3).
+            if (!Flow.EncounterCommitted && AttackStartRule != "E6")
             {
                 if (Flow.RunState != RunState.Playing)
                     return;
@@ -629,7 +654,8 @@ namespace PHYSXR.Game.Gameplay
             ghostRuntime.Session.EnterTerminal(TerminalReason.PlayerDied);
             ghost.Halt(false);
             Telemetry.Emit("FLOW", string.Format(CultureInfo.InvariantCulture,
-                "event=DEATH attempt={0} deaths={1} t={2:F1}", services.Session.Attempt, services.Session.Deaths, RunSeconds));
+                "event=DEATH attempt={0} deaths={1} t={2:F1} attack_rule={3}", services.Session.Attempt, services.Session.Deaths, RunSeconds,
+                AttackStartRule));
             Debug.Log("[GameFlow] DEATH attempt=" + services.Session.Attempt);
             audioPlayer?.Play2D(AudioCue.DeathSting);
             Raise(death.Message);

@@ -53,7 +53,11 @@ namespace PHYSXR.Game.Audio
         ScoreSwell,
         DistantKnock,
         PipeGroan,
-        WaterDrip
+        WaterDrip,
+        GhostScream,
+        GhostRecoil,
+        GhostInhale,
+        GhostVanish
     }
 
     // Every sound in the game, synthesised in code: oscillators, filtered
@@ -79,8 +83,10 @@ namespace PHYSXR.Game.Audio
                 case AudioCue.Thunder:
                 case AudioCue.DistantKnock:
                 case AudioCue.WaterDrip:
+                case AudioCue.GhostScream:
                     return 3;
                 case AudioCue.PipeGroan:
+                case AudioCue.GhostRecoil:
                     return 2;
                 default:
                     return 1;
@@ -309,6 +315,10 @@ namespace PHYSXR.Game.Audio
                 case AudioCue.DistantKnock: return DistantKnock(rng, v);
                 case AudioCue.PipeGroan: return PipeGroan(rng, v);
                 case AudioCue.WaterDrip: return Drip(rng, v);
+                case AudioCue.GhostScream: return Scream(rng, v);
+                case AudioCue.GhostRecoil: return Recoil(rng, v);
+                case AudioCue.GhostInhale: return Inhale(rng);
+                case AudioCue.GhostVanish: return Vanish(rng);
                 default: return Buffer(0.1f);
             }
         }
@@ -1056,6 +1066,117 @@ namespace PHYSXR.Game.Audio
                 s[i] = plop + splash;
             }
             Room(s, 0.6f, 1.1f);
+            return s;
+        }
+    
+        // ----------------------------------------------- the Hollow, attack
+
+        private static float Tanh(float x) => (float)Math.Tanh(x);
+
+        // The attack scream: a torn, half-human shriek. A doubled sawtooth
+        // voice through moving formants (an open "ah" closing to a thin
+        // "ee"), ring-modulated by an inharmonic partial so it is never quite
+        // a person, a breathy rasp, a low growl underneath for weight, and a
+        // soft-clipped body. It rises to its peak in about a tenth of a
+        // second, holds, cracks and falls away. The variants share the voice
+        // (same creature) and differ in pitch contour and length.
+        private static float[] Scream(Rng rng, int v)
+        {
+            float len = 1.1f + v * 0.12f;
+            var s = Buffer(len);
+            var f1 = Biquad.BandPass(850f, 5f);
+            var f2 = Biquad.BandPass(1250f, 7f);
+            var f3 = Biquad.BandPass(2800f, 9f);
+            var rasp = new OnePole(2600f);
+            var growlLp = new OnePole(170f);
+            float startF = 470f + v * 60f, peakF = 900f + v * 55f, endF = 560f - v * 30f;
+            float ph = 0f, ph2 = 0f, phg = 0f;
+            for (int i = 0; i < s.Length; i++)
+            {
+                float t = T(i);
+                float k = t / len;
+                float rise = Mathf.SmoothStep(0f, 1f, t / 0.11f);
+                float f0 = Mathf.Lerp(startF, peakF, rise);
+                f0 = Mathf.Lerp(f0, endF, Mathf.SmoothStep(0.4f, 1f, k));
+                // a crack in the voice two-thirds through
+                if (k > 0.62f && k < 0.66f) f0 *= 1.35f;
+                f0 *= 1f + 0.035f * Mathf.Sin(t * 2f * Mathf.PI * (7.3f + v)) + 0.015f * rng.Bipolar();
+                ph += f0 / Rate;
+                ph2 += f0 * 1.008f / Rate;
+                float src = Saw(ph) + 0.6f * Saw(ph2);
+
+                float vowel = Mathf.SmoothStep(0.08f, 0.6f, k);
+                f1.SetBandPass(Mathf.Lerp(850f, 420f, vowel), 5f);
+                f2.SetBandPass(Mathf.Lerp(1250f, 2250f, vowel), 7f);
+                f3.SetBandPass(Mathf.Lerp(2800f, 3300f, vowel), 9f);
+                float voice = f1.Process(src) + f2.Process(src) * 0.85f + f3.Process(src) * 0.5f;
+                float ring = voice * Sine(ph * 2.37f) * 0.4f;
+                float breath = rasp.High(rng.Bipolar()) * (0.35f + 0.2f * Mathf.Sin(t * 41f));
+
+                phg += (64f + 18f * rise) / Rate;
+                float growl = growlLp.Low(Saw(phg)) * 2.6f * Env(t, 0.01f, 0.4f);
+
+                float env = t < 0.012f ? t / 0.012f : (k < 0.45f ? 1f : Mathf.Exp(-(k - 0.45f) * 6f));
+                s[i] = Tanh(((voice * 0.9f + ring + breath * 0.45f) * env + growl) * 2.2f);
+            }
+            Room(s, 0.28f, 1.3f);
+            return s;
+        }
+
+        // Struck by the lantern: a short, choked, falling cry - pain, not
+        // threat - so it reads differently from the attack scream.
+        private static float[] Recoil(Rng rng, int v)
+        {
+            float len = 0.75f + v * 0.1f;
+            var s = Buffer(len);
+            var f1 = Biquad.BandPass(600f, 5f);
+            var f2 = Biquad.BandPass(1000f, 6f);
+            var hiss = new OnePole(3500f);
+            float ph = 0f;
+            for (int i = 0; i < s.Length; i++)
+            {
+                float t = T(i);
+                float k = t / len;
+                float f0 = Mathf.Lerp(1050f + v * 80f, 280f, Mathf.Pow(k, 0.7f)) * (1f + 0.04f * rng.Bipolar());
+                ph += f0 / Rate;
+                float src = Saw(ph);
+                float choke = 0.55f + 0.45f * Mathf.Sign(Mathf.Sin(t * 2f * Mathf.PI * 17f));
+                float voice = (f1.Process(src) + f2.Process(src) * 0.7f) * choke;
+                float env = Env(t, 0.006f, len * 0.45f);
+                s[i] = Tanh((voice + hiss.High(rng.Bipolar()) * 0.4f) * env * 2f);
+            }
+            Room(s, 0.3f, 1.2f);
+            return s;
+        }
+
+        // The anticipation: one quick, quiet intake of breath.
+        private static float[] Inhale(Rng rng)
+        {
+            var s = Buffer(0.45f);
+            var bp = Biquad.BandPass(900f, 1.6f);
+            for (int i = 0; i < s.Length; i++)
+            {
+                float t = T(i);
+                bp.SetBandPass(Mathf.Lerp(700f, 1900f, t / 0.45f), 1.6f);
+                float env = Mathf.Sin(Mathf.Clamp01(t / 0.38f) * Mathf.PI) * (t < 0.38f ? 1f : 0f);
+                s[i] = bp.Process(rng.Bipolar()) * env * env;
+            }
+            return s;
+        }
+
+        // Disappearing: air sucked backward into nothing, then cut.
+        private static float[] Vanish(Rng rng)
+        {
+            var s = Buffer(0.7f);
+            var hp = new OnePole(1500f);
+            for (int i = 0; i < s.Length; i++)
+            {
+                float t = T(i);
+                float k = t / 0.62f;
+                float swell = k < 1f ? Mathf.Pow(k, 3f) : Mathf.Exp(-(t - 0.62f) * 120f);
+                float tone = Sine(Mathf.Lerp(420f, 160f, Mathf.Clamp01(k)) * t) * 0.3f;
+                s[i] = (hp.High(rng.Bipolar()) + tone) * swell;
+            }
             return s;
         }
     }

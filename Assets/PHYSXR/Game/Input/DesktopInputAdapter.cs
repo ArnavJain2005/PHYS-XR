@@ -1,3 +1,4 @@
+using System.Collections.Generic;
 using UnityEngine;
 using UnityEngine.InputSystem;
 
@@ -15,6 +16,16 @@ namespace PHYSXR.Game.Input
     // action bound to Escape. If the project-wide asset or one of its actions
     // is missing, equivalent local bindings are created so the game is still
     // playable.
+    //
+    // Meta Quest Touch controllers (OpenXR Oculus Touch profile, e.g. over
+    // Quest Link) drive the same intents alongside the keyboard: left stick
+    // move, left stick click sprint (hold), right stick smooth turn (yaw only;
+    // the headset owns pitch), right trigger or A interact, left trigger
+    // lantern pulse, B jump, left menu button pause/resume. The asset's
+    // generic XR-group bindings (either stick moves, either trigger sprints)
+    // would clash with that, so they are disabled with runtime binding
+    // overrides, which are never written to the asset and are removed on
+    // destroy.
     public class DesktopInputAdapter : MonoBehaviour, IPlayerInput
     {
         [Tooltip("Degrees of rotation per pixel of mouse movement.")]
@@ -33,39 +44,59 @@ namespace PHYSXR.Game.Input
         private bool ownsPlayerActions;
         private bool ownsSprintJump;
 
-        public Vector2 Move => moveAction != null ? Vector2.ClampMagnitude(moveAction.ReadValue<Vector2>(), 1f) : Vector2.zero;
+        // Quest Touch actions, always owned by this adapter.
+        private InputAction xrMoveAction;
+        private InputAction xrTurnAction;
+        private InputAction xrInteractAction;
+        private InputAction xrSprintAction;
+        private InputAction xrJumpAction;
+        private readonly List<(InputAction action, int bindingIndex)> disabledXRBindings = new List<(InputAction, int)>();
+
+        public Vector2 Move
+        {
+            get
+            {
+                Vector2 move = moveAction != null ? moveAction.ReadValue<Vector2>() : Vector2.zero;
+                return Vector2.ClampMagnitude(move + xrMoveAction.ReadValue<Vector2>(), 1f);
+            }
+        }
 
         public Vector2 LookDegrees
         {
             get
             {
-                if (lookAction == null)
-                    return Vector2.zero;
+                Vector2 degrees = Vector2.zero;
+                if (lookAction != null)
+                {
+                    Vector2 raw = lookAction.ReadValue<Vector2>();
+                    InputControl control = lookAction.activeControl;
+                    if (control != null && control.device is Pointer)
+                        degrees = raw * mouseDegreesPerPixel;
+                    else
+                        // Sticks report deflection, not a per-frame delta.
+                        degrees = raw * (stickDegreesPerSecond * Time.unscaledDeltaTime);
 
-                Vector2 raw = lookAction.ReadValue<Vector2>();
-                InputControl control = lookAction.activeControl;
-                Vector2 degrees;
-                if (control != null && control.device is Pointer)
-                    degrees = raw * mouseDegreesPerPixel;
-                else
-                    // Sticks report deflection, not a per-frame delta.
-                    degrees = raw * (stickDegreesPerSecond * Time.unscaledDeltaTime);
+                    if (InvertY)
+                        degrees.y = -degrees.y;
+                }
 
-                if (InvertY)
-                    degrees.y = -degrees.y;
+                // Right Touch stick turns the body only; its y is ignored.
+                degrees.x += xrTurnAction.ReadValue<Vector2>().x * (stickDegreesPerSecond * Time.unscaledDeltaTime);
                 return degrees;
             }
         }
 
-        public bool InteractPressed => interactAction != null && interactAction.WasPressedThisFrame();
+        public bool InteractPressed =>
+            (interactAction != null && interactAction.WasPressedThisFrame()) || xrInteractAction.WasPressedThisFrame();
 
         public bool PausePressed => pauseAction != null && pauseAction.WasPressedThisFrame();
 
         public bool DefendPressed => defendAction != null && defendAction.WasPressedThisFrame();
 
-        public bool SprintHeld => sprintAction != null && sprintAction.IsPressed();
+        public bool SprintHeld => (sprintAction != null && sprintAction.IsPressed()) || xrSprintAction.IsPressed();
 
-        public bool JumpPressed => jumpAction != null && jumpAction.WasPressedThisFrame();
+        public bool JumpPressed =>
+            (jumpAction != null && jumpAction.WasPressedThisFrame()) || xrJumpAction.WasPressedThisFrame();
 
         public bool InvertY { get; set; }
 
@@ -112,8 +143,41 @@ namespace PHYSXR.Game.Input
             }
 
             pauseAction = new InputAction("Pause", InputActionType.Button, "<Keyboard>/escape");
+            pauseAction.AddBinding("<XRController>{LeftHand}/{MenuButton}");
             defendAction = new InputAction("Defend", InputActionType.Button, "<Keyboard>/f");
             defendAction.AddBinding("<Mouse>/rightButton");
+            defendAction.AddBinding("<XRController>{LeftHand}/{TriggerButton}");
+
+            xrMoveAction = new InputAction("XRMove", InputActionType.Value, "<XRController>{LeftHand}/{Primary2DAxis}");
+            xrTurnAction = new InputAction("XRTurn", InputActionType.Value, "<XRController>{RightHand}/{Primary2DAxis}");
+            xrInteractAction = new InputAction("XRInteract", InputActionType.Button, "<XRController>{RightHand}/{TriggerButton}");
+            xrInteractAction.AddBinding("<XRController>{RightHand}/{PrimaryButton}");
+            xrSprintAction = new InputAction("XRSprint", InputActionType.Button, "<XRController>{LeftHand}/{Primary2DAxisClick}");
+            xrJumpAction = new InputAction("XRJump", InputActionType.Button, "<XRController>{RightHand}/{SecondaryButton}");
+
+            if (!ownsPlayerActions)
+            {
+                DisableXRBindings(moveAction);
+                DisableXRBindings(lookAction);
+                DisableXRBindings(interactAction);
+            }
+            if (!ownsSprintJump)
+            {
+                DisableXRBindings(sprintAction);
+                DisableXRBindings(jumpAction);
+            }
+        }
+
+        // An empty override path disables a binding for this session only.
+        private void DisableXRBindings(InputAction action)
+        {
+            for (int i = 0; i < action.bindings.Count; i++)
+            {
+                if (!action.bindings[i].path.StartsWith("<XRController>"))
+                    continue;
+                action.ApplyBindingOverride(i, string.Empty);
+                disabledXRBindings.Add((action, i));
+            }
         }
 
         private void OnEnable()
@@ -125,6 +189,11 @@ namespace PHYSXR.Game.Input
             jumpAction?.Enable();
             pauseAction?.Enable();
             defendAction?.Enable();
+            xrMoveAction.Enable();
+            xrTurnAction.Enable();
+            xrInteractAction.Enable();
+            xrSprintAction.Enable();
+            xrJumpAction.Enable();
         }
 
         private void OnDisable()
@@ -143,10 +212,19 @@ namespace PHYSXR.Game.Input
             }
             pauseAction?.Disable();
             defendAction?.Disable();
+            xrMoveAction.Disable();
+            xrTurnAction.Disable();
+            xrInteractAction.Disable();
+            xrSprintAction.Disable();
+            xrJumpAction.Disable();
         }
 
         private void OnDestroy()
         {
+            foreach ((InputAction action, int bindingIndex) in disabledXRBindings)
+                action.RemoveBindingOverride(bindingIndex);
+            disabledXRBindings.Clear();
+
             if (ownsPlayerActions)
             {
                 moveAction?.Dispose();
@@ -160,6 +238,11 @@ namespace PHYSXR.Game.Input
             }
             pauseAction?.Dispose();
             defendAction?.Dispose();
+            xrMoveAction.Dispose();
+            xrTurnAction.Dispose();
+            xrInteractAction.Dispose();
+            xrSprintAction.Dispose();
+            xrJumpAction.Dispose();
         }
     }
 }

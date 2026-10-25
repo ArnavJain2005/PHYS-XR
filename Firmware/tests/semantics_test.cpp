@@ -90,6 +90,23 @@ static void testFusionTable() {
   CHECK(f.presence == PRESENCE_NONE && f.confidence == CONFIDENCE_LOW, "both invalid -> NONE LOW, stale class ignored");
 }
 
+// FUSION_TOF_PRIMARY: only the ToF-sees / ultrasonic-NONE case changes.
+static void testFusionToFPrimary() {
+  FusedProximity f;
+  f = fuseProximity(true, PRESENCE_NEAR, true, PRESENCE_NONE, true);
+  CHECK(f.presence == PRESENCE_NEAR && f.confidence == CONFIDENCE_LOW, "ToF-primary: NEAR+NONE -> NEAR LOW");
+  f = fuseProximity(true, PRESENCE_VERY_NEAR, true, PRESENCE_NONE, true);
+  CHECK(f.presence == PRESENCE_VERY_NEAR && f.confidence == CONFIDENCE_LOW, "ToF-primary: VN+NONE -> VN LOW");
+  f = fuseProximity(true, PRESENCE_NONE, true, PRESENCE_NEAR, true);
+  CHECK(f.presence == PRESENCE_NONE && f.confidence == CONFIDENCE_LOW, "ToF-primary: ultrasonic alone never creates presence");
+  f = fuseProximity(true, PRESENCE_VERY_NEAR, true, PRESENCE_NEAR, true);
+  CHECK(f.presence == PRESENCE_NEAR && f.confidence == CONFIDENCE_LOW, "ToF-primary: VN+NEAR still the conservative class");
+  f = fuseProximity(true, PRESENCE_NEAR, true, PRESENCE_NEAR, true);
+  CHECK(f.presence == PRESENCE_NEAR && f.confidence == CONFIDENCE_HIGH, "ToF-primary: agreement still HIGH");
+  f = fuseProximity(false, PRESENCE_NEAR, false, PRESENCE_NEAR, true);
+  CHECK(f.presence == PRESENCE_NONE && f.confidence == CONFIDENCE_LOW, "ToF-primary: both invalid -> NONE LOW");
+}
+
 static void testMedian() {
   Median3 m;
   CHECK(fabsf(m.push(50) - 50) < 1e-4f, "first sample passes through");
@@ -185,6 +202,7 @@ static void testFormat() {
 int main() {
   testClassifierHysteresis();
   testFusionTable();
+  testFusionToFPrimary();
   testMedian();
   testDisturbance();
   testFormat();

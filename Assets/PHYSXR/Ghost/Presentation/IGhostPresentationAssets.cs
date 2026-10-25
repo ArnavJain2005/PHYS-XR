@@ -16,7 +16,10 @@ namespace PHYSXR.Ghost
         ProtectHum,
         LanternRecoil,
         Presence,
-        Drag
+        Drag,
+        Scream,
+        Inhale,
+        Vanish
     }
 
     // The modelled body parts of the figure. Each mesh is authored in the
@@ -39,6 +42,12 @@ namespace PHYSXR.Ghost
     public interface IGhostPresentationAssets
     {
         AudioClip Clip(GhostSound sound, out float volume);
+
+        // Variation `variant` (0 .. Variants - 1) of a sound. Variations are
+        // the same voice, so repeats differ without sounding like another
+        // creature.
+        AudioClip Clip(GhostSound sound, int variant, out float volume);
+        int Variants(GhostSound sound);
 
         // Shared asset, not owned by the caller. Null when the part is not
         // available; the figure then falls back to primitive shapes.

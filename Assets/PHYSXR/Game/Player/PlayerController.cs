@@ -14,8 +14,8 @@ namespace PHYSXR.Game.Player
     // the floor under the player) and applies a small, optional head bob.
     //
     // The input source is swappable (SetInput), which is how the scripted
-    // self-tests drive the real motor and interactor, and how a Quest
-    // XRInputAdapter will plug in later.
+    // self-tests drive the real motor and interactor. Quest Touch controllers
+    // are read by DesktopInputAdapter alongside the keyboard.
     [RequireComponent(typeof(DesktopMotor), typeof(PlayerInteractor))]
     public class PlayerController : MonoBehaviour
     {

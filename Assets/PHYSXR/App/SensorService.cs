@@ -323,7 +323,7 @@ namespace PHYSXR.App
 
             IReadOnlyList<PacketOutcome> outcomes = feed.Pump(now);
             for (int i = 0; i < outcomes.Count; i++)
-                Log(outcomes[i]);
+                Log(outcomes[i], now);
 
             if (feed.StatusChanged)
                 telemetry.Emit("SOURCE_STATUS", "from=" + feed.PreviousStatus + " to=" + feed.Status + " link=" + LinkLabel());
@@ -424,8 +424,15 @@ namespace PHYSXR.App
             }
         }
 
-        private void Log(PacketOutcome outcome)
+        // q= is how long the line waited between arriving on the reader
+        // thread (t2) and being processed here, on the same clock: the
+        // Unity-side share of the sensor-to-ghost latency. The decision and
+        // the BEHAVIOUR record for it follow in this frame, so their telemetry
+        // ts minus this record's ts, plus q, is receipt-to-response
+        // (Tools/analyze_telemetry.py reports it).
+        private void Log(PacketOutcome outcome, long now)
         {
+            long queued = now - outcome.arrivalMs;
             if (outcome.isNewBoot)
                 telemetry.Emit("ESP32_REBOOT", "boot=" + outcome.boot);
 
@@ -434,9 +441,9 @@ namespace PHYSXR.App
                 // PKT_RX for every datagram would be ~10 lines/s; it is the
                 // record the spec asks for, and the writer is off-thread.
                 telemetry.Emit("PKT_RX", string.Format(CultureInfo.InvariantCulture,
-                    "boot={0} seq={1} bytes={2} t1_dev={3} t2={4} age={5} gap={6} presence={7} confidence={8}",
+                    "boot={0} seq={1} bytes={2} t1_dev={3} t2={4} age={5} gap={6} presence={7} confidence={8} q={9}",
                     outcome.boot, outcome.sequence, outcome.bytes, outcome.deviceTimestamp, outcome.arrivalMs,
-                    outcome.transitAgeMs, outcome.sequenceGap, outcome.state?.presence, outcome.state?.confidence));
+                    outcome.transitAgeMs, outcome.sequenceGap, outcome.state?.presence, outcome.state?.confidence, queued));
             }
             else
             {
@@ -449,7 +456,7 @@ namespace PHYSXR.App
             if (outcome.eventResult != EventAcceptance.NoEvent)
             {
                 telemetry.Emit("PHYS_EVENT", string.Format(CultureInfo.InvariantCulture,
-                    "evt={0} result={1} boot={2} t2={3}", outcome.eventId, outcome.eventResult, outcome.boot, outcome.arrivalMs),
+                    "evt={0} result={1} boot={2} t2={3} q={4}", outcome.eventId, outcome.eventResult, outcome.boot, outcome.arrivalMs, queued),
                     relatedId: outcome.eventId);
                 if (outcome.acceptedEvent != null)
                     frameEvents.Add(outcome.acceptedEvent);

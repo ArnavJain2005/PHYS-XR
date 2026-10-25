@@ -3,8 +3,8 @@ using UnityEngine;
 namespace PHYSXR.Game.Input
 {
     // Device-independent player intents, polled once per frame by
-    // PlayerController. Desktop (DesktopInputAdapter), a future Quest
-    // XRInputAdapter and the scripted route self-test all implement this, so
+    // PlayerController. DesktopInputAdapter (keyboard/mouse plus Quest Touch
+    // controllers) and the scripted route self-test implement this, so
     // gameplay code never reads a keyboard, mouse or controller directly.
     public interface IPlayerInput
     {
