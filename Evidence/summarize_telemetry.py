@@ -1,0 +1,162 @@
+#!/usr/bin/env python3
+"""Recompute the PHYS-XR session metrics from the raw telemetry in Evidence/Logs/telemetry.
+
+Reads every <trial>_<platform>_<utc>.jsonl file (one file = one run, from
+Begin to the end of the run or a restart), plus its .trial.json header, and
+writes:
+
+    Evidence/Logs/telemetry_runs.csv      one row per run (all conditions)
+    Evidence/Logs/telemetry_summary.md    the aggregate figures and how each is defined
+
+Usage (from the repository root):
+    python Evidence/summarize_telemetry.py
+
+Standard library only. The raw files are never modified.
+"""
+import collections
+import csv
+import glob
+import json
+import os
+import sys
+
+ROOT = os.path.dirname(os.path.abspath(__file__))
+TELEMETRY = os.path.join(ROOT, "Logs", "telemetry")
+OUT_CSV = os.path.join(ROOT, "Logs", "telemetry_runs.csv")
+OUT_MD = os.path.join(ROOT, "Logs", "telemetry_summary.md")
+
+
+def kv(detail):
+    out = {}
+    for part in (detail or "").split():
+        if "=" in part:
+            k, v = part.split("=", 1)
+            out[k] = v
+    return out
+
+
+def load(path):
+    rows = []
+    with open(path, encoding="utf-8") as f:
+        for line in f:
+            line = line.strip()
+            if not line:
+                continue
+            try:
+                rows.append(json.loads(line))
+            except json.JSONDecodeError:
+                pass
+    return rows
+
+
+def analyse(path):
+    rows = load(path)
+    name = os.path.basename(path)
+    header_path = path[:-len(".jsonl")] + ".trial.json"
+    header = {}
+    if os.path.exists(header_path):
+        with open(header_path, encoding="utf-8") as f:
+            header = json.load(f)
+    r = collections.OrderedDict()
+    r["file"] = os.path.relpath(path, ROOT).replace("\\", "/")
+    r["trial_id"] = header.get("trial") or (rows[0].get("trial") if rows else "")
+    r["condition"] = header.get("cond") or (rows[0].get("cond") if rows else "")
+    r["utc_start"] = header.get("utc_start", "")
+    status = [x for x in rows if x.get("type") == "SOURCE_STATUS"]
+    first = kv(status[0].get("detail")) if status else {}
+    r["transport"] = first.get("transport", "")
+    r["duration_s"] = round(rows[-1]["ts"] / 1000.0, 1) if rows else 0.0
+    pkt = [x for x in rows if x.get("type") == "PKT_RX"]
+    r["state_lines_received"] = len(pkt)
+    r["state_lines_rejected"] = sum(1 for x in rows if x.get("type") == "PKT_REJECT")
+    r["state_lines_lost"] = sum(int(kv(x.get("detail")).get("gap", 0)) for x in pkt)
+    events = collections.Counter(kv(x.get("detail")).get("result", "?") for x in rows if x.get("type") == "PHYS_EVENT")
+    r["events_accepted"] = events.get("ACCEPTED", 0)
+    r["events_duplicate"] = events.get("DUPLICATE", 0)
+    outcomes = collections.Counter(kv(x.get("detail")).get("outcome", "?") for x in rows if x.get("type") == "PHYS_EVENT_OUTCOME")
+    r["outcome_acted"] = outcomes.get("ACTED", 0)
+    r["outcome_outranked"] = outcomes.get("OUTRANKED", 0)
+    r["outcome_not_qualified"] = outcomes.get("NOT_QUALIFIED", 0)
+    decisions = {x.get("dec"): x for x in rows if x.get("type") == "DECISION"}
+    started = {x.get("dec") for x in rows if x.get("type") == "BEHAVIOUR" and "event=START" in (x.get("detail") or "")}
+    caused = [d for d in decisions.values() if d.get("cause_evt")]
+    r["decisions"] = len(decisions)
+    r["event_caused_decisions"] = len(caused)
+    r["event_caused_with_behaviour_start"] = sum(1 for d in caused if d.get("dec") in started)
+    r["attack_decisions"] = sum(1 for d in decisions.values() if d.get("action") == "ATTACK")
+    r["attack_decisions_with_physical_cause"] = sum(1 for d in decisions.values() if d.get("action") == "ATTACK" and d.get("cause_evt"))
+    hello = [x for x in rows if x.get("type") == "STATION_LOG" and "#HELLO" in (x.get("detail") or "")]
+    r["station_hello"] = hello[0]["detail"].split("#HELLO", 1)[1].strip() if hello else ""
+    return r
+
+
+def main():
+    files = sorted(glob.glob(os.path.join(TELEMETRY, "**", "*.jsonl"), recursive=True))
+    if not files:
+        print("no telemetry files under " + TELEMETRY, file=sys.stderr)
+        return 1
+    runs = [analyse(f) for f in files]
+    with open(OUT_CSV, "w", newline="", encoding="utf-8") as f:
+        w = csv.DictWriter(f, fieldnames=list(runs[0].keys()))
+        w.writeheader()
+        w.writerows(runs)
+
+    def human(r):
+        return os.path.basename(r["file"]).startswith("T2026")
+
+    by_cond = collections.Counter((r["condition"], human(r)) for r in runs)
+    phys = [r for r in runs if human(r) and r["condition"] == "PHYSICAL_PLUS_VIRTUAL"]
+    live = [r for r in phys if r["state_lines_received"] > 0]
+    days = sorted({r["trial_id"][1:9] for r in live})
+    hello = sorted({r["station_hello"] for r in runs if r["station_hello"]})
+
+    def total(key, rs=live):
+        return sum(r[key] for r in rs)
+
+    lines = [
+        "# Telemetry summary (generated)",
+        "",
+        "Generated by `python Evidence/summarize_telemetry.py` from the raw files in `Evidence/Logs/telemetry/`. Do not edit by hand.",
+        "",
+        "## Definitions",
+        "",
+        "- **Run**: one telemetry file, from **Begin** in the menu to the end of the run or a restart. One trial ID (typed in the menu) can cover several runs.",
+        "- **Human-run**: a file whose name starts with the trial ID `T2026...` (the self-tests write `selftest_*`, the capture tour `capture_*`).",
+        "- **Physical run**: a human-run file in the `PHYSICAL_PLUS_VIRTUAL` condition. **Live physical run**: a physical run that received at least one state line from the station.",
+        "",
+        "## Files",
+        "",
+        "| Condition | Human-run files | Automated files (self-test / capture) |",
+        "|---|---|---|",
+    ]
+    for cond in sorted({c for c, _ in by_cond}):
+        lines.append("| {} | {} | {} |".format(cond, by_cond.get((cond, True), 0), by_cond.get((cond, False), 0)))
+    lines += [
+        "",
+        "## Live physical runs",
+        "",
+        "| Measure | Value |",
+        "|---|---|",
+        "| Physical runs / of which live | {} / {} |".format(len(phys), len(live)),
+        "| Distinct trial IDs among live runs | {} |".format(len({r['trial_id'] for r in live})),
+        "| Days | {} |".format(", ".join(days)),
+        "| Total duration of live runs | {:.1f} min |".format(total("duration_s") / 60.0),
+        "| State lines received / rejected / lost (sequence gaps) | {} / {} / {} |".format(total("state_lines_received"), total("state_lines_rejected"), total("state_lines_lost")),
+        "| Knock events accepted / duplicates ignored | {} / {} |".format(total("events_accepted"), total("events_duplicate")),
+        "| PHYS_EVENT_OUTCOME ACTED / OUTRANKED / NOT_QUALIFIED | {} / {} / {} |".format(total("outcome_acted"), total("outcome_outranked"), total("outcome_not_qualified")),
+        "| Decisions carrying cause_evt / followed by BEHAVIOUR START | {} / {} |".format(total("event_caused_decisions"), total("event_caused_with_behaviour_start")),
+        "| ATTACK decisions / with a physical cause | {} / {} |".format(total("attack_decisions"), total("attack_decisions_with_physical_cause")),
+        "",
+        "## Station identity lines seen (any condition)",
+        "",
+    ]
+    lines += ["- `#HELLO {}`".format(h) for h in hello] or ["- none"]
+    lines += ["", "Per-run rows: `Evidence/Logs/telemetry_runs.csv`.", ""]
+    with open(OUT_MD, "w", encoding="utf-8") as f:
+        f.write("\n".join(lines))
+    print("\n".join(lines))
+    return 0
+
+
+if __name__ == "__main__":
+    sys.exit(main())

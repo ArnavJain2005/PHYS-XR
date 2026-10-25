@@ -1,0 +1,55 @@
+{"ts":19,"type":"SOURCE_STATUS","trial":"capture","cond":"VIRTUAL_ONLY","plat":"Windows","attempt":1,"frame":0,"detail":"from=NONE to=UNAVAILABLE condition=VIRTUAL_ONLY transport=USB_SERIAL serial=AUTO @ 115200"}
+{"ts":1110,"type":"FLOW","trial":"capture","cond":"VIRTUAL_ONLY","plat":"Windows","attempt":1,"frame":0,"detail":"event=RUN_START run=1 attempt=1 condition=VIRTUAL_ONLY"}
+{"ts":1114,"type":"SERIAL_LINK","trial":"capture","cond":"VIRTUAL_ONLY","plat":"Windows","attempt":1,"frame":0,"detail":"state=DISCONNECTED port=AUTO t2=5389 detail=no USB COM ports, only Bluetooth (COM3, COM5, COM7, COM8); is the ESP32 plugged in?"}
+{"ts":1116,"type":"SERIAL_COUNTERS","trial":"capture","cond":"VIRTUAL_ONLY","plat":"Windows","attempt":1,"frame":0,"detail":"state=DISCONNECTED port=AUTO identified=False lines=0 diag=0 noise=0 legacy=0 oversized=0 dropped=0 reconnects=0 idle_discarded=0"}
+{"ts":1122,"type":"DECISION","trial":"capture","cond":"VIRTUAL_ONLY","plat":"Windows","attempt":1,"frame":30,"action":"FOLLOW","rule":"INNER","reason":"FOLLOW: no active threat or event requiring intervention","dec":1,"detail":"prev=NONE"}
+{"ts":4966,"type":"PERF","trial":"capture","cond":"VIRTUAL_ONLY","plat":"Windows","attempt":1,"frame":250,"detail":"fps_mean=44.1 fps_min=0.8 mono_mb=5.1"}
+{"ts":7699,"type":"FLOW","trial":"capture","cond":"VIRTUAL_ONLY","plat":"Windows","attempt":1,"frame":414,"detail":"event=BEAT id=FIRST_SIGHTING source=trigger"}
+{"ts":7713,"type":"DECISION","trial":"capture","cond":"VIRTUAL_ONLY","plat":"Windows","attempt":1,"frame":415,"action":"WARN","rule":"W","reason":"WARN[W]: mandatory scripted warning beat (inner candidate WARN)","dec":2,"detail":"prev=FOLLOW"}
+{"ts":7716,"type":"BEHAVIOUR","trial":"capture","cond":"VIRTUAL_ONLY","plat":"Windows","attempt":1,"frame":415,"action":"WARN","exec":"Warning","rule":"W","dec":2,"detail":"event=START state=Warning"}
+{"ts":7967,"type":"FLOW","trial":"capture","cond":"VIRTUAL_ONLY","plat":"Windows","attempt":1,"frame":430,"detail":"event=SIGHTING distance=6.00"}
+{"ts":7982,"type":"DECISION","trial":"capture","cond":"VIRTUAL_ONLY","plat":"Windows","attempt":1,"frame":431,"action":"ATTACK","rule":"E5","reason":"ATTACK[E5]: first sighting of the player","dec":3,"detail":"prev=WARN"}
+{"ts":7982,"type":"BEHAVIOUR","trial":"capture","cond":"VIRTUAL_ONLY","plat":"Windows","attempt":1,"frame":431,"exec":"Warning","dec":2,"detail":"event=PREEMPTED state=Warning"}
+{"ts":7982,"type":"BEHAVIOUR","trial":"capture","cond":"VIRTUAL_ONLY","plat":"Windows","attempt":1,"frame":431,"action":"ATTACK","exec":"Attacking","rule":"E5","dec":3,"detail":"event=START state=Attacking"}
+{"ts":7983,"type":"ATTACK","trial":"capture","cond":"VIRTUAL_ONLY","plat":"Windows","attempt":1,"frame":431,"dec":3,"detail":"event=WINDUP distance=6.00"}
+{"ts":7997,"type":"DECISION","trial":"capture","cond":"VIRTUAL_ONLY","plat":"Windows","attempt":1,"frame":432,"action":"ATTACK","rule":"E1","reason":"ATTACK[E1]: attack in progress","dec":4,"detail":"prev=ATTACK"}
+{"ts":9413,"type":"ATTACK","trial":"capture","cond":"VIRTUAL_ONLY","plat":"Windows","attempt":1,"frame":516,"dec":4,"detail":"event=STRIKE_HIT distance=1.58 angle=0.25"}
+{"ts":9415,"type":"ATTACK","trial":"capture","cond":"VIRTUAL_ONLY","plat":"Windows","attempt":1,"frame":516,"detail":"event=STRIKE_FEINT distance=1.58"}
+{"ts":9979,"type":"PERF","trial":"capture","cond":"VIRTUAL_ONLY","plat":"Windows","attempt":1,"frame":550,"detail":"fps_mean=59.8 fps_min=25.9 mono_mb=4.8"}
+{"ts":11512,"type":"ATTACK","trial":"capture","cond":"VIRTUAL_ONLY","plat":"Windows","attempt":1,"frame":642,"dec":4,"detail":"event=RECOVER_END cooldown_ms=6000"}
+{"ts":11529,"type":"DECISION","trial":"capture","cond":"VIRTUAL_ONLY","plat":"Windows","attempt":1,"frame":643,"action":"FOLLOW","rule":"INNER","reason":"FOLLOW: no active threat or event requiring intervention","dec":5,"detail":"prev=ATTACK"}
+{"ts":11529,"type":"BEHAVIOUR","trial":"capture","cond":"VIRTUAL_ONLY","plat":"Windows","attempt":1,"frame":643,"exec":"Attacking","dec":3,"detail":"event=PREEMPTED state=Attacking"}
+{"ts":11529,"type":"BEHAVIOUR","trial":"capture","cond":"VIRTUAL_ONLY","plat":"Windows","attempt":1,"frame":643,"action":"FOLLOW","exec":"Following","rule":"INNER","dec":5,"detail":"event=START state=Following"}
+{"ts":12531,"type":"OBJECTIVE","trial":"capture","cond":"VIRTUAL_ONLY","plat":"Windows","attempt":1,"frame":703,"detail":"event=FUSE_PICKUP stage=InstallFuse t=11.3"}
+{"ts":12532,"type":"OBJECTIVE","trial":"capture","cond":"VIRTUAL_ONLY","plat":"Windows","attempt":1,"frame":703,"detail":"event=FUSE_INSTALLED stage=RestoringPower t=11.3"}
+{"ts":12545,"type":"DECISION","trial":"capture","cond":"VIRTUAL_ONLY","plat":"Windows","attempt":1,"frame":704,"action":"RETREAT","rule":"S","reason":"RETREAT: sufficiently high threat without active player-risk condition","dec":6,"detail":"prev=FOLLOW"}
+{"ts":12545,"type":"BEHAVIOUR","trial":"capture","cond":"VIRTUAL_ONLY","plat":"Windows","attempt":1,"frame":704,"exec":"Following","dec":5,"detail":"event=PREEMPTED state=Following"}
+{"ts":12545,"type":"BEHAVIOUR","trial":"capture","cond":"VIRTUAL_ONLY","plat":"Windows","attempt":1,"frame":704,"action":"RETREAT","exec":"Retreating","rule":"S","dec":6,"detail":"event=START state=Retreating"}
+{"ts":14512,"type":"OBJECTIVE","trial":"capture","cond":"VIRTUAL_ONLY","plat":"Windows","attempt":1,"frame":822,"detail":"event=POWER_RESTORED stage=ReachExit t=13.3"}
+{"ts":14512,"type":"FLOW","trial":"capture","cond":"VIRTUAL_ONLY","plat":"Windows","attempt":1,"frame":822,"detail":"event=CHECKPOINT_SAVE stage=ReachExit"}
+{"ts":14994,"type":"PERF","trial":"capture","cond":"VIRTUAL_ONLY","plat":"Windows","attempt":1,"frame":851,"detail":"fps_mean=60.0 fps_min=33.2 mono_mb=5.1"}
+{"ts":15544,"type":"DECISION","trial":"capture","cond":"VIRTUAL_ONLY","plat":"Windows","attempt":1,"frame":884,"action":"WARN","rule":"W","reason":"WARN[W]: mandatory scripted warning beat (inner candidate WARN)","dec":7,"detail":"prev=RETREAT"}
+{"ts":15544,"type":"BEHAVIOUR","trial":"capture","cond":"VIRTUAL_ONLY","plat":"Windows","attempt":1,"frame":884,"exec":"Retreating","dec":6,"detail":"event=PREEMPTED state=Retreating"}
+{"ts":15544,"type":"BEHAVIOUR","trial":"capture","cond":"VIRTUAL_ONLY","plat":"Windows","attempt":1,"frame":884,"action":"WARN","exec":"Warning","rule":"W","dec":7,"detail":"event=START state=Warning"}
+{"ts":16543,"type":"DECISION","trial":"capture","cond":"VIRTUAL_ONLY","plat":"Windows","attempt":1,"frame":944,"action":"WARN","rule":"INNER","reason":"HYSTERESIS: retaining WARN; candidate FOLLOW suppressed until minimum dwell elapsed (elapsed=999ms, required=1500ms).","dec":8,"detail":"prev=WARN"}
+{"ts":17060,"type":"DECISION","trial":"capture","cond":"VIRTUAL_ONLY","plat":"Windows","attempt":1,"frame":975,"action":"FOLLOW","rule":"INNER","reason":"FOLLOW: no active threat or event requiring intervention","dec":9,"detail":"prev=WARN"}
+{"ts":17060,"type":"BEHAVIOUR","trial":"capture","cond":"VIRTUAL_ONLY","plat":"Windows","attempt":1,"frame":975,"exec":"Warning","dec":7,"detail":"event=PREEMPTED state=Warning"}
+{"ts":17060,"type":"BEHAVIOUR","trial":"capture","cond":"VIRTUAL_ONLY","plat":"Windows","attempt":1,"frame":975,"action":"FOLLOW","exec":"Following","rule":"INNER","dec":9,"detail":"event=START state=Following"}
+{"ts":18245,"type":"OBJECTIVE","trial":"capture","cond":"VIRTUAL_ONLY","plat":"Windows","attempt":1,"frame":1043,"detail":"event=ENCOUNTER_COMMITTED stage=ReachExit t=17.0"}
+{"ts":18245,"type":"OBJECTIVE","trial":"capture","cond":"VIRTUAL_ONLY","plat":"Windows","attempt":1,"frame":1043,"detail":"event=ENCOUNTER_COMMITTED trigger=dining"}
+{"ts":20008,"type":"PERF","trial":"capture","cond":"VIRTUAL_ONLY","plat":"Windows","attempt":1,"frame":1150,"detail":"fps_mean=59.6 fps_min=15.8 mono_mb=5.0"}
+{"ts":21763,"type":"DECISION","trial":"capture","cond":"VIRTUAL_ONLY","plat":"Windows","attempt":1,"frame":1250,"action":"WARN","rule":"E4","reason":"WARN[E4]: committed encounter, player inside the warn band","dec":10,"detail":"prev=FOLLOW"}
+{"ts":21763,"type":"BEHAVIOUR","trial":"capture","cond":"VIRTUAL_ONLY","plat":"Windows","attempt":1,"frame":1250,"exec":"Following","dec":9,"detail":"event=PREEMPTED state=Following"}
+{"ts":21763,"type":"BEHAVIOUR","trial":"capture","cond":"VIRTUAL_ONLY","plat":"Windows","attempt":1,"frame":1250,"action":"WARN","exec":"Warning","rule":"E4","dec":10,"detail":"event=START state=Warning"}
+{"ts":23274,"type":"DECISION","trial":"capture","cond":"VIRTUAL_ONLY","plat":"Windows","attempt":1,"frame":1341,"action":"ATTACK","rule":"E3","reason":"ATTACK[E3]: committed, warned 1.5s, distance 1.6m","dec":11,"detail":"prev=WARN"}
+{"ts":23274,"type":"BEHAVIOUR","trial":"capture","cond":"VIRTUAL_ONLY","plat":"Windows","attempt":1,"frame":1341,"exec":"Warning","dec":10,"detail":"event=PREEMPTED state=Warning"}
+{"ts":23274,"type":"BEHAVIOUR","trial":"capture","cond":"VIRTUAL_ONLY","plat":"Windows","attempt":1,"frame":1341,"action":"ATTACK","exec":"Attacking","rule":"E3","dec":11,"detail":"event=START state=Attacking"}
+{"ts":23274,"type":"ATTACK","trial":"capture","cond":"VIRTUAL_ONLY","plat":"Windows","attempt":1,"frame":1341,"dec":11,"detail":"event=WINDUP distance=1.54"}
+{"ts":23291,"type":"DECISION","trial":"capture","cond":"VIRTUAL_ONLY","plat":"Windows","attempt":1,"frame":1342,"action":"ATTACK","rule":"E1","reason":"ATTACK[E1]: attack in progress","dec":12,"detail":"prev=ATTACK"}
+{"ts":24790,"type":"ATTACK","trial":"capture","cond":"VIRTUAL_ONLY","plat":"Windows","attempt":1,"frame":1429,"dec":12,"detail":"event=STRIKE_MISS distance=5.70"}
+{"ts":25023,"type":"PERF","trial":"capture","cond":"VIRTUAL_ONLY","plat":"Windows","attempt":1,"frame":1443,"detail":"fps_mean=58.4 fps_min=9.5 mono_mb=5.4"}
+{"ts":26410,"type":"RUN_END","trial":"capture","cond":"VIRTUAL_ONLY","plat":"Windows","attempt":1,"frame":1525,"detail":"outcome=success duration_s=25.2 deaths=0 attempt=1 lantern_uses=0 lantern_hits=0"}
+{"ts":26412,"type":"OBJECTIVE","trial":"capture","cond":"VIRTUAL_ONLY","plat":"Windows","attempt":1,"frame":1525,"detail":"event=EXIT_USED stage=Completed t=25.2"}
+{"ts":30038,"type":"PERF","trial":"capture","cond":"VIRTUAL_ONLY","plat":"Windows","attempt":1,"frame":1741,"detail":"fps_mean=59.4 fps_min=23.8 mono_mb=4.6"}
+{"ts":35052,"type":"PERF","trial":"capture","cond":"VIRTUAL_ONLY","plat":"Windows","attempt":1,"frame":2042,"detail":"fps_mean=60.0 fps_min=30.4 mono_mb=4.9"}
+{"ts":40068,"type":"PERF","trial":"capture","cond":"VIRTUAL_ONLY","plat":"Windows","attempt":1,"frame":2341,"detail":"fps_mean=59.6 fps_min=18.1 mono_mb=4.9"}

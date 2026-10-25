@@ -1,0 +1,64 @@
+{"ts":22,"type":"PROFILE","trial":"selftest","cond":"VIRTUAL_ONLY","plat":"Windows","attempt":1,"frame":0,"detail":"sensor-response(confirm=250ms,hold=1500ms,protectInZone=False,investigateDisturbance=True) proximityAttack=True"}
+{"ts":28,"type":"SOURCE_STATUS","trial":"selftest","cond":"VIRTUAL_ONLY","plat":"Windows","attempt":1,"frame":0,"detail":"from=NONE to=UNAVAILABLE condition=VIRTUAL_ONLY transport=UDP udp=47800"}
+{"ts":4988,"type":"FLOW","trial":"selftest","cond":"VIRTUAL_ONLY","plat":"Windows","attempt":0,"frame":1,"detail":"event=RUN_START run=1 attempt=1 condition=VIRTUAL_ONLY"}
+{"ts":4999,"type":"DECISION","trial":"selftest","cond":"VIRTUAL_ONLY","plat":"Windows","attempt":1,"frame":2,"action":"FOLLOW","rule":"INNER","reason":"FOLLOW: no active threat or event requiring intervention","dec":1,"detail":"prev=NONE"}
+{"ts":5059,"type":"PERF","trial":"selftest","cond":"VIRTUAL_ONLY","plat":"Windows","attempt":1,"frame":3,"detail":"fps_mean=0.5 fps_min=0.2 mono_mb=6.5"}
+{"ts":6087,"type":"FLOW","trial":"selftest","cond":"VIRTUAL_ONLY","plat":"Windows","attempt":1,"frame":61,"detail":"event=BEAT id=FIRST_SIGHTING source=trigger"}
+{"ts":6087,"type":"DECISION","trial":"selftest","cond":"VIRTUAL_ONLY","plat":"Windows","attempt":1,"frame":62,"action":"WARN","rule":"W","reason":"WARN[W]: mandatory scripted warning beat (inner candidate WARN)","dec":2,"detail":"prev=FOLLOW"}
+{"ts":6089,"type":"BEHAVIOUR","trial":"selftest","cond":"VIRTUAL_ONLY","plat":"Windows","attempt":1,"frame":62,"action":"WARN","exec":"Warning","rule":"W","dec":2,"detail":"event=START state=Warning"}
+{"ts":6298,"type":"FLOW","trial":"selftest","cond":"VIRTUAL_ONLY","plat":"Windows","attempt":1,"frame":75,"detail":"event=SIGHTING distance=5.33"}
+{"ts":6313,"type":"DECISION","trial":"selftest","cond":"VIRTUAL_ONLY","plat":"Windows","attempt":1,"frame":76,"action":"ATTACK","rule":"E5","reason":"ATTACK[E5]: first sighting of the player","dec":3,"detail":"prev=WARN"}
+{"ts":6313,"type":"BEHAVIOUR","trial":"selftest","cond":"VIRTUAL_ONLY","plat":"Windows","attempt":1,"frame":76,"exec":"Warning","dec":2,"detail":"event=PREEMPTED state=Warning"}
+{"ts":6313,"type":"BEHAVIOUR","trial":"selftest","cond":"VIRTUAL_ONLY","plat":"Windows","attempt":1,"frame":76,"action":"ATTACK","exec":"Attacking","rule":"E5","dec":3,"detail":"event=START state=Attacking"}
+{"ts":6317,"type":"ATTACK","trial":"selftest","cond":"VIRTUAL_ONLY","plat":"Windows","attempt":1,"frame":76,"dec":3,"detail":"event=WINDUP distance=5.71"}
+{"ts":6318,"type":"ATTACK","trial":"selftest","cond":"VIRTUAL_ONLY","plat":"Windows","attempt":1,"frame":76,"detail":"event=START rule=E5 source=first_sighting distance=5.27"}
+{"ts":6328,"type":"DECISION","trial":"selftest","cond":"VIRTUAL_ONLY","plat":"Windows","attempt":1,"frame":77,"action":"ATTACK","rule":"E1","reason":"ATTACK[E1]: attack in progress","dec":4,"detail":"prev=ATTACK"}
+{"ts":7664,"type":"ATTACK","trial":"selftest","cond":"VIRTUAL_ONLY","plat":"Windows","attempt":1,"frame":156,"dec":4,"detail":"event=STRIKE_HIT distance=1.49 angle=0.57"}
+{"ts":7665,"type":"ATTACK","trial":"selftest","cond":"VIRTUAL_ONLY","plat":"Windows","attempt":1,"frame":156,"detail":"event=STRIKE_FEINT distance=1.49"}
+{"ts":9827,"type":"ATTACK","trial":"selftest","cond":"VIRTUAL_ONLY","plat":"Windows","attempt":1,"frame":283,"dec":4,"detail":"event=RECOVER_END cooldown_ms=6000"}
+{"ts":9844,"type":"DECISION","trial":"selftest","cond":"VIRTUAL_ONLY","plat":"Windows","attempt":1,"frame":284,"action":"WARN","rule":"E6","reason":"WARN[E6]: player inside the ghost's threat zone (in-game proximity telegraph)","dec":5,"detail":"prev=ATTACK"}
+{"ts":9844,"type":"BEHAVIOUR","trial":"selftest","cond":"VIRTUAL_ONLY","plat":"Windows","attempt":1,"frame":284,"exec":"Attacking","dec":3,"detail":"event=PREEMPTED state=Attacking"}
+{"ts":9844,"type":"BEHAVIOUR","trial":"selftest","cond":"VIRTUAL_ONLY","plat":"Windows","attempt":1,"frame":284,"action":"WARN","exec":"Warning","rule":"E6","dec":5,"detail":"event=START state=Warning"}
+{"ts":9994,"type":"DECISION","trial":"selftest","cond":"VIRTUAL_ONLY","plat":"Windows","attempt":1,"frame":293,"action":"WARN","rule":"DWELL","reason":"HYSTERESIS[outer]: retaining WARN; candidate FOLLOW suppressed until minimum dwell elapsed","dec":6,"detail":"prev=WARN"}
+{"ts":10061,"type":"PERF","trial":"selftest","cond":"VIRTUAL_ONLY","plat":"Windows","attempt":1,"frame":297,"detail":"fps_mean=58.8 fps_min=13.7 mono_mb=5.2"}
+{"ts":11347,"type":"DECISION","trial":"selftest","cond":"VIRTUAL_ONLY","plat":"Windows","attempt":1,"frame":374,"action":"FOLLOW","rule":"INNER","reason":"FOLLOW: no active threat or event requiring intervention","dec":7,"detail":"prev=WARN"}
+{"ts":11347,"type":"BEHAVIOUR","trial":"selftest","cond":"VIRTUAL_ONLY","plat":"Windows","attempt":1,"frame":374,"exec":"Warning","dec":5,"detail":"event=PREEMPTED state=Warning"}
+{"ts":11347,"type":"BEHAVIOUR","trial":"selftest","cond":"VIRTUAL_ONLY","plat":"Windows","attempt":1,"frame":374,"action":"FOLLOW","exec":"Following","rule":"INNER","dec":7,"detail":"event=START state=Following"}
+{"ts":15061,"type":"PERF","trial":"selftest","cond":"VIRTUAL_ONLY","plat":"Windows","attempt":1,"frame":596,"detail":"fps_mean=59.8 fps_min=43.9 mono_mb=5.5"}
+{"ts":17825,"type":"DECISION","trial":"selftest","cond":"VIRTUAL_ONLY","plat":"Windows","attempt":1,"frame":761,"action":"WARN","rule":"E6","reason":"WARN[E6]: player inside the ghost's threat zone (in-game proximity telegraph)","dec":8,"detail":"prev=FOLLOW"}
+{"ts":17825,"type":"BEHAVIOUR","trial":"selftest","cond":"VIRTUAL_ONLY","plat":"Windows","attempt":1,"frame":761,"exec":"Following","dec":7,"detail":"event=PREEMPTED state=Following"}
+{"ts":17825,"type":"BEHAVIOUR","trial":"selftest","cond":"VIRTUAL_ONLY","plat":"Windows","attempt":1,"frame":761,"action":"WARN","exec":"Warning","rule":"E6","dec":8,"detail":"event=START state=Warning"}
+{"ts":18060,"type":"FLOW","trial":"selftest","cond":"VIRTUAL_ONLY","plat":"Windows","attempt":1,"frame":775,"detail":"event=PAUSE"}
+{"ts":20061,"type":"FLOW","trial":"selftest","cond":"VIRTUAL_ONLY","plat":"Windows","attempt":1,"frame":895,"detail":"event=RESUME"}
+{"ts":20077,"type":"PERF","trial":"selftest","cond":"VIRTUAL_ONLY","plat":"Windows","attempt":1,"frame":896,"detail":"fps_mean=59.8 fps_min=39.6 mono_mb=5.4"}
+{"ts":23131,"type":"DECISION","trial":"selftest","cond":"VIRTUAL_ONLY","plat":"Windows","attempt":1,"frame":1079,"action":"ATTACK","rule":"E6","reason":"ATTACK[E6]: player too close to the ghost, warned 3.3s, distance 2.0m (in-game proximity)","dec":9,"detail":"prev=WARN"}
+{"ts":23131,"type":"BEHAVIOUR","trial":"selftest","cond":"VIRTUAL_ONLY","plat":"Windows","attempt":1,"frame":1079,"exec":"Warning","dec":8,"detail":"event=PREEMPTED state=Warning"}
+{"ts":23131,"type":"BEHAVIOUR","trial":"selftest","cond":"VIRTUAL_ONLY","plat":"Windows","attempt":1,"frame":1079,"action":"ATTACK","exec":"Attacking","rule":"E6","dec":9,"detail":"event=START state=Attacking"}
+{"ts":23131,"type":"ATTACK","trial":"selftest","cond":"VIRTUAL_ONLY","plat":"Windows","attempt":1,"frame":1079,"dec":9,"detail":"event=WINDUP distance=1.96"}
+{"ts":23131,"type":"ATTACK","trial":"selftest","cond":"VIRTUAL_ONLY","plat":"Windows","attempt":1,"frame":1079,"detail":"event=START rule=E6 source=proximity distance=1.96"}
+{"ts":23148,"type":"DECISION","trial":"selftest","cond":"VIRTUAL_ONLY","plat":"Windows","attempt":1,"frame":1080,"action":"ATTACK","rule":"E1","reason":"ATTACK[E1]: attack in progress","dec":10,"detail":"prev=ATTACK"}
+{"ts":23190,"type":"BEHAVIOUR","trial":"selftest","cond":"VIRTUAL_ONLY","plat":"Windows","attempt":1,"frame":1081,"exec":"Attacking","dec":9,"detail":"event=INTERRUPT from_phase=WINDUP"}
+{"ts":23190,"type":"DEFENSE","trial":"selftest","cond":"VIRTUAL_ONLY","plat":"Windows","attempt":1,"frame":1081,"detail":"hit=True reason=INTERRUPTED distance=1.79 angle=0.3 cooldown=10 ghost_phase=INTERRUPTED"}
+{"ts":23191,"type":"DECISION","trial":"selftest","cond":"VIRTUAL_ONLY","plat":"Windows","attempt":1,"frame":1082,"action":"RETREAT","rule":"E0","reason":"RETREAT[E0]: ghost interrupted by defensive pulse","dec":11,"detail":"prev=ATTACK"}
+{"ts":25080,"type":"PERF","trial":"selftest","cond":"VIRTUAL_ONLY","plat":"Windows","attempt":1,"frame":1195,"detail":"fps_mean=59.8 fps_min=37.3 mono_mb=5.7"}
+{"ts":28670,"type":"BEHAVIOUR","trial":"selftest","cond":"VIRTUAL_ONLY","plat":"Windows","attempt":1,"frame":1410,"dec":9,"detail":"event=RECOVER cooldown_ms=6000"}
+{"ts":28687,"type":"DECISION","trial":"selftest","cond":"VIRTUAL_ONLY","plat":"Windows","attempt":1,"frame":1411,"action":"FOLLOW","rule":"INNER","reason":"FOLLOW: no active threat or event requiring intervention","dec":12,"detail":"prev=RETREAT"}
+{"ts":28687,"type":"BEHAVIOUR","trial":"selftest","cond":"VIRTUAL_ONLY","plat":"Windows","attempt":1,"frame":1411,"action":"FOLLOW","exec":"Following","rule":"INNER","dec":12,"detail":"event=START state=Following"}
+{"ts":30091,"type":"PERF","trial":"selftest","cond":"VIRTUAL_ONLY","plat":"Windows","attempt":1,"frame":1495,"detail":"fps_mean=59.9 fps_min=57.8 mono_mb=5.8"}
+{"ts":35100,"type":"PERF","trial":"selftest","cond":"VIRTUAL_ONLY","plat":"Windows","attempt":1,"frame":1794,"detail":"fps_mean=59.7 fps_min=30.6 mono_mb=5.1"}
+{"ts":38190,"type":"DECISION","trial":"selftest","cond":"VIRTUAL_ONLY","plat":"Windows","attempt":1,"frame":1979,"action":"WARN","rule":"E6","reason":"WARN[E6]: player inside the ghost's threat zone (in-game proximity telegraph)","dec":13,"detail":"prev=FOLLOW"}
+{"ts":38190,"type":"BEHAVIOUR","trial":"selftest","cond":"VIRTUAL_ONLY","plat":"Windows","attempt":1,"frame":1979,"exec":"Following","dec":12,"detail":"event=PREEMPTED state=Following"}
+{"ts":38190,"type":"BEHAVIOUR","trial":"selftest","cond":"VIRTUAL_ONLY","plat":"Windows","attempt":1,"frame":1979,"action":"WARN","exec":"Warning","rule":"E6","dec":13,"detail":"event=START state=Warning"}
+{"ts":39693,"type":"DECISION","trial":"selftest","cond":"VIRTUAL_ONLY","plat":"Windows","attempt":1,"frame":2069,"action":"ATTACK","rule":"E6","reason":"ATTACK[E6]: player too close to the ghost, warned 1.5s, distance 1.5m (in-game proximity)","dec":14,"detail":"prev=WARN"}
+{"ts":39693,"type":"BEHAVIOUR","trial":"selftest","cond":"VIRTUAL_ONLY","plat":"Windows","attempt":1,"frame":2069,"exec":"Warning","dec":13,"detail":"event=PREEMPTED state=Warning"}
+{"ts":39693,"type":"BEHAVIOUR","trial":"selftest","cond":"VIRTUAL_ONLY","plat":"Windows","attempt":1,"frame":2069,"action":"ATTACK","exec":"Attacking","rule":"E6","dec":14,"detail":"event=START state=Attacking"}
+{"ts":39693,"type":"ATTACK","trial":"selftest","cond":"VIRTUAL_ONLY","plat":"Windows","attempt":1,"frame":2069,"dec":14,"detail":"event=WINDUP distance=1.55"}
+{"ts":39693,"type":"ATTACK","trial":"selftest","cond":"VIRTUAL_ONLY","plat":"Windows","attempt":1,"frame":2069,"detail":"event=START rule=E6 source=proximity distance=1.55"}
+{"ts":39710,"type":"DECISION","trial":"selftest","cond":"VIRTUAL_ONLY","plat":"Windows","attempt":1,"frame":2070,"action":"ATTACK","rule":"E1","reason":"ATTACK[E1]: attack in progress","dec":15,"detail":"prev=ATTACK"}
+{"ts":40111,"type":"PERF","trial":"selftest","cond":"VIRTUAL_ONLY","plat":"Windows","attempt":1,"frame":2094,"detail":"fps_mean=59.9 fps_min=57.9 mono_mb=5.1"}
+{"ts":40923,"type":"ATTACK","trial":"selftest","cond":"VIRTUAL_ONLY","plat":"Windows","attempt":1,"frame":2141,"dec":15,"detail":"event=STRIKE_HIT distance=0.72 angle=0.00"}
+{"ts":40927,"type":"FLOW","trial":"selftest","cond":"VIRTUAL_ONLY","plat":"Windows","attempt":1,"frame":2141,"detail":"event=DEATH attempt=1 deaths=1 t=33.9 attack_rule=E6"}
+{"ts":40929,"type":"FLOW","trial":"selftest","cond":"VIRTUAL_ONLY","plat":"Windows","attempt":1,"frame":2141,"detail":"event=RUN_RESTART stage=FindFuse state=Dead"}
+{"ts":40929,"type":"RUN_END","trial":"selftest","cond":"VIRTUAL_ONLY","plat":"Windows","attempt":1,"frame":2141,"detail":"outcome=restart duration_s=33.9 deaths=1 attempt=1 lantern_uses=1 lantern_hits=1"}
+{"ts":41003,"type":"FLOW","trial":"selftest","cond":"VIRTUAL_ONLY","plat":"Windows","attempt":1,"frame":2141,"detail":"event=RUN_START run=2 attempt=1 condition=VIRTUAL_ONLY"}
+{"ts":41004,"type":"DECISION","trial":"selftest","cond":"VIRTUAL_ONLY","plat":"Windows","attempt":1,"frame":2142,"action":"FOLLOW","rule":"INNER","reason":"FOLLOW: no active threat or event requiring intervention","dec":1,"detail":"prev=NONE"}

@@ -1,0 +1,540 @@
+[Licensing::Module] Trying to connect to existing licensing client channel...
+Built from '6000.5/staging' branch; Version is '6000.5.8f1 (5cb7df797b7d) revision 6076383'; Using compiler version '194234433'; Build Type 'Release'
+[Licensing::IpcConnector] Channel LicenseClient-<user> doesn't exist
+OS: 'Windows 11  (10.0.26220) CoreSingleLanguage' Language: 'en' Physical Memory: 16091 MB
+BatchMode: 1, IsHumanControllingUs: 0, StartBugReporterOnCrash: 0, Is64bit: 1
+System  architecture: x64
+Process architecture: x64
+Date: 2026-10-22T10:47:55Z
+[Licensing::Module] Successfully launched the LicensingClient (PId: 3504)
+
+COMMAND LINE ARGUMENTS:
+C:\Program Files\Unity\Hub\Editor\6000.5.8f1\Editor\Unity.exe
+-batchmode
+-quit
+-projectPath
+C:\Learning\College\CPS\Sem-5\IAVR & ESDP Project\PHYS-XR\PHYS-XR
+-executeMethod
+PHYSXR.EditorTools.AudioCueReport.Run
+-audioOut
+C:\Users\<user>\AppData\Local\Temp\claude\C--Learning-College-CPS-Sem-5-IAVR---ESDP-Project-PHYS-XR-PHYS-XR\f67ac757-0da2-41fb-9801-f5e9fce54a73\scratchpad\audio2
+-logFile
+C:\Users\<user>\AppData\Local\Temp\claude\C--Learning-College-CPS-Sem-5-IAVR---ESDP-Project-PHYS-XR-PHYS-XR\f67ac757-0da2-41fb-9801-f5e9fce54a73\scratchpad\final2\audio.log
+Successfully changed project path to: C:\Learning\College\CPS\Sem-5\IAVR & ESDP Project\PHYS-XR\PHYS-XR
+C:/Learning/College/CPS/Sem-5/IAVR & ESDP Project/PHYS-XR/PHYS-XR
+[UnityMemory] Configuration Parameters - Can be set up in boot.config
+    "memorysetup-temp-allocator-size-gi-baking-worker=262144"
+    "memorysetup-temp-allocator-size-gi-baking-worker=262144"
+    "memorysetup-temp-allocator-size-gi-baking-worker=262144"
+    "memorysetup-temp-allocator-size-gi-baking-worker=262144"
+    "memorysetup-temp-allocator-size-gi-baking-worker=262144"
+    "memorysetup-temp-allocator-size-nav-mesh-worker=65536"
+    "memorysetup-temp-allocator-size-audio-worker=65536"
+    "memorysetup-temp-allocator-size-cloud-worker=32768"
+    "memorysetup-temp-allocator-size-gfx=262144"
+    "memorysetup-temp-allocator-size-preload-manager=33554432"
+    "memorysetup-allocator-temp-initial-block-size-main=262144"
+    "memorysetup-allocator-temp-initial-block-size-worker=262144"
+    "memorysetup-temp-allocator-size-job-worker=262144"
+    "memorysetup-temp-allocator-size-background-worker=32768"
+    "memorysetup-bucket-allocator-granularity=16"
+    "memorysetup-bucket-allocator-bucket-count=8"
+    "memorysetup-bucket-allocator-block-size=33554432"
+    "memorysetup-bucket-allocator-block-count=8"
+    "memorysetup-main-allocator-block-size=16777216"
+    "memorysetup-thread-allocator-block-size=16777216"
+    "memorysetup-main-allocator-mimalloc-enabled=0"
+    "memorysetup-gfx-main-allocator-block-size=16777216"
+    "memorysetup-gfx-thread-allocator-block-size=16777216"
+    "memorysetup-cache-allocator-block-size=4194304"
+    "memorysetup-typetree-allocator-block-size=2097152"
+    "memorysetup-profiler-bucket-allocator-granularity=16"
+    "memorysetup-profiler-bucket-allocator-bucket-count=8"
+    "memorysetup-profiler-bucket-allocator-block-size=33554432"
+    "memorysetup-profiler-bucket-allocator-block-count=8"
+    "memorysetup-profiler-allocator-block-size=16777216"
+    "memorysetup-profiler-editor-allocator-block-size=1048576"
+    "memorysetup-temp-allocator-size-main=16777216"
+    "memorysetup-job-temp-allocator-block-size=2097152"
+    "memorysetup-job-temp-allocator-block-size-background=1048576"
+    "memorysetup-job-temp-allocator-reduction-small-platforms=262144"
+Logging is directed to a specific file, skipping project log.Starting IPC server.
+Player connection [20004]  Target information:
+
+Player connection [20004]  * "[IP] 10.55.3.248 [Port] 55504 [Flags] 2 [Guid] 3454237543 [EditorId] 3454237543 [Version] 1048832 [Id] WindowsEditor(7,ArnavxJ) [Debug] 1 [PackageName] WindowsEditor [ProjectName] Editor" 
+
+Player connection [20004] Host joined multi-casting on [225.0.0.222:54997]...
+Player connection [20004] Host joined alternative multi-casting on [225.0.0.222:34997]...
+Waiting for clients to connect on \\.\pipe\Unity-LicenseClient-<user>, press Ctrl-C to exit.
+Input System module state changed to: Initialized.
+[Physics::Module] Initialized fallback backend.
+[Physics::Module] Id: 0xdecafbad
+[Licensing::IpcConnector] Successfully connected to: "LicenseClient-<user>" at "2026-10-22T10:47:55.4495182Z"
+[Licensing::Client] Code 10 while verifying Licensing Client signature (process Id: 3504, path: "C:/Program Files/Unity/Hub/Editor/6000.5.8f1/Editor/Data/Resources/Licensing/Client/Unity.Licensing.Client.exe")
+[Licensing::Module] LicensingClient has failed validation; ignoring
+[Package Manager] Connected to IPC stream "Upm-22560" after 0.3 seconds.
+[Licensing::Module] Licensing is not yet initialized.
+[Licensing::Client] Handshaking with LicensingClient:
+  Version:                 1.18.1+9fbee8e
+  Session Id:              c4b998e795344887a94922714df60a60
+  Correlation Id:          4a3423a3f17cc5036eb93b93474dd9a4
+  External correlation Id: 9151912957411344175
+  Machine Id:              r/FIqJy7KJb5dAVnSxjo8pXAhBw=
+[Licensing::Module] Successfully connected to LicensingClient on channel: "LicenseClient-<user>" (connect: 0.37s, validation: 0.28s, handshake: 0.08s)
+[Licensing::IpcConnector] Successfully connected to: "LicenseClient-<user>-notifications" at "2026-10-22T10:47:55.8073366Z"
+[Licensing::Module] Connected to LicensingClient (PId: 3504, launch time: 0.01, total connection time: 0.73s)
+[Licensing::Module] Error: Access token is unavailable; failed to update
+[Licensing::Client] Successfully resolved entitlement details
+[Licensing::Module] License group:
+  Id: 13469952279369-UnityPersXXXX
+  Product: Unity Personal
+  Type: Assigned
+  Expiration: Unlimited
+[Licensing::Client] Successfully updated license, isAsync: True, time: 0.01
+[Licensing::Client] Successfully resolved entitlement details
+[Licensing::Module] Licensing Background thread has ended after 0.79s
+[Licensing::Module] Licensing is initialized (took 0.13s).
+[Licensing::Client] Successfully resolved entitlement details
+Library Redirect Path: Library/
+[Physics::Module] Selected backend.
+[Physics::Module] Name: PhysX
+[Physics::Module] Id: 0xf2b8ea05
+[Physics::Module] SDK Version: 4.1.2
+[Physics::Module] Integration Version: 1.0.0
+[Physics::Module] Threading Mode: Multi-Threaded
+Artifact Garbage Collection - Removed 1 unused hashed content files
+Refreshing native plugins compatible for Editor in 3.22 ms, found 0 plugins.
+Initialize engine version: 6000.5.8f1 (5cb7df797b7d)
+[Subsystems] Discovering subsystems at path C:/Program Files/Unity/Hub/Editor/6000.5.8f1/Editor/Data/Resources/UnitySubsystems
+[Subsystems] Discovering subsystems at path C:/Learning/College/CPS/Sem-5/IAVR & ESDP Project/PHYS-XR/PHYS-XR/Assets
+GfxDevice: creating device client; kGfxThreadingModeNonThreaded
+d3d12: failed to query info queue interface (0x80004002).
+Direct3D:
+    Version:         Direct3D 12 [level 12.2]
+    Renderer:        NVIDIA GeForce RTX 4060 Laptop GPU (ID=0x28e0)
+    Vendor:          NVIDIA
+    VRAM:            7957 MB
+    App VRAM Budget: 7189 MB
+    Driver:          32.0.15.8129
+Initialize mono
+Mono path[0] = 'C:/Program Files/Unity/Hub/Editor/6000.5.8f1/Editor/Data/Managed'
+Mono path[1] = 'C:/Program Files/Unity/Hub/Editor/6000.5.8f1/Editor/Data/BCLExtensions/runtime/netstandard2.1'
+Mono path[2] = 'C:/Program Files/Unity/Hub/Editor/6000.5.8f1/Editor/Data/MonoBleedingEdge/lib/mono/unityjit-win32'
+Mono config path = 'C:/Program Files/Unity/Hub/Editor/6000.5.8f1/Editor/Data/MonoBleedingEdge/etc'
+Using monoOptions --debugger-agent=transport=dt_socket,embedding=1,server=y,suspend=n,address=127.0.0.1:56560
+CodeReloadManager initialized
+ImportWorker Server TCP listen port: 0
+AcceleratorClientConnectionCallback - disconnected - :0
+Begin MonoManager ReloadAssembly
+Registering precompiled unity dll's ...
+Register platform support module: C:/Program Files/Unity/Hub/Editor/6000.5.8f1/Editor/Data/PlaybackEngines/WebGLSupport/UnityEditor.WebGL.Extensions.dll
+Register platform support module: C:/Program Files/Unity/Hub/Editor/6000.5.8f1/Editor/Data/PlaybackEngines/WindowsStandaloneSupport/UnityEditor.WindowsStandalone.Extensions.dll
+Registered in 0.003960 seconds.
+Native extension for WindowsStandalone target not found
+Native extension for WebGL target not found
+Package Manager log level set to [2]
+ScheduleIndexationOnStartup MainProcess:False IndexOnStartup:True
+Mono: successfully reloaded assembly
+- Finished resetting the current domain, in  0.875 seconds
+Domain Reload Profiling: 1535ms
+	BeginReloadAssembly (173ms)
+		CreateAndSetChildDomain (11ms)
+	RebuildCommonClasses (6ms)
+	RebuildNativeTypeToScriptingClass (20ms)
+	initialDomainReloadingComplete (92ms)
+	LoadAllAssembliesAndSetupDomain (367ms)
+		LoadAssemblies (156ms)
+		AnalyzeDomain (260ms)
+			TypeCache.Refresh (258ms)
+				TypeCache.ScanAssembly (242ms)
+	FinalizeReload (877ms)
+		SetupLoadedEditorAssemblies (0ms)
+			InitializePlatformSupportModulesInManaged (3ms)
+			BeforeProcessingInitializeOnLoad (108ms)
+			ProcessInitializeOnLoadAttributes (117ms)
+			ProcessInitializeOnLoadMethodAttributes (568ms)
+[Licensing::Client] Successfully resolved entitlement details
+Application.AssetDatabase Initial Refresh Start
+[Package Manager] Restoring resolved packages state from cache
+[Licensing::Client] Successfully resolved entitlement details
+[Package Manager] Registered 68 packages:
+  Packages from [https://packages.unity.com]:
+    com.unity.ai.assistant@2.19.0-pre.2 (location: C:\Learning\College\CPS\Sem-5\IAVR & ESDP Project\PHYS-XR\PHYS-XR\Library\PackageCache\com.unity.ai.assistant@8d1e3e89e3a7)
+    com.unity.ai.inference@2.6.1 (location: C:\Learning\College\CPS\Sem-5\IAVR & ESDP Project\PHYS-XR\PHYS-XR\Library\PackageCache\com.unity.ai.inference@9a123aee5df7)
+    com.unity.ai.navigation@2.0.14 (location: C:\Learning\College\CPS\Sem-5\IAVR & ESDP Project\PHYS-XR\PHYS-XR\Library\PackageCache\com.unity.ai.navigation@134dd6a3b97b)
+    com.unity.collab-proxy@2.13.5 (location: C:\Learning\College\CPS\Sem-5\IAVR & ESDP Project\PHYS-XR\PHYS-XR\Library\PackageCache\com.unity.collab-proxy@120d77864ebc)
+    com.unity.ide.rider@3.0.38 (location: C:\Learning\College\CPS\Sem-5\IAVR & ESDP Project\PHYS-XR\PHYS-XR\Library\PackageCache\com.unity.ide.rider@1f60b3138684)
+    com.unity.ide.visualstudio@2.0.26 (location: C:\Learning\College\CPS\Sem-5\IAVR & ESDP Project\PHYS-XR\PHYS-XR\Library\PackageCache\com.unity.ide.visualstudio@a99d56dec63f)
+    com.unity.inputsystem@1.20.0 (location: C:\Learning\College\CPS\Sem-5\IAVR & ESDP Project\PHYS-XR\PHYS-XR\Library\PackageCache\com.unity.inputsystem@7a4e1a2a8194)
+    com.unity.pipeline@0.7.0-exp.1 (location: C:\Learning\College\CPS\Sem-5\IAVR & ESDP Project\PHYS-XR\PHYS-XR\Library\PackageCache\com.unity.pipeline@ab05e9cd7f74)
+    com.unity.timeline@1.8.12 (location: C:\Learning\College\CPS\Sem-5\IAVR & ESDP Project\PHYS-XR\PHYS-XR\Library\PackageCache\com.unity.timeline@8cd8509afae5)
+    com.unity.visualscripting@1.9.12 (location: C:\Learning\College\CPS\Sem-5\IAVR & ESDP Project\PHYS-XR\PHYS-XR\Library\PackageCache\com.unity.visualscripting@4edfcc09512f)
+    com.unity.xr.management@4.7.0 (location: C:\Learning\College\CPS\Sem-5\IAVR & ESDP Project\PHYS-XR\PHYS-XR\Library\PackageCache\com.unity.xr.management@2ad85c7dd480)
+    com.unity.xr.openxr@1.18.0 (location: C:\Learning\College\CPS\Sem-5\IAVR & ESDP Project\PHYS-XR\PHYS-XR\Library\PackageCache\com.unity.xr.openxr@b5b77b4027be)
+    com.unity.xr.core-utils@2.6.0 (location: C:\Learning\College\CPS\Sem-5\IAVR & ESDP Project\PHYS-XR\PHYS-XR\Library\PackageCache\com.unity.xr.core-utils@a8b900321199)
+    com.unity.xr.legacyinputhelpers@3.0.1 (location: C:\Learning\College\CPS\Sem-5\IAVR & ESDP Project\PHYS-XR\PHYS-XR\Library\PackageCache\com.unity.xr.legacyinputhelpers@3f62d634f63b)
+    com.unity.nuget.mono-cecil@1.11.6 (location: C:\Learning\College\CPS\Sem-5\IAVR & ESDP Project\PHYS-XR\PHYS-XR\Library\PackageCache\com.unity.nuget.mono-cecil@ecb9724e46ff)
+    com.unity.nuget.newtonsoft-json@3.2.2 (location: C:\Learning\College\CPS\Sem-5\IAVR & ESDP Project\PHYS-XR\PHYS-XR\Library\PackageCache\com.unity.nuget.newtonsoft-json@4dfd81071c64)
+    com.unity.burst@1.8.30 (location: C:\Learning\College\CPS\Sem-5\IAVR & ESDP Project\PHYS-XR\PHYS-XR\Library\PackageCache\com.unity.burst@2f3d916873ea)
+    com.unity.dt.app-ui@2.1.7 (location: C:\Learning\College\CPS\Sem-5\IAVR & ESDP Project\PHYS-XR\PHYS-XR\Library\PackageCache\com.unity.dt.app-ui@b097002a00c2)
+    com.unity.searcher@4.9.5 (location: C:\Learning\College\CPS\Sem-5\IAVR & ESDP Project\PHYS-XR\PHYS-XR\Library\PackageCache\com.unity.searcher@a463122f2c00)
+    com.unity.test-framework.performance@3.5.0 (location: C:\Learning\College\CPS\Sem-5\IAVR & ESDP Project\PHYS-XR\PHYS-XR\Library\PackageCache\com.unity.test-framework.performance@8b56083ec0f0)
+  Built-in packages:
+    com.unity.multiplayer.center@1.0.1 (location: C:\Learning\College\CPS\Sem-5\IAVR & ESDP Project\PHYS-XR\PHYS-XR\Library\PackageCache\com.unity.multiplayer.center@b860850997d0)
+    com.unity.render-pipelines.universal@17.5.0 (location: C:\Learning\College\CPS\Sem-5\IAVR & ESDP Project\PHYS-XR\PHYS-XR\Library\PackageCache\com.unity.render-pipelines.universal@73b4c4ff130e)
+    com.unity.test-framework@1.7.0 (location: C:\Learning\College\CPS\Sem-5\IAVR & ESDP Project\PHYS-XR\PHYS-XR\Library\PackageCache\com.unity.test-framework@1405238725ab)
+    com.unity.ugui@2.5.0 (location: C:\Learning\College\CPS\Sem-5\IAVR & ESDP Project\PHYS-XR\PHYS-XR\Library\PackageCache\com.unity.ugui@1c4864518158)
+    com.unity.modules.accessibility@1.0.0 (location: C:\Learning\College\CPS\Sem-5\IAVR & ESDP Project\PHYS-XR\PHYS-XR\Library\PackageCache\com.unity.modules.accessibility)
+    com.unity.modules.adaptiveperformance@1.0.0 (location: C:\Learning\College\CPS\Sem-5\IAVR & ESDP Project\PHYS-XR\PHYS-XR\Library\PackageCache\com.unity.modules.adaptiveperformance)
+    com.unity.modules.ai@1.0.0 (location: C:\Learning\College\CPS\Sem-5\IAVR & ESDP Project\PHYS-XR\PHYS-XR\Library\PackageCache\com.unity.modules.ai)
+    com.unity.modules.androidjni@1.0.0 (location: C:\Learning\College\CPS\Sem-5\IAVR & ESDP Project\PHYS-XR\PHYS-XR\Library\PackageCache\com.unity.modules.androidjni)
+    com.unity.modules.animation@1.0.0 (location: C:\Learning\College\CPS\Sem-5\IAVR & ESDP Project\PHYS-XR\PHYS-XR\Library\PackageCache\com.unity.modules.animation)
+    com.unity.modules.assetbundle@1.0.0 (location: C:\Learning\College\CPS\Sem-5\IAVR & ESDP Project\PHYS-XR\PHYS-XR\Library\PackageCache\com.unity.modules.assetbundle)
+    com.unity.modules.audio@1.0.0 (location: C:\Learning\College\CPS\Sem-5\IAVR & ESDP Project\PHYS-XR\PHYS-XR\Library\PackageCache\com.unity.modules.audio)
+    com.unity.modules.cloth@1.0.0 (location: C:\Learning\College\CPS\Sem-5\IAVR & ESDP Project\PHYS-XR\PHYS-XR\Library\PackageCache\com.unity.modules.cloth)
+    com.unity.modules.director@1.0.0 (location: C:\Learning\College\CPS\Sem-5\IAVR & ESDP Project\PHYS-XR\PHYS-XR\Library\PackageCache\com.unity.modules.director)
+    com.unity.modules.imageconversion@1.0.0 (location: C:\Learning\College\CPS\Sem-5\IAVR & ESDP Project\PHYS-XR\PHYS-XR\Library\PackageCache\com.unity.modules.imageconversion)
+    com.unity.modules.imgui@1.0.0 (location: C:\Learning\College\CPS\Sem-5\IAVR & ESDP Project\PHYS-XR\PHYS-XR\Library\PackageCache\com.unity.modules.imgui)
+    com.unity.modules.jsonserialize@1.0.0 (location: C:\Learning\College\CPS\Sem-5\IAVR & ESDP Project\PHYS-XR\PHYS-XR\Library\PackageCache\com.unity.modules.jsonserialize)
+    com.unity.modules.particlesystem@1.0.0 (location: C:\Learning\College\CPS\Sem-5\IAVR & ESDP Project\PHYS-XR\PHYS-XR\Library\PackageCache\com.unity.modules.particlesystem)
+    com.unity.modules.physics@1.0.0 (location: C:\Learning\College\CPS\Sem-5\IAVR & ESDP Project\PHYS-XR\PHYS-XR\Library\PackageCache\com.unity.modules.physics)
+    com.unity.modules.physics2d@1.0.0 (location: C:\Learning\College\CPS\Sem-5\IAVR & ESDP Project\PHYS-XR\PHYS-XR\Library\PackageCache\com.unity.modules.physics2d)
+    com.unity.modules.physicscore2d@1.0.0 (location: C:\Learning\College\CPS\Sem-5\IAVR & ESDP Project\PHYS-XR\PHYS-XR\Library\PackageCache\com.unity.modules.physicscore2d)
+    com.unity.modules.screencapture@1.0.0 (location: C:\Learning\College\CPS\Sem-5\IAVR & ESDP Project\PHYS-XR\PHYS-XR\Library\PackageCache\com.unity.modules.screencapture)
+    com.unity.modules.terrain@1.0.0 (location: C:\Learning\College\CPS\Sem-5\IAVR & ESDP Project\PHYS-XR\PHYS-XR\Library\PackageCache\com.unity.modules.terrain)
+    com.unity.modules.terrainphysics@1.0.0 (location: C:\Learning\College\CPS\Sem-5\IAVR & ESDP Project\PHYS-XR\PHYS-XR\Library\PackageCache\com.unity.modules.terrainphysics)
+    com.unity.modules.tilemap@1.0.0 (location: C:\Learning\College\CPS\Sem-5\IAVR & ESDP Project\PHYS-XR\PHYS-XR\Library\PackageCache\com.unity.modules.tilemap)
+    com.unity.modules.ui@1.0.0 (location: C:\Learning\College\CPS\Sem-5\IAVR & ESDP Project\PHYS-XR\PHYS-XR\Library\PackageCache\com.unity.modules.ui)
+    com.unity.modules.uielements@1.0.0 (location: C:\Learning\College\CPS\Sem-5\IAVR & ESDP Project\PHYS-XR\PHYS-XR\Library\PackageCache\com.unity.modules.uielements)
+    com.unity.modules.umbra@1.0.0 (location: C:\Learning\College\CPS\Sem-5\IAVR & ESDP Project\PHYS-XR\PHYS-XR\Library\PackageCache\com.unity.modules.umbra)
+    com.unity.modules.unityanalytics@1.0.0 (location: C:\Learning\College\CPS\Sem-5\IAVR & ESDP Project\PHYS-XR\PHYS-XR\Library\PackageCache\com.unity.modules.unityanalytics)
+    com.unity.modules.unitywebrequest@1.0.0 (location: C:\Learning\College\CPS\Sem-5\IAVR & ESDP Project\PHYS-XR\PHYS-XR\Library\PackageCache\com.unity.modules.unitywebrequest)
+    com.unity.modules.unitywebrequestassetbundle@1.0.0 (location: C:\Learning\College\CPS\Sem-5\IAVR & ESDP Project\PHYS-XR\PHYS-XR\Library\PackageCache\com.unity.modules.unitywebrequestassetbundle)
+    com.unity.modules.unitywebrequestaudio@1.0.0 (location: C:\Learning\College\CPS\Sem-5\IAVR & ESDP Project\PHYS-XR\PHYS-XR\Library\PackageCache\com.unity.modules.unitywebrequestaudio)
+    com.unity.modules.unitywebrequesttexture@1.0.0 (location: C:\Learning\College\CPS\Sem-5\IAVR & ESDP Project\PHYS-XR\PHYS-XR\Library\PackageCache\com.unity.modules.unitywebrequesttexture)
+    com.unity.modules.unitywebrequestwww@1.0.0 (location: C:\Learning\College\CPS\Sem-5\IAVR & ESDP Project\PHYS-XR\PHYS-XR\Library\PackageCache\com.unity.modules.unitywebrequestwww)
+    com.unity.modules.vectorgraphics@1.0.0 (location: C:\Learning\College\CPS\Sem-5\IAVR & ESDP Project\PHYS-XR\PHYS-XR\Library\PackageCache\com.unity.modules.vectorgraphics)
+    com.unity.modules.vehicles@1.0.0 (location: C:\Learning\College\CPS\Sem-5\IAVR & ESDP Project\PHYS-XR\PHYS-XR\Library\PackageCache\com.unity.modules.vehicles)
+    com.unity.modules.video@1.0.0 (location: C:\Learning\College\CPS\Sem-5\IAVR & ESDP Project\PHYS-XR\PHYS-XR\Library\PackageCache\com.unity.modules.video)
+    com.unity.modules.wind@1.0.0 (location: C:\Learning\College\CPS\Sem-5\IAVR & ESDP Project\PHYS-XR\PHYS-XR\Library\PackageCache\com.unity.modules.wind)
+    com.unity.modules.xr@1.0.0 (location: C:\Learning\College\CPS\Sem-5\IAVR & ESDP Project\PHYS-XR\PHYS-XR\Library\PackageCache\com.unity.modules.xr)
+    com.unity.modules.subsystems@1.0.0 (location: C:\Learning\College\CPS\Sem-5\IAVR & ESDP Project\PHYS-XR\PHYS-XR\Library\PackageCache\com.unity.modules.subsystems)
+    com.unity.modules.hierarchycore@1.0.0 (location: C:\Learning\College\CPS\Sem-5\IAVR & ESDP Project\PHYS-XR\PHYS-XR\Library\PackageCache\com.unity.modules.hierarchycore)
+    com.unity.ext.nunit@2.1.0 (location: C:\Learning\College\CPS\Sem-5\IAVR & ESDP Project\PHYS-XR\PHYS-XR\Library\PackageCache\com.unity.ext.nunit@44f7d31723bd)
+    com.unity.render-pipelines.core@17.5.0 (location: C:\Learning\College\CPS\Sem-5\IAVR & ESDP Project\PHYS-XR\PHYS-XR\Library\PackageCache\com.unity.render-pipelines.core@a4c9a9793789)
+    com.unity.shadergraph@17.5.0 (location: C:\Learning\College\CPS\Sem-5\IAVR & ESDP Project\PHYS-XR\PHYS-XR\Library\PackageCache\com.unity.shadergraph@8d7376ec43ee)
+    com.unity.render-pipelines.universal-config@17.5.0 (location: C:\Learning\College\CPS\Sem-5\IAVR & ESDP Project\PHYS-XR\PHYS-XR\Library\PackageCache\com.unity.render-pipelines.universal-config@fdda01c80fe3)
+    com.unity.collections@6.5.0 (location: C:\Learning\College\CPS\Sem-5\IAVR & ESDP Project\PHYS-XR\PHYS-XR\Library\PackageCache\com.unity.collections@ec2c217e4cb2)
+    com.unity.2d.sprite@1.0.0 (location: C:\Learning\College\CPS\Sem-5\IAVR & ESDP Project\PHYS-XR\PHYS-XR\Library\PackageCache\com.unity.2d.sprite@053a968eab56)
+    com.unity.mathematics@1.4.0 (location: C:\Learning\College\CPS\Sem-5\IAVR & ESDP Project\PHYS-XR\PHYS-XR\Library\PackageCache\com.unity.mathematics@981956d94fb6)
+  Git packages:
+    com.coplaydev.unity-mcp@https://github.com/CoplayDev/unity-mcp.git?path=/MCPForUnity#main (location: C:\Learning\College\CPS\Sem-5\IAVR & ESDP Project\PHYS-XR\PHYS-XR\Library\PackageCache\com.coplaydev.unity-mcp@4384f8b518e8)
+[Subsystems] Looking for new subsystems at path C:\Learning\College\CPS\Sem-5\IAVR & ESDP Project\PHYS-XR\PHYS-XR\Library\PackageCache\com.unity.xr.openxr@b5b77b4027be
+[Subsystems] Novel subsystem found at Library/PackageCache/com.unity.xr.openxr@b5b77b4027be/Runtime/UnitySubsystemsManifest.json
+[Subsystems] Discovering subsystems at path C:/Program Files/Unity/Hub/Editor/6000.5.8f1/Editor/Data/Resources/UnitySubsystems
+[Subsystems] Discovering subsystems at path C:/Learning/College/CPS/Sem-5/IAVR & ESDP Project/PHYS-XR/PHYS-XR/Assets
+[Subsystems] Discovering subsystems at path C:\Learning\College\CPS\Sem-5\IAVR & ESDP Project\PHYS-XR\PHYS-XR\Library\PackageCache\com.unity.xr.openxr@b5b77b4027be
+[Subsystems] No descriptors matched for  examples in Library/PackageCache/com.unity.xr.openxr@b5b77b4027be/Runtime/UnitySubsystemsManifest.json.
+[Subsystems] 1 'inputs' descriptors matched in Library/PackageCache/com.unity.xr.openxr@b5b77b4027be/Runtime/UnitySubsystemsManifest.json
+[Subsystems] 1 'displays' descriptors matched in Library/PackageCache/com.unity.xr.openxr@b5b77b4027be/Runtime/UnitySubsystemsManifest.json
+[Subsystems] No descriptors matched for  meshings in Library/PackageCache/com.unity.xr.openxr@b5b77b4027be/Runtime/UnitySubsystemsManifest.json.
+[Package Manager] Done registering packages in 0.04 seconds
+info: Microsoft.Hosting.Lifetime[14]
+      Now listening on: http://localhost:80
+info: Microsoft.Hosting.Lifetime[0]
+      Application started. Press Ctrl+C to shut down.
+info: Microsoft.Hosting.Lifetime[0]
+      Hosting environment: Production
+info: Microsoft.Hosting.Lifetime[0]
+      Content root path: C:\Learning\College\CPS\Sem-5\IAVR & ESDP Project\PHYS-XR\PHYS-XR
+info: Microsoft.AspNetCore.Hosting.Diagnostics[1]
+      Request starting HTTP/2 POST http://ilpp/UnityILPP.PostProcessing/Ping - application/grpc -
+info: Microsoft.AspNetCore.Routing.EndpointMiddleware[0]
+      Executing endpoint 'gRPC - /UnityILPP.PostProcessing/Ping'
+info: Microsoft.AspNetCore.Routing.EndpointMiddleware[1]
+      Executed endpoint 'gRPC - /UnityILPP.PostProcessing/Ping'
+info: Microsoft.AspNetCore.Hosting.Diagnostics[2]
+      Request finished HTTP/2 POST http://ilpp/UnityILPP.PostProcessing/Ping - 200 - application/grpc 31.5945ms
+Refreshing native plugins compatible for Editor in 8.88 ms, found 11 plugins.
+Starting: C:\Program Files\Unity\Hub\Editor\6000.5.8f1\Editor\Data\Tools\BuildPipeline\bee_backend.exe --ipc --defer-dag-verification --dagfile="Library/Bee/1900b0aE.dag" --continue-on-failure --profile="Library/Bee/backend1.traceevents" ScriptAssemblies
+WorkingDir: C:/Learning/College/CPS/Sem-5/IAVR & ESDP Project/PHYS-XR/PHYS-XR
+DisplayProgressbar: Compiling Scripts
+info: Microsoft.AspNetCore.Hosting.Diagnostics[1]
+      Request starting HTTP/2 POST http://ilpp/UnityILPP.PostProcessing/ConfigurePostProcessors - application/grpc -
+info: Microsoft.AspNetCore.Routing.EndpointMiddleware[0]
+      Executing endpoint 'gRPC - /UnityILPP.PostProcessing/ConfigurePostProcessors'
+warn: Unity.ILPP.Runner.PostProcessingAssemblyLoadContext[0]
+      Assembly system.runtime.interopservices.windowsruntime has duplicate hint path. Ignoring "C:\Program Files\Unity\Hub\Editor\6000.5.8f1\Editor\Data\NetStandard\Extensions\2.0.0\System.Runtime.InteropServices.WindowsRuntime.dll" in favor of "C:\Program Files\Unity\Hub\Editor\6000.5.8f1\Editor\Data\UnityReferenceAssemblies\unity-4.8-api\Facades\System.Runtime.InteropServices.WindowsRuntime.dll"
+warn: Unity.ILPP.Runner.PostProcessingAssemblyLoadContext[0]
+      Assembly system.componentmodel.composition has duplicate hint path. Ignoring "C:\Program Files\Unity\Hub\Editor\6000.5.8f1\Editor\Data\NetStandard\compat\2.1.0\shims\netfx\System.ComponentModel.Composition.dll" in favor of "C:\Program Files\Unity\Hub\Editor\6000.5.8f1\Editor\Data\UnityReferenceAssemblies\unity-4.8-api\System.ComponentModel.Composition.dll"
+info: Unity.ILPP.Runner.PostProcessingAssemblyLoadContext[0]
+      Resolved Mono.Cecil, Version=0.11.5.0, Culture=neutral, PublicKeyToken=50cebf1cceb9d05e with Library\PackageCache\com.unity.nuget.mono-cecil@ecb9724e46ff\Mono.Cecil.dll
+info: Unity.ILPP.Runner.PostProcessingAssemblyLoadContext[0]
+      Resolved Unity.Burst.Cecil, Version=0.11.6.0, Culture=neutral, PublicKeyToken=50cebf1cceb9d05e with Library\PackageCache\com.unity.burst@2f3d916873ea\Unity.Burst.CodeGen\Unity.Burst.Cecil.dll
+info: Microsoft.AspNetCore.Routing.EndpointMiddleware[1]
+      Executed endpoint 'gRPC - /UnityILPP.PostProcessing/ConfigurePostProcessors'
+info: Microsoft.AspNetCore.Hosting.Diagnostics[2]
+      Request finished HTTP/2 POST http://ilpp/UnityILPP.PostProcessing/ConfigurePostProcessors - 200 - application/grpc 80.8579ms
+ExitCode: 0 Duration: 0s658ms
+[ 569/1870  0s] WriteResponseFile Library/Bee/artifacts/rsp/4747638433968585886.rsp
+[1419/1870  0s] ILPP-Configuration Library/ilpp-configuration.nevergeneratedoutput
+*** Tundra build success (0.61 seconds), 2 items updated, 1870 evaluated
+AssetDatabase: script compilation time: 1.283250s
+Begin MonoManager ReloadAssembly
+Symbol file LoadedFromMemory is not a mono symbol file
+Symbol file LoadedFromMemory is not a mono symbol file
+Refreshing native plugins compatible for Editor in 11.05 ms, found 11 plugins.
+Native extension for WindowsStandalone target not found
+Native extension for WebGL target not found
+Refreshing native plugins compatible for Editor in 11.34 ms, found 11 plugins.
+Refreshing native plugins compatible for Editor in 10.67 ms, found 11 plugins.
+Start HTTP server: port:7800
+Starting new worker id: 0 with log in C:/Learning/College/CPS/Sem-5/IAVR & ESDP Project/PHYS-XR/PHYS-XR/Logs/AssetImportWorkerHW0.log
+[Licensing::Client] Error: Code 404 while processing request (status: Found 0 entitlement groups and 0 free entitlements matching requested entitlement ids)
+[Licensing::Client] Error: Code 404 while processing request (status: Found 0 entitlement groups and 0 free entitlements matching requested entitlement ids)
+[Licensing::Client] Error: Code 404 while processing request (status: Found 0 entitlement groups and 0 free entitlements matching requested entitlement ids)
+ScheduleIndexationOnStartup MainProcess:True IndexOnStartup:True
+Mono: successfully reloaded assembly
+- Finished resetting the current domain, in  7.463 seconds
+Domain Reload Profiling: 9675ms
+	BeginReloadAssembly (425ms)
+		DisableScriptedObjects (60ms)
+		CreateAndSetChildDomain (156ms)
+	RebuildCommonClasses (11ms)
+	RebuildNativeTypeToScriptingClass (19ms)
+	initialDomainReloadingComplete (156ms)
+	LoadAllAssembliesAndSetupDomain (1600ms)
+		LoadAssemblies (779ms)
+		AnalyzeDomain (734ms)
+			TypeCache.Refresh (578ms)
+				TypeCache.ScanAssembly (547ms)
+			BuildScriptInfoCaches (143ms)
+			ResolveRequiredComponents (11ms)
+	FinalizeReload (7464ms)
+		SetupLoadedEditorAssemblies (0ms)
+			InitializePlatformSupportModulesInManaged (3ms)
+			BeforeProcessingInitializeOnLoad (153ms)
+			ProcessInitializeOnLoadAttributes (6215ms)
+			ProcessInitializeOnLoadMethodAttributes (564ms)
+			AfterProcessingInitializeOnLoad (12ms)
+		AwakeInstancesAfterBackupRestoration (44ms)
+Importing 'GUID: 0000000000000000b000000000000000 - Path: ProjectSettings/EditorBuildSettings.asset' with importer (LibraryAssetImporter)
+Imported 'GUID: 0000000000000000b000000000000000' -> (Import Result ID: '3f20c61853fea2278f6542182abfb98f') in 0.021 seconds [static dependencies only]. Details - ImportResultOutputID=4647dd083cfc32cebcd7526e8846440c DependenciesID=a76f48b2ea706a10d0b5f8ab31321e22 StaticDependenciesID=2409f881008845584f882615dc4fcaef 
+Refreshing native plugins compatible for Editor in 9.31 ms, found 11 plugins.
+
+Asset Pipeline Refresh (id=62818aa551b1aa44082a7961d6f58204): Total: 13.167 seconds - Initiated by InitialRefreshV2(ForceSynchronousImport)
+	(Values over 0.05ms)
+	Summary:
+		Imports: total=1 (actual=1, local cache=0, cache server=0)
+		Asset DB Process Time: managed=2 ms, native=8614 ms
+		Asset DB Callback time: managed=704 ms, native=59 ms
+		Scripting: domain reloads=1, domain reload time=2350 ms, compile time=1285 ms, other=150 ms
+		Project Asset Count: scripts=2482, non-scripts=5404
+		Asset File Changes: new=0, changed=0, moved=0, deleted=0
+		Scan Filter Count: 0
+	InvokePackagesCallback: 45.922ms
+	ApplyChangesToAssetFolders: 0.758ms
+	Scan: 275.859ms
+	Collect global state as custom dependencies: 43.239ms
+	CategorizeScriptCompilationAssets: 118.327ms
+	ProcessAssetsWithTransientArtifactChanges: 173.527ms
+	CategorizeAssets: 111.365ms
+	CompileScripts: 1285.326ms
+	ImportOutOfDateAssets: 7624.647ms (7515.898ms without children)
+		ImportManagerImport: 23.319ms (1.519ms without children)
+		UnloadImportedAssets: 1.179ms
+		EnsureUptoDateAssetsAreRegisteredWithGuidPM: 1.351ms
+		ImportSchedulerStart: 82.832ms
+	PostProcessAllAssets: 708.609ms
+		XRBuildSystem.XRAssetImported 3.408ms
+		MonoPostProcessAllAssets: 704.255ms
+			AssetPostprocessor.OnPostprocessAllAssets 112.336ms
+			AssetReferenceReimportMonitor.OnPostprocessAllAssets 35.789ms
+			StyleCatalogPostProcessor.OnPostprocessAllAssets 23.906ms
+			AssetCallbacks.OnPostprocessAllAssets 16.613ms
+			SyncVS.PostprocessSyncProject 12.727ms
+			UniversalRenderPipelineGlobalSettingsPostprocessor.OnPostprocessAllAssets 12.618ms
+			BuilderAssetPostprocessor.OnPostprocessAllAssets 7.233ms
+			SpriteSlicePostprocessor.OnPostprocessAllAssets 3.099ms
+			GraphRefreshPostprocessor.OnPostprocessAllAssets 2.487ms
+			SpeedTree9Postprocessor.OnPostprocessAllAssets 2.014ms
+			EditModeScopePostprocessor.OnPostprocessAllAssets 2.012ms
+			WindowAssetPostprocessingWatcher.OnPostprocessAllAssets 1.984ms
+			ShaderGraphAssetPostProcessor.OnPostprocessAllAssets 1.566ms
+			RetainedModeAssetPostprocessor.OnPostprocessAllAssets 1.431ms
+			AssetChangedListener.OnPostprocessAllAssets 1.407ms
+			AssetChangeDetector.OnPostprocessAllAssets 1.146ms
+			RenderPipelineGlobalSettingsPostprocessor.OnPostprocessAllAssets 0.965ms
+			MaterialPostprocessor.OnPostprocessAllAssets 0.949ms
+			InputActionAssetPostprocessor.OnPostprocessAllAssets 0.660ms
+			SpriteEditorTexturePostprocessor.OnPostprocessAllAssets 0.640ms
+			ArtifactBrowserPostProcessor.OnPostprocessAllAssets 0.620ms
+			UVCSAssetPostprocessor.OnPostprocessAllAssets 0.544ms
+			SampleDependencyImporterPostProcessor.OnPostprocessAllAssets 0.492ms
+			SkillsProjectAssetPostprocessor.OnPostprocessAllAssets 0.453ms
+			ModelAssetProcessor.OnPostprocessAllAssets 0.392ms
+			TextAssetPostProcessor.OnPostprocessAllAssets 0.391ms
+			AudioMixerPostprocessor.OnPostprocessAllAssets 0.390ms
+			ShaderReflectionAssetPostProcessor.OnPostprocessAllAssets 0.376ms
+			InputActionJsonNameModifierAssetProcessor.OnPostprocessAllAssets 0.369ms
+			TMPro_TexturePostProcessor.OnPostprocessAllAssets 0.366ms
+			ReferencedClipsPostProcessor.OnPostprocessAllAssets 0.330ms
+			ProjectSettingsPostprocessor.OnPostprocessAllAssets 0.315ms
+			AssetEvents.OnPostprocessAllAssets 0.264ms
+			PostProcessor.OnPostprocessAllAssets 0.243ms
+			TerrainToolbarOverlayPostProcessor.OnPostprocessAllAssets 0.225ms
+			AssetDatabaseCallbacks.OnPostprocessAllAssets 0.203ms
+			SamplePostprocessor.OnPostprocessAllAssets 0.166ms
+			SpeedTreePostProcessor.OnPostprocessAllAssets 0.166ms
+			ConfigAssetsTracker.OnPostprocessAllAssets 0.159ms
+			ScenarioDriftAssetsTracker.OnPostprocessAllAssets 0.145ms
+			AssetReloadNotifier.OnPostprocessAllAssets 0.126ms
+			TrackSelectedAssetsProcessor.OnPostprocessAllAssets 0.082ms
+			AudioContainerPostProcessor.OnPostprocessAllAssets 0.079ms
+	PostAssetChangesProfiler: 12.229ms
+	UnloadStreamsBegin: 4.298ms
+	PersistCurrentRevisions: 0.426ms
+	GenerateScriptTypeHashes: 3.319ms
+	GenerateScriptTypeSerializationHashes: 5.539ms
+	Untracked: 2753.229ms
+
+Application.AssetDatabase Initial Refresh End
+Launched and connected shader compiler UnityShaderCompiler.exe after 0.02 seconds
+Scanning for USB devices : 2.590ms
+Initializing Unity extensions:
+Project path contains special characters, which can be an issue when opening Visual Studio
+UnityEngine.Debug:ExtractStackTraceNoAlloc (byte*,int,string)
+UnityEngine.StackTraceUtility:ExtractStackTrace ()
+UnityEngine.DebugLogHandler:Internal_Log (UnityEngine.LogType,UnityEngine.LogOption,string,UnityEngine.Object)
+UnityEngine.DebugLogHandler:LogFormat (UnityEngine.LogType,UnityEngine.Object,string,object[])
+UnityEngine.Logger:Log (UnityEngine.LogType,object)
+UnityEngine.Debug:LogWarning (object)
+Microsoft.Unity.VisualStudio.Editor.ProjectGeneration:SyncSolution (System.Collections.Generic.IEnumerable`1<UnityEditor.Compilation.Assembly>) (at ./Library/PackageCache/com.unity.ide.visualstudio@a99d56dec63f/Editor/ProjectGeneration/ProjectGeneration.cs:837)
+Microsoft.Unity.VisualStudio.Editor.ProjectGeneration:GenerateAndWriteSolutionAndProjects () (at ./Library/PackageCache/com.unity.ide.visualstudio@a99d56dec63f/Editor/ProjectGeneration/ProjectGeneration.cs:278)
+Microsoft.Unity.VisualStudio.Editor.ProjectGeneration:Sync () (at ./Library/PackageCache/com.unity.ide.visualstudio@a99d56dec63f/Editor/ProjectGeneration/ProjectGeneration.cs:184)
+Microsoft.Unity.VisualStudio.Editor.VisualStudioEditor:SyncAll () (at ./Library/PackageCache/com.unity.ide.visualstudio@a99d56dec63f/Editor/VisualStudioEditor.cs:199)
+UnityEditor.CodeEditorProjectSync:SyncEditorProject ()
+
+(Filename: ./Library/PackageCache/com.unity.ide.visualstudio@a99d56dec63f/Editor/ProjectGeneration/ProjectGeneration.cs Line: 837)
+
+[MODES] ModeService[none].Initialize
+[MODES] ModeService[none].LoadModes
+[MODES] Loading mode Default (0) for mode-current-id-PHYS-XR
+Unloading 68 Unused Serialized files (Serialized files now loaded: 0)
+Unloading 11663 unused Assets / (22.8 MB). Loaded Objects now: 12756.
+Memory consumption went from 0.66 GB to 0.64 GB.
+Total: 34.768200 ms (FindLiveObjects: 0.989000 ms CreateObjectMapping: 5.010900 ms MarkObjects: 19.899800 ms  DeleteObjects: 8.865000 ms)
+
+Worker ready: AssetImportWorkerHW0 0
+AUDIO_CUE_REPORT
+cue variant length_s peak rms_db mix eff_rms_db
+AmbienceHouse 0 24.00 0.89 -13.3 0.55 -18.5
+AmbienceStorm 0 16.00 0.89 -13.3 0.45 -20.2
+Thunder 0 5.00 0.89 -17.2 0.80 -19.1
+Thunder 1 5.00 0.89 -17.7 0.80 -19.7
+Thunder 2 5.00 0.89 -18.1 0.80 -20.0
+MenuMusic 0 32.00 0.89 -15.0 0.50 -21.1
+FootstepWood 0 0.32 0.89 -15.2 0.32 -25.1
+FootstepWood 1 0.32 0.89 -16.0 0.32 -25.9
+FootstepWood 2 0.32 0.89 -17.1 0.32 -27.0
+FootstepWood 3 0.32 0.89 -15.6 0.32 -25.5
+FootstepTile 0 0.32 0.89 -20.9 0.30 -31.3
+FootstepTile 1 0.32 0.89 -20.8 0.30 -31.2
+FootstepTile 2 0.32 0.89 -21.8 0.30 -32.3
+FootstepTile 3 0.32 0.89 -20.7 0.30 -31.2
+ClockTick 0 2.00 0.89 -33.0 0.35 -42.1
+HouseCreak 0 1.60 0.89 -14.0 0.40 -21.9
+HouseCreak 1 1.60 0.89 -13.8 0.40 -21.8
+HouseCreak 2 1.60 0.89 -15.4 0.40 -23.4
+HouseCreak 3 1.60 0.89 -14.2 0.40 -22.2
+UiHover 0 0.05 0.89 -11.7 0.15 -28.2
+UiSelect 0 0.25 0.89 -10.2 0.30 -20.7
+ObjectiveUpdate 0 1.80 0.89 -15.8 0.35 -24.9
+FusePickup 0 0.60 0.89 -16.5 0.60 -20.9
+FuseInsert 0 0.60 0.89 -16.9 0.80 -18.8
+Invalid 0 0.45 0.89 -16.5 0.50 -22.5
+DoorLocked 0 0.70 0.89 -18.3 0.60 -22.8
+DoorOpen 0 2.00 0.89 -18.7 0.80 -20.6
+PowerSurge 0 2.20 0.89 -11.9 0.90 -12.8
+PowerHum 0 4.00 0.89 -5.8 0.18 -20.7
+LightBuzz 0 4.00 0.89 -6.2 0.20 -20.2
+Flicker 0 0.25 0.89 -27.3 0.50 -33.3
+GhostBreath 0 6.00 0.89 -15.9 0.60 -20.3
+GhostWhisper 0 8.00 0.89 -19.7 0.50 -25.7
+GhostScreech 0 1.80 0.89 -18.2 0.55 -23.4
+GhostThud 0 1.80 0.89 -18.8 0.75 -21.3
+GhostHiss 0 1.30 0.89 -18.3 0.60 -22.8
+GhostManifest 0 2.60 0.89 -18.1 0.60 -22.5
+AttackRise 0 1.30 0.89 -15.1 0.70 -18.2
+StrikeImpact 0 1.60 0.89 -14.6 0.95 -15.1
+StrikeWhiff 0 0.50 0.89 -14.9 0.60 -19.3
+ProtectHum 0 6.00 0.89 -8.8 0.40 -16.7
+LanternPulse 0 1.40 0.89 -21.2 0.70 -24.3
+LanternMiss 0 0.60 0.89 -30.4 0.45 -37.4
+LanternReady 0 0.35 0.89 -12.5 0.25 -24.6
+Heartbeat 0 1.00 0.89 -15.3 0.60 -19.8
+DeathSting 0 3.50 0.89 -20.6 0.85 -22.0
+WinSting 0 6.00 0.89 -15.8 0.60 -20.3
+RadioStatic 0 5.00 0.89 -16.4 0.35 -25.5
+NoteRustle 0 0.60 0.89 -14.4 0.50 -20.4
+CandleCrackle 0 5.00 0.89 -34.1 0.30 -44.5
+GhostPresence 0 12.00 0.89 -12.1 0.42 -19.7
+GhostDrag 0 6.00 0.89 -17.7 0.35 -26.8
+ScoreDrone 0 32.00 0.89 -13.9 0.34 -23.3
+ScoreStrings 0 24.00 0.89 -20.2 0.27 -31.6
+ScorePulse 0 10.91 0.89 -18.2 0.36 -27.1
+ScoreSwell 0 3.20 0.89 -19.7 0.42 -27.3
+DistantKnock 0 2.40 0.89 -20.8 0.45 -27.7
+DistantKnock 1 2.40 0.89 -15.8 0.45 -22.7
+DistantKnock 2 2.40 0.89 -16.4 0.45 -23.3
+PipeGroan 0 2.60 0.89 -16.1 0.32 -26.0
+PipeGroan 1 3.20 0.89 -17.0 0.32 -26.9
+WaterDrip 0 0.90 0.89 -18.8 0.30 -29.3
+WaterDrip 1 0.90 0.89 -17.4 0.30 -27.8
+WaterDrip 2 0.90 0.89 -18.9 0.30 -29.3
+GhostScream 0 1.10 0.89 -8.7 0.80 -10.6
+GhostScream 1 1.22 0.89 -9.1 0.80 -11.0
+GhostScream 2 1.34 0.89 -9.2 0.80 -11.2
+GhostRecoil 0 0.75 0.89 -13.8 0.60 -18.2
+GhostRecoil 1 0.85 0.89 -14.2 0.60 -18.7
+GhostInhale 0 0.45 0.89 -15.4 0.35 -24.5
+GhostVanish 0 0.70 0.89 -17.9 0.40 -25.8
+UnityEngine.Debug:ExtractStackTraceNoAlloc (byte*,int,string)
+UnityEngine.StackTraceUtility:ExtractStackTrace ()
+UnityEngine.DebugLogHandler:Internal_Log (UnityEngine.LogType,UnityEngine.LogOption,string,UnityEngine.Object)
+UnityEngine.DebugLogHandler:LogFormat (UnityEngine.LogType,UnityEngine.Object,string,object[])
+UnityEngine.Logger:Log (UnityEngine.LogType,object)
+UnityEngine.Debug:Log (object)
+PHYSXR.EditorTools.AudioCueReport:Run () (at Assets/PHYSXR/Editor/AudioCueReport.cs:49)
+
+(Filename: Assets/PHYSXR/Editor/AudioCueReport.cs Line: 49)
+
+MonoPathRemapper: Attempts to remap: 61689; Successful remaps: 16
+Serialized file version minimum: 23, current 23
+Pipeline Server stopped
+[Physics::Module] Cleanup current backend.
+[Physics::Module] Id: 0xf2b8ea05
+Input System module state changed to: ShutdownInProgress.
+Input Polling Thread exited.
+Input System module state changed to: Shutdown.
+[Licensing::IpcConnector] LicenseClient-<user>-notifications channel disconnected successfully.
+[Licensing::IpcConnector] LicenseClient-<user> channel disconnected successfully.
+Shut down.
+Lingering sessions upon destruction of worker manager
+AcceleratorClientConnectionCallback - disconnected - :0
+Cleanup mono
+CodeReloadManager destroyed
+abort_threads: Failed aborting id: 0000000000001E00, mono_thread_manage will ignore it
+
+abort_threads: Failed aborting id: 0000000000004414, mono_thread_manage will ignore it
+
+abort_threads: Failed aborting id: 0000000000001E00, mono_thread_manage will ignore it
+
+abort_threads: Failed aborting id: 0000000000004414, mono_thread_manage will ignore it
+
+debugger-agent: Unable to listen on 5012
+Checking for leaked weakptr:
+  Found no leaked weakptrs.
+[Package Manager] Server process was shutdown
+##utp:{"type":"MemoryLeaks","version":2,"phase":"Immediate","time":1792666103076,"processId":22560,"allocatedMemory":21151716,"memoryLabels":[{"Default":224832},{"Permanent":15516},{"NewDelete":66723},{"Thread":4205216},{"Manager":40005},{"VertexData":8},{"Geometry":816},{"Texture":24},{"Shader":856848},{"Material":24},{"GfxDevice":57368},{"Animation":952},{"Audio":1544},{"FreeType":8},{"FontEngine":736},{"Physics":2146},{"Physics2D":16},{"Serialization":696},{"Input":42840},{"JobScheduler":256},{"TextLib":280},{"Mono":48},{"MonoCode":320},{"ScriptingNativeRuntime":1650860},{"BaseObject":1621960},{"Resource":1208},{"Renderer":3080},{"Transform":4685},{"File":1032},{"WebCam":616},{"Culling":32},{"Terrain":11442},{"Wind":24},{"STL":40},{"String":24610},{"StaticString":3808},{"Utility":2674870},{"Curl":2579},{"PoolAlloc":2840},{"AI":80},{"TypeTree":17165},{"CodeReload":448},{"RuntimeInitializeOnLoadManager":64},{"Sprites":102},{"SpriteAtlas":120},{"GI":7816},{"Director":8296},{"CloudService":9368},{"WebRequest":589},{"VR":47258},{"SceneManager":608},{"Video":64},{"LazyScriptCache":32},{"Camera":17},{"Secure":2377},{"SerializationCache":1576},{"APIUpdating":10320},{"Subsystems":192},{"VirtualTexturing":57888},{"StaticSafetyDebugInfo":278528},{"Analytics":552},{"Hierarchy":1176},{"UIElements":72},{"CoreStats":13688},{"Identifiers":6768},{"Gui":128},{"EditorUtility":120880},{"VersionControl":8},{"Undo":931},{"AssetDatabase":8987283},{"AssetImporter":40},{"EditorGi":328},{"UnityConnect":38905},{"Upm":1912},{"UpmDiagnostics":8},{"AssetCompliance":64},{"DrivenProperties":72},{"LocalIPC":211},{"ProfilerEditor":9746},{"CoreBusinessMetrics":3480},{"Windowing":456},{"Licensing":1232},{"AssetReference":32},{"IPCStream":32}]}
+~StackAllocator(ALLOC_TEMP_MAIN) m_LastAlloc not NULL. Did you forget to call FreeAllStackAllocations()? To get more information, run app with -diag-temp-memory-leak-validation cmd line argument

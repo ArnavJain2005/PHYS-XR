@@ -1,0 +1,62 @@
+Mono path[0] = 'C:/Learning/College/CPS/Sem-5/IAVR & ESDP Project/PHYS-XR/PHYS-XR/Builds/PHYSXR_Windows/PHYS-XR_Data/Managed'
+Mono config path = 'C:/Learning/College/CPS/Sem-5/IAVR & ESDP Project/PHYS-XR/PHYS-XR/Builds/PHYSXR_Windows/MonoBleedingEdge/etc'
+CodeReloadManager initialized
+Input System module state changed to: Initialized.
+[Physics::Module] Initialized fallback backend.
+[Physics::Module] Id: 0xdecafbad
+Initialize engine version: 6000.5.8f1 (5cb7df797b7d)
+[Subsystems] Discovering subsystems at path C:/Learning/College/CPS/Sem-5/IAVR & ESDP Project/PHYS-XR/PHYS-XR/Builds/PHYSXR_Windows/PHYS-XR_Data/UnitySubsystems
+[Subsystems] No descriptors matched for  examples in UnitySubsystems/UnityOpenXR/UnitySubsystemsManifest.json.
+[Subsystems] 1 'inputs' descriptors matched in UnitySubsystems/UnityOpenXR/UnitySubsystemsManifest.json
+[Subsystems] 1 'displays' descriptors matched in UnitySubsystems/UnityOpenXR/UnitySubsystemsManifest.json
+[Subsystems] No descriptors matched for  meshings in UnitySubsystems/UnityOpenXR/UnitySubsystemsManifest.json.
+Forcing GfxDevice: Null
+GfxDevice: creating device client; kGfxThreadingModeNonThreaded
+NullGfxDevice:
+    Version:  NULL 1.0 [1.0]
+    Renderer: Null Device
+    Vendor:   Unity Technologies
+Begin MonoManager ReloadAssembly
+- Finished resetting the current domain, in  0.042 seconds
+[Physics::Module] Selected backend.
+[Physics::Module] Name: PhysX
+[Physics::Module] Id: 0xf2b8ea05
+[Physics::Module] SDK Version: 4.1.2
+[Physics::Module] Integration Version: 1.0.0
+[Physics::Module] Threading Mode: Multi-Threaded
+Microsoft Media Foundation video decoding to texture disabled: graphics device is Null, only Direct3D 11 and Direct3D 12 (only on desktop) are supported for hardware-accelerated video decoding.
+UnloadTime: 0.789600 ms
+[Sensors] condition SIMULATED, SIMULATED
+[Telemetry] trial selftest (SIMULATED) -> C:/Users/<user>/AppData/LocalLow/DefaultCompany/PHYS_XR\telemetry\selftest_Windows_20261021T140522Z.jsonl
+Unloading 5 Unused Serialized files (Serialized files now loaded: 0)
+SELFTEST BEGIN encounter
+UnloadTime: 0.176800 ms
+Unloading 5 unused Assets to reduce memory usage. Loaded Objects now: 7308.
+Total: 1.799600 ms (FindLiveObjects: 0.224300 ms CreateObjectMapping: 0.362500 ms MarkObjects: 1.188800 ms  DeleteObjects: 0.023700 ms)
+
+[GameFlow] RUN_START run=1 attempt=1 condition=SIMULATED
+SELFTEST PASS S01_StartState | dormant=True solid=False nav=True
+SELFTEST PASS S02_SingleCameraListenerEventSystem | cameras=1 listeners=1 eventSystems=1 flows=1 ghosts=1
+SELFTEST PASS M01_EOpensReadable | open=True target=Radio
+SELFTEST PASS M02_ModalBlocksControls | moved=0.000 jumps=0 lantern=0
+SELFTEST PASS M03_EClosesReadable | open=False
+SELFTEST PASS M04_ControlsRestored | moved=0.60
+[GameFlow] PAUSE
+[GameFlow] RESUME
+SELFTEST PASS M05_EscAndPauseClose | esc=True pause=True
+SELFTEST PASS J01_SprintFaster | walk=1.80 sprint=3.20 m/s stamina=0.87
+SELFTEST PASS J02_JumpOnceNoAirJump | jumps=1 rise=0.87 airPress=True
+[GameFlow] PAUSE
+SELFTEST PASS J03_PausedNoJumpOrSprint | jumps=1
+[GameFlow] RESUME
+SELFTEST PASS S03_FirstSightingManifests | dormant=False onNav=True
+SELFTEST PASS S04a_SightingDetected | seen=True solid=True
+SELFTEST PASS S04b_SightingAttack_E5Windup | E5=True windup=True last=ATTACK [E1]
+SELFTEST PASS S04c_SightingAttackNotLethal | phase=NORMAL dead=False feints=1
+SELFTEST PASS S04d_SightingAttackOnce | windup frames after=0
+[GameFlow] OBJECTIVE FUSE_PICKUP stage=InstallFuse t=13.8
+[GameFlow] OBJECTIVE FUSE_INSTALLED stage=RestoringPower t=13.8
+SELFTEST PASS S05_FuseInstalled | Accepted: Picked up a fuse. / Accepted: Fuse installed.
+[GameFlow] OBJECTIVE POWER_RESTORED stage=ReachExit t=15.7
+SELFTEST PASS S06_SurgeRetreat | R2 RETREAT seen during the surge
+SELFTEST PASS S07_CheckpointSaved | checkpoint=True

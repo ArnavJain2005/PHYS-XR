@@ -1,0 +1,8 @@
+{"ts":57,"type":"PERF","trial":"selftest","cond":"VIRTUAL_ONLY","plat":"Windows","attempt":0,"frame":1,"detail":"fps_mean=0.0 fps_min=0.0 mono_mb=1082.7"}
+{"ts":80682,"type":"FLOW","trial":"selftest","cond":"VIRTUAL_ONLY","plat":"Windows","attempt":0,"frame":1,"detail":"event=RUN_START run=1 attempt=1 condition=VIRTUAL_ONLY"}
+{"ts":80694,"type":"PERF","trial":"selftest","cond":"VIRTUAL_ONLY","plat":"Windows","attempt":1,"frame":2,"detail":"fps_mean=0.0 fps_min=0.0 mono_mb=1096.1"}
+{"ts":80699,"type":"DECISION","trial":"selftest","cond":"VIRTUAL_ONLY","plat":"Windows","attempt":1,"frame":2,"action":"FOLLOW","rule":"INNER","reason":"FOLLOW: no active threat or event requiring intervention","dec":1,"detail":"prev=NONE"}
+{"ts":85561,"type":"PERF","trial":"selftest","cond":"VIRTUAL_ONLY","plat":"Windows","attempt":1,"frame":157,"detail":"fps_mean=31.0 fps_min=1.3 mono_mb=1096.9"}
+{"ts":90589,"type":"PERF","trial":"selftest","cond":"VIRTUAL_ONLY","plat":"Windows","attempt":1,"frame":188,"detail":"fps_mean=6.2 fps_min=0.2 mono_mb=1097.2"}
+{"ts":95598,"type":"PERF","trial":"selftest","cond":"VIRTUAL_ONLY","plat":"Windows","attempt":1,"frame":377,"detail":"fps_mean=37.7 fps_min=2.0 mono_mb=1099.4"}
+{"ts":100611,"type":"PERF","trial":"selftest","cond":"VIRTUAL_ONLY","plat":"Windows","attempt":1,"frame":563,"detail":"fps_mean=37.1 fps_min=1.9 mono_mb=1101.6"}

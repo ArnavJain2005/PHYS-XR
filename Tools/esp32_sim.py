@@ -9,7 +9,7 @@ against firmware): one UTF-8 key=value line per datagram,
 
 so the full socket path (UDPReceiver -> queue -> validator -> pipeline) can be
 tested against the Editor, a Windows build or a headset without hardware.
-Start the game with "Physical sensors (UDP 47800)" selected.
+Start the game with "Physical - UDP 47800" selected.
 
 Scenarios:
     idle        NONE/HIGH at 10 Hz

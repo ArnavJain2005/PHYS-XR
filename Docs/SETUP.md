@@ -108,7 +108,10 @@ python Tools/esp32_sim.py --host 127.0.0.1 --scenario near --seconds 60
 
 Scenarios: `idle`, `near`, `threat`, `flap`, `duplicates`, `outage`, `reboot`, `interactive`.
 
-### 4. With real hardware (not yet performed)
+### 4. With real hardware
+
+The team accepted the station hardware on 26 Oct 2026. For a new or rebuilt station, follow these steps:
+
 
 1. Complete [`HARDWARE_ACCEPTANCE.md`](HARDWARE_ACCEPTANCE.md) A (meter checks), B (flash) and C (boot identity).
 2. Check the station without Unity:
@@ -119,6 +122,10 @@ dotnet run -c Release --project Tools/TestHarness -- --serial-monitor AUTO 30
 
 3. Quit the monitor (`Port released.`), start the game, choose **Sensors → Physical - USB serial**, port `AUTO` or `COMx`, and wait for live readings. **Begin**: the HUD chip must read `SENSORS USB COMx CONNECTED - FRESH`.
 4. Kiosk-style launch: `PHYS-XR.exe -physxr-transport serial -physxr-serial-port COM6 -physxr-serial-baud 115200`.
+
+### 4b. Meta Quest 2 / Quest 3 (PC VR)
+
+The team has demonstrated the game with the physical station on Meta Quest 2 and Quest 3, running the Windows build as PC VR through OpenXR (for example over Quest Link). The project carries the OpenXR, XR Interaction Toolkit and Oculus Touch profile settings. Touch controllers are mapped in `DesktopInputAdapter`: left stick to move (click to sprint), right stick to turn, right trigger or A to interact, left trigger for the lantern, B to jump, left menu button to pause. Step-by-step headset setup is not yet written down here.
 
 > A **simulation run** proves the software chain from the validator onwards. A **hardware run** additionally proves wiring, firmware, calibration, USB timing and the device identity check. Only the second is evidence for the project's central claim.
 
@@ -158,7 +165,7 @@ The faculty run sheet [`Docs/DEMO_SCRIPT.md`](DEMO_SCRIPT.md) gives a hardware g
 
 | Beat | Do | Expect (`decision` line) |
 |---|---|---|
-| 3 | Stand ≥ 5 m from the ghost, press `2` then `5` | `INVESTIGATE [INNER]` (R3) |
+| 3 | Stand ≥ 5 m from the ghost (outside its 3.5 m threat zone, before picking up the fuse), press `2` then `5` | `INVESTIGATE [INNER]` (R3) |
 | 4 | Press `4` | `WARN [INNER]` low confidence (R4); press `4` again |
 | 5 | Press `1` then `5` | `WARN [INNER]` without proximity (R5) |
 | 6 | `Esc`, press `5`, resume | Nothing (F1 fix) |
