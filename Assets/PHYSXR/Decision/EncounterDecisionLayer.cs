@@ -30,8 +30,9 @@ namespace PHYSXR.Decision
     //       cooldown 0 -> ATTACK. A one-shot scripted beat: the game raises
     //       the flag once per run and clears it when the attack starts.
     //   E3  attack starts: encounterCommitted, no restart grace, distance <=
-    //       AttackDistance, previous decision WARN for >= WarnTelegraphMs,
-    //       attack cooldown 0, inner result not PROTECT -> ATTACK
+    //       AttackDistance, the encounter telegraph (see below) running for
+    //       >= WarnTelegraphMs, attack cooldown 0, inner result not PROTECT
+    //       -> ATTACK
     //   E4  close pressure: encounterCommitted, player in the warn band, inner
     //       result FOLLOW or WARN -> WARN
     //   --  otherwise                    -> (effective) inner result
@@ -49,8 +50,8 @@ namespace PHYSXR.Decision
     //       committed (E3/E4 already cover the committed encounter), on player
     //       and ghost positions only, never on a sensor:
     //         E6  ATTACK: not committed, no restart grace, distance <=
-    //             AttackDistance, previous decision WARN for >= WarnTelegraphMs,
-    //             attack cooldown 0 (ranked with E3, after E5)
+    //             AttackDistance, the encounter telegraph running for >=
+    //             WarnTelegraphMs, attack cooldown 0 (ranked with E3, after E5)
     //         E6  WARN:   not committed, player in the threat zone (3.5 m, exit
     //             4.5 m), inner result FOLLOW or WARN (ranked with E4) - the
     //             telegraph. An INVESTIGATE (R3/X3) or PROTECT is never
@@ -65,10 +66,15 @@ namespace PHYSXR.Decision
     // Decisions on deferred questions (recorded here and in the docs):
     //  - A mandatory warning beat does NOT stop an attack already in progress
     //    (E1 outranks W), but no NEW attack can start during a beat (W
-    //    outranks E3). The beat itself is a WARN, so it counts as the
-    //    telegraph E3 requires.
-    //  - No sensor value appears in E1-E5. Physical input can only PREVENT an
-    //    attack (R1 PROTECT through S), never cause one.
+    //    outranks E3).
+    //  - The telegraph E3 and E6 require is encounter-specific: it starts
+    //    when this layer first decides an encounter warning (E4, E6 WARN, or
+    //    the DWELL that holds one) and ends at any other decision. A WARN
+    //    from the inner rules (R4-R7), the sensor response (X2) or a scripted
+    //    beat (W) neither starts nor extends it, so physical input cannot
+    //    shorten or skip the warning before an attack.
+    //  - No sensor value appears in E1-E6. Physical input never starts an
+    //    attack, and R1 PROTECT (through S) prevents one.
     //  - The first-sighting attack (E5) ranks below the warning beat, so the
     //    game ends the manifest beat when it raises the sighting flag.
     //
@@ -102,6 +108,12 @@ namespace PHYSXR.Decision
 
         private GhostAction? previousAction;
         private long previousActionEnteredAt;
+
+        // Encounter telegraph for E3/E6: when the current unbroken run of
+        // encounter warnings (E4, E6 WARN, DWELL) began, or null when none is
+        // running. Kept separate from previousActionEnteredAt, which any WARN
+        // advances, so an unrelated WARN cannot pre-charge an attack.
+        private long? telegraphStartedAt;
         private long? protectStartedAt;
         private long protectRefractoryUntil = long.MinValue;
 
@@ -162,6 +174,13 @@ namespace PHYSXR.Decision
         // The action this layer returned last, or null before the first call.
         public GhostAction? PreviousAction => previousAction;
 
+        // How long the encounter telegraph has been running at `now`, or -1
+        // when no encounter warning is running.
+        public long TelegraphElapsedMs(long now) => telegraphStartedAt.HasValue ? now - telegraphStartedAt.Value : -1L;
+
+        private static bool IsEncounterWarning(GhostAction action, string ruleId) =>
+            action == GhostAction.WARN && (ruleId == "E4" || ruleId == "E6" || ruleId == "DWELL");
+
         // Checkpoint restart: clears the inner provider's temporal context
         // (hysteresis history), this layer's own timers (telegraph, PROTECT
         // cap and refractory) and the last reason/rule. Calibration and the
@@ -171,6 +190,7 @@ namespace PHYSXR.Decision
             inner.Reset();
             previousAction = null;
             previousActionEnteredAt = 0L;
+            telegraphStartedAt = null;
             protectStartedAt = null;
             protectRefractoryUntil = long.MinValue;
             presenceSince = long.MinValue;
@@ -284,12 +304,11 @@ namespace PHYSXR.Decision
             if (committed && !virtualWorld.attackGraceActive && player != null && ghost != null
                 && player.distanceToGhost <= AttackDistance
                 && ghost.attackCooldownMs <= 0L
-                && previousAction == GhostAction.WARN
-                && now - previousActionEnteredAt >= WarnTelegraphMs)
+                && TelegraphElapsedMs(now) >= WarnTelegraphMs)
             {
                 Set(GhostAction.ATTACK, "E3", string.Format(CultureInfo.InvariantCulture,
                         "ATTACK[E3]: committed, warned {0:F1}s, distance {1:F1}m",
-                        (now - previousActionEnteredAt) / 1000.0, player.distanceToGhost),
+                        TelegraphElapsedMs(now) / 1000.0, player.distanceToGhost),
                     out action, out ruleId, out reason);
                 return;
             }
@@ -299,12 +318,11 @@ namespace PHYSXR.Decision
             if (ProximityAttack && !committed && !attackGrace && player != null && ghost != null
                 && player.distanceToGhost <= AttackDistance
                 && ghost.attackCooldownMs <= 0L
-                && previousAction == GhostAction.WARN
-                && now - previousActionEnteredAt >= WarnTelegraphMs)
+                && TelegraphElapsedMs(now) >= WarnTelegraphMs)
             {
                 Set(GhostAction.ATTACK, "E6", string.Format(CultureInfo.InvariantCulture,
                         "ATTACK[E6]: player too close to the ghost, warned {0:F1}s, distance {1:F1}m (in-game proximity)",
-                        (now - previousActionEnteredAt) / 1000.0, player.distanceToGhost),
+                        TelegraphElapsedMs(now) / 1000.0, player.distanceToGhost),
                     out action, out ruleId, out reason);
                 return;
             }
@@ -464,6 +482,16 @@ namespace PHYSXR.Decision
         {
             if (!previousAction.HasValue || previousAction.Value != action)
                 previousActionEnteredAt = now;
+
+            if (IsEncounterWarning(action, ruleId))
+            {
+                if (!telegraphStartedAt.HasValue)
+                    telegraphStartedAt = now;
+            }
+            else
+            {
+                telegraphStartedAt = null;
+            }
 
             if (action == GhostAction.PROTECT)
             {

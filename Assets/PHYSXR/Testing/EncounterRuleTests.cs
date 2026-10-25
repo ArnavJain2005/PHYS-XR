@@ -57,6 +57,10 @@ namespace PHYSXR.Testing
             Run("ENC-T11_Oscillation_NoWarnShorterThanDwell", T11);
             Run("ENC-T14_InterruptDuringWindup_RetreatsAndNextAttackAfter11_5s", T14);
             Run("ENC-FLOW_AttackMiss_RecoverCooldownThenFreshTelegraph", AttackFlow);
+            Run("ENC-TG1_SensorWarnBeforeBand_DoesNotShortenE3Telegraph", TelegraphNotPreCharged);
+            Run("ENC-TG2_SensorWarnAlone_NeverStartsTelegraphOrAttack", SensorWarnAloneNoAttack);
+            Run("ENC-TG3_BrokenTelegraph_RestartsFull1500ms", TelegraphRestartsAfterBreak);
+            Run("ENC-TG4_BeatWarn_DoesNotPreChargeE3", BeatDoesNotPreCharge);
 
             Console.WriteLine("EncounterRuleTests: " + passed + " passed, " + failed + " failed");
             return failed;
@@ -113,6 +117,85 @@ namespace PHYSXR.Testing
         {
             for (long t = 0; t < holdMs; t += 100)
                 AssertEq(GhostAction.WARN, rig.Step(W(distance: distance + 3f, committed: true, band: true)), "telegraph WARN");
+        }
+
+        // ---------------------------------------------- encounter telegraph
+
+        // Steps at 1.8 m inside the band until ATTACK; returns ms since t0.
+        private static long MsUntilAttack(Rig rig, long t0, int maxSteps = 40)
+        {
+            for (int i = 0; i < maxSteps; i++)
+            {
+                if (rig.Step(W(distance: 1.8f, committed: true, band: true, threatZone: true)) == GhostAction.ATTACK)
+                    return rig.Now - t0;
+            }
+            throw new Exception("no ATTACK within " + maxSteps * 100 + " ms");
+        }
+
+        private static void TelegraphNotPreCharged()
+        {
+            // A sensor-driven R4 WARN (NEAR, LOW) outside the warn band for 3 s,
+            // then 1 s of E4 close pressure, then within reach: the attack
+            // still waits for the full 1.5 s of encounter warning.
+            var rig = new Rig();
+            for (int i = 0; i < 30; i++)
+                AssertEq(GhostAction.WARN, rig.Step(W(distance: 7f, committed: true, presence: PresenceLevel.NEAR)), "sensor WARN (R4)");
+            AssertEq("INNER", rig.Layer.LastRuleId, "inner rule");
+            AssertEq(-1L, rig.Layer.TelegraphElapsedMs(rig.Now), "a sensor WARN starts no telegraph");
+            AssertEq(GhostAction.WARN, rig.Step(W(distance: 4f, committed: true, band: true, presence: PresenceLevel.NEAR)), "E4 begins");
+            AssertEq("E4", rig.Layer.LastRuleId, "E4");
+            long t0 = rig.Now;
+            for (int i = 0; i < 9; i++)
+                rig.Step(W(distance: 4f, committed: true, band: true, presence: PresenceLevel.NEAR));
+            long ms = MsUntilAttack(rig, t0);
+            AssertTrue(ms >= EncounterDecisionLayer.DefaultWarnTelegraphMs && ms <= EncounterDecisionLayer.DefaultWarnTelegraphMs + 100,
+                "attack after the full encounter telegraph, measured from E4: " + ms + " ms");
+            AssertTrue(rig.Layer.LastDecisionReason.StartsWith("ATTACK[E3]: committed, warned 1.5s"), rig.Layer.LastDecisionReason);
+        }
+
+        private static void SensorWarnAloneNoAttack()
+        {
+            // Committed, within 2 m, but outside the band: only the sensor
+            // WARN applies. It must never start the telegraph or an attack.
+            var rig = new Rig();
+            for (int i = 0; i < 50; i++)
+            {
+                AssertTrue(rig.Step(W(distance: 1.8f, committed: true, presence: PresenceLevel.NEAR)) != GhostAction.ATTACK, "no ATTACK from a sensor WARN");
+                AssertEq(-1L, rig.Layer.TelegraphElapsedMs(rig.Now), "no telegraph");
+            }
+        }
+
+        private static void TelegraphRestartsAfterBreak()
+        {
+            // 1 s of E4, then 0.5 s of a sensor WARN outside the band (still a
+            // WARN, but not an encounter warning), then back within reach: the
+            // broken telegraph restarts and needs a fresh 1.5 s.
+            var rig = new Rig();
+            for (int i = 0; i < 10; i++)
+                rig.Step(W(distance: 4f, committed: true, band: true));
+            AssertTrue(rig.Layer.TelegraphElapsedMs(rig.Now) >= 900, "telegraph running");
+            for (int i = 0; i < 5; i++)
+                AssertEq(GhostAction.WARN, rig.Step(W(distance: 7f, committed: true, presence: PresenceLevel.NEAR)), "sensor WARN");
+            AssertEq(-1L, rig.Layer.TelegraphElapsedMs(rig.Now), "the sensor WARN ended the telegraph");
+            long t0 = rig.Now;
+            long ms = MsUntilAttack(rig, t0);
+            AssertTrue(ms >= EncounterDecisionLayer.DefaultWarnTelegraphMs + 100 && ms <= EncounterDecisionLayer.DefaultWarnTelegraphMs + 200,
+                "fresh 1.5 s from the first E4 WARN after the break: " + ms + " ms");
+        }
+
+        private static void BeatDoesNotPreCharge()
+        {
+            // A 2 s scripted beat (W) is a WARN but not the encounter's
+            // telegraph: within reach afterwards, E4 must warn 1.5 s first.
+            var rig = new Rig();
+            for (int i = 0; i < 20; i++)
+                AssertEq(GhostAction.WARN, rig.Step(W(distance: 7f, committed: true, beat: true)), "beat");
+            AssertEq("W", rig.Layer.LastRuleId, "beat rule");
+            AssertEq(-1L, rig.Layer.TelegraphElapsedMs(rig.Now), "a beat starts no telegraph");
+            long t0 = rig.Now;
+            long ms = MsUntilAttack(rig, t0);
+            AssertTrue(ms >= EncounterDecisionLayer.DefaultWarnTelegraphMs + 100 && ms <= EncounterDecisionLayer.DefaultWarnTelegraphMs + 200,
+                "full telegraph after the beat: " + ms + " ms");
         }
 
         // ------------------------------------------------------------------ E0

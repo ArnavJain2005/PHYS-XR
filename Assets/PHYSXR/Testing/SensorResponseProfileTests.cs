@@ -86,6 +86,9 @@ namespace PHYSXR.Testing
             Run("E6-07_VirtualOnlyMasked_StillAttacks", ProximityMasked);
             Run("E6-08_ShakeInZone_InvestigateDelaysAttack", ShakeDelaysAttack);
             Run("E6-09_Committed_E3NotE6", ProximityCommitted);
+            Run("E6-10_SensorWarnX2_DoesNotPreChargeE6", X2DoesNotPreChargeE6);
+            Run("E6-11_X2AloneInReach_NeverAttacks", X2AloneNeverAttacks);
+            Run("E6-12_InterruptedTelegraph_RestartsFull1500ms", E6TelegraphRestarts);
 
             Console.WriteLine("SensorResponseProfileTests: " + passed + " passed, " + failed + " failed");
             return failed;
@@ -246,6 +249,62 @@ namespace PHYSXR.Testing
         }
 
         // ------------------------------------------------------------ tests
+
+        // Index (50 ms frames) of the first ATTACK, or -1.
+        private static int FirstAttack(List<GhostAction> actions) => actions.IndexOf(GhostAction.ATTACK);
+
+        private static void X2DoesNotPreChargeE6()
+        {
+            // VERY_NEAR at the station makes X2 WARN for 3 s while the player
+            // is outside the threat zone; then the player steps within reach.
+            // E6 must still give its own full 1.5 s warning.
+            Rig rig = Ready(On(), proximity: true);
+            rig.Player(4.2f, false);
+            rig.Hold("VERY_NEAR", 3000);
+            AssertEq("X2", rig.Layer.LastRuleId, "sensor WARN (X2)");
+            AssertEq(-1L, rig.Layer.TelegraphElapsedMs(rig.Now), "X2 starts no telegraph");
+            rig.Player(1.8f, true);
+            List<GhostAction> actions = rig.Hold("VERY_NEAR", 2500);
+            AssertEq(GhostAction.WARN, actions[0], "E6 warns first");
+            int attack = FirstAttack(actions);
+            AssertTrue(attack >= 0, "attack eventually: " + string.Join(",", actions));
+            long ms = attack * 50L;
+            AssertTrue(ms >= EncounterDecisionLayer.DefaultWarnTelegraphMs && ms <= EncounterDecisionLayer.DefaultWarnTelegraphMs + 50,
+                "full telegraph after entering reach: " + ms + " ms");
+        }
+
+        private static void X2AloneNeverAttacks()
+        {
+            // VERY_NEAR keeps X2 WARN with the player 1.8 m away but outside
+            // the threat zone: no encounter warning, so never an attack.
+            Rig rig = Ready(On(), proximity: true);
+            rig.Player(1.8f, false);
+            foreach (GhostAction a in rig.Hold("VERY_NEAR", 5000))
+                AssertTrue(a != GhostAction.ATTACK, "a sensor WARN alone never attacks");
+            AssertEq(-1L, rig.Layer.TelegraphElapsedMs(rig.Now), "no telegraph");
+        }
+
+        private static void E6TelegraphRestarts()
+        {
+            // 1 s of E6 WARN at 3 m, 0.5 s outside the zone with VERY_NEAR (X2
+            // WARN, not an encounter warning), then within reach: the telegraph
+            // restarts and needs a fresh 1.5 s.
+            Rig rig = Ready(On(), proximity: true);
+            rig.Player(3f, true);
+            rig.Hold("NONE", 1000);
+            AssertEq("E6", rig.Layer.LastRuleId, "E6 telegraph");
+            rig.Player(4.6f, false);
+            rig.Hold("VERY_NEAR", 500);
+            AssertEq("X2", rig.Layer.LastRuleId, "sensor WARN in between");
+            AssertEq(-1L, rig.Layer.TelegraphElapsedMs(rig.Now), "telegraph ended");
+            rig.Player(1.8f, true);
+            List<GhostAction> actions = rig.Hold("VERY_NEAR", 2500);
+            int attack = FirstAttack(actions);
+            AssertTrue(attack >= 0, "attack eventually: " + string.Join(",", actions));
+            long ms = attack * 50L;
+            AssertTrue(ms >= EncounterDecisionLayer.DefaultWarnTelegraphMs && ms <= EncounterDecisionLayer.DefaultWarnTelegraphMs + 50,
+                "fresh telegraph after the break: " + ms + " ms");
+        }
 
         private static void ProfileOff()
         {
