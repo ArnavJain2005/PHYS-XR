@@ -4,13 +4,13 @@ PHYS-XR is a three-person team project: a B.Tech Cyber Physical Systems project 
 
 | Member | Contribution |
 |---|---|
-| **Arnav Jain** (team lead) | Unity core and the XR game, the Ghost decision system, and overall software and integration leadership |
+| **Arnav Jain** (team lead) | Unity core and the XR game, the Ghost decision system, the station firmware sketches, the firmware semantic core and its host tests, and overall software and integration leadership |
 | **Arya M** | Implemented a dashboard prototype independently, for evaluation. It is not a shipped or validated feature of the game |
 | **Nandhitha Chowdary Surapaneni** | Assembly and debugging of the hardware station |
 
 ## Project-level work
 
-The station firmware sketches, the firmware semantic core and its host tests, sensor calibration, and the formal acceptance and validation work are credited to the **project team**. Individual attribution for this work is not stated here until the team lead has confirmed it with the team.
+Sensor calibration and the formal acceptance testing of the station are credited to the **project team**. The firmware attribution above was agreed with Nandhitha Chowdary Surapaneni.
 
 ## Role assignments in the project synopsis
 
