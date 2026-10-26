@@ -151,7 +151,7 @@ Milestones and the issue register: [`Docs/TechnicalSpec_MilestoneStatus.md`](Doc
 
 ## Team and ownership
 
-PHYS-XR is a **three-person team project**: a B.Tech Cyber Physical Systems project (IAVR and ESDP, Semester 5) at the School of Electrical Engineering, Manipal Institute of Technology, academic year 2026–27. **Arnav Jain** is the project lead and integrated and committed all contributions.
+PHYS-XR is a **three-person team project** developed as part of the B.Tech Cyber Physical Systems curriculum (IAVR and ESDP, Semester 5) at the School of Electrical Engineering, Manipal Institute of Technology, for the 2026–27 academic year. **Arnav Jain served as the project lead and primary developer**, driving the core game development, AI decision system, software architecture, and overall integration, while bringing together the contributions of the team into a cohesive, working system.
 
 **Who did what:** **[CONTRIBUTORS.md](CONTRIBUTORS.md)** lists every team member, their role and their contribution.
 
