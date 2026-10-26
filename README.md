@@ -118,7 +118,6 @@ Full table: [`Docs/ARCHITECTURE.md`](Docs/ARCHITECTURE.md#engineering-highlights
 | Windows player self-tests | in-game checks per suite | Responsiveness **24/24** · route **23/23** · encounter **40/40** · simulated sensors **42/42** | Recorded 26 Oct 2026 ([logs](Evidence/Logs/2026-10-26_post-fix/player)) |
 | Live station sessions, 22–24 Oct 2026 | physical runs · trial IDs · minutes | **15 live runs** (of 16 physical-run telemetry files) · 9 trial IDs · 48.1 min | Recomputed from raw telemetry, 26 Oct 2026 |
 | Same sessions | telemetry state lines · knock events · decisions | 29,896 lines (4 rejected, 4 lost) · 131 knocks accepted · **0 of 48 ATTACK decisions with a physical cause** | Recomputed from raw telemetry, 26 Oct 2026 |
-| Latency measurement, user study | — | **Not run** ([protocol](Docs/LATENCY_PROTOCOL.md)) | — |
 
 "Recorded" means taken from the 26 Oct verification logs; "recomputed" means regenerated from raw telemetry by [`summarize_telemetry.py`](Evidence/summarize_telemetry.py). Raw logs and the 15-vs-18 run count: [`Evidence/README.md`](Evidence/README.md). Reproduction steps: [`Docs/TESTING_AND_EVALUATION.md`](Docs/TESTING_AND_EVALUATION.md).
 
