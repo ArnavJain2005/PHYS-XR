@@ -1,8 +1,19 @@
 # The Ghost decision system
 
-The complete reference for how The Hollow decides what to do. The [main README](../README.md#the-hollows-decision-system) carries the summary: the two-layer design, the R1–R8 overview and the safety property. This file holds every input, threshold, reason string, timing and test. Source: [`RuleBasedDecisionProvider.cs`](../Assets/PHYSXR/Decision/RuleBasedDecisionProvider.cs), [`EncounterDecisionLayer.cs`](../Assets/PHYSXR/Decision/EncounterDecisionLayer.cs), [`GhostMotionController.cs`](../Assets/PHYSXR/Ghost/Presentation/GhostMotionController.cs).
+The complete reference for how The Hollow decides what to do. The [main README](../README.md) carries a short summary; this file holds every rule, input, threshold, reason string, timing and test. Source: [`RuleBasedDecisionProvider.cs`](../Assets/PHYSXR/Decision/RuleBasedDecisionProvider.cs), [`SensorResponseProfile.cs`](../Assets/PHYSXR/Decision/SensorResponseProfile.cs), [`EncounterDecisionLayer.cs`](../Assets/PHYSXR/Decision/EncounterDecisionLayer.cs), [`GhostMotionController.cs`](../Assets/PHYSXR/Ghost/Presentation/GhostMotionController.cs).
 
-The Hollow is an autonomous agent with a fixed, inspectable policy. This section documents it exactly as implemented in [`RuleBasedDecisionProvider.cs`](../Assets/PHYSXR/Decision/RuleBasedDecisionProvider.cs) and [`EncounterDecisionLayer.cs`](../Assets/PHYSXR/Decision/EncounterDecisionLayer.cs).
+The Hollow runs a deterministic, rule-based policy: fixed, inspectable, and not a learning system. This file documents it exactly as implemented.
+
+## Design in brief
+
+- **Physical events are evidence, not commands.** A knock raises a disturbance flag. Whether that matters depends on the proximity evidence, its confidence, the player's position, the game's threat level and what the ghost is doing.
+- **Layers with separate jobs.**
+  - The inner rules (R1–R8) interpret the combined physical and virtual state.
+  - The sensor-response rules (X1–X3) give proximity and knocks a visible meaning when proximity is reported at LOW confidence.
+  - The encounter layer owns the game: scripted beats, telegraphed attacks, the lantern counter and timing limits.
+- **Deterministic.** There is no randomness, no learned parameters and no wall-clock time; time comes from an injected game clock. The same input sequence always produces the same decisions (test TELJ-06).
+
+The threat zone is entered at 3.5 m and left at 4.5 m. An attack runs WINDUP 1.2 s → STRIKE 0.3 s → RECOVER 2 s → 6 s cooldown, and the lantern can interrupt it in any phase except STRIKE ([state machine](#ghost-attack-phase-state-machine)).
 
 ## Decision cycle
 
@@ -14,7 +25,7 @@ Every rendered frame while the run is `Playing`:
 4. `WorldStateManager` builds a `WorldState`.
 5. `GhostRuntimePipeline` checks the terminal gate, then calls `EncounterDecisionLayer.Decide`. That layer **always** evaluates the inner R1–R8 provider first, so the inner hysteresis history stays consistent, and then arbitrates.
 6. The chosen `GhostAction` becomes a `GhostExecutionState`, which `GhostMotionController` turns into movement, pose and sound.
-7. If the action, the rule ID or the reason changed since the last record (numbers inside the reason are ignored), one `DECISION` telemetry record is written (`dec`, `rule`, `reason`, and `cause_evt` for R3/R5-caused decisions). Unchanged decisions are not logged; see [Explainability and telemetry](#explainability-and-telemetry).
+7. If the action, the rule ID or the reason changed since the last record (numbers inside the reason are ignored), one `DECISION` telemetry record is written (`dec`, `rule`, `reason`, and `cause_evt` for decisions caused by R3, R5 or X3). Unchanged decisions are not logged; see [Explainability and telemetry](#explainability-and-telemetry).
 
 Both layers use an injected **decision clock**: accumulated, scaled play time in ms (fix P1). Hysteresis therefore keeps counting while sensors are silent and stops while the game is paused.
 
@@ -42,7 +53,7 @@ flowchart TD
     o8 --> DW
 ```
 
-<sub>The two-layer decision pipeline. Read top to bottom: the first matching box decides. No sensor value appears below the inner provider, so physical input can only reach E-rules through the inner result (R1 PROTECT, which S passes through and which blocks E3).</sub>
+<sub>The core arbitration. Read top to bottom: the first matching box decides. With the default sensor-response profile, X1–X3 replace an idle inner result before E2, and E6 adds the same telegraphed warn-then-attack before the encounter is committed ([below](#encounter-layer-game-arbitration)). Apart from X1–X3, no sensor value appears below the inner provider, so physical input reaches the E-rules only through the inner result (R1 PROTECT, which S passes through and which blocks E3) and can never charge the attack telegraph.</sub>
 
 ## Inputs the rules read
 
@@ -118,7 +129,7 @@ A held decision is explained as `HYSTERESIS: retaining <prev>; candidate <cand> 
 Decisions recorded on deferred questions:
 
 - A scripted beat does not stop an attack in progress (E1 ranks above W), but no new attack starts during a beat (W ranks above E3 and E5).
-- **No sensor value appears in E1–E6.** Physical input never *starts* an attack: every ATTACK needs the in-game encounter conditions, and an R1 PROTECT blocks one through S. SER-18h, ENC-E3d, EXH-13 and SR-20 flood sensor input with the player close and verify there is no ATTACK.
+- **No sensor value appears in E1–E6.** Physical input never *starts* an attack: every ATTACK needs the in-game encounter conditions, and an R1 PROTECT blocks one through S. SER-18h, ENC-E3d, EXH-13 and SR-20 flood sensor input with the player close and verify there is no ATTACK; the in-player responsiveness check Q03 confirms the same on the built game. In the 15 logged live-station runs (22–24 Oct 2026, [`Evidence/`](../Evidence/README.md)), none of the 48 ATTACK decisions had a physical cause.
 - **The telegraph is encounter-specific (fixed 26 Oct 2026).** E3 and E6 attack only after 1.5 s of continuous *encounter* warning: E4, an E6 WARN, or the DWELL holding one (`EncounterDecisionLayer.TelegraphElapsedMs`). A WARN from the inner rules (R4-R7), the sensor response (X2) or a scripted beat (W) neither starts nor extends that timer, and any other decision ends it. Before the fix the attack checks used the time since the last decision became WARN, so a sensor-driven WARN could shorten the warning (a sprint into reach was attacked 1.0 s after entering the warn band) or, with X2, let E6 strike the moment the player came within 2 m. Regression tests: ENC-TG1..4 and E6-10..12; all seven fail against the previous logic.
 
 ## Ghost attack-phase state machine
@@ -126,7 +137,7 @@ Decisions recorded on deferred questions:
 ```mermaid
 stateDiagram-v2
     [*] --> NORMAL
-    NORMAL --> WINDUP: ATTACK decided (E3 or E5)
+    NORMAL --> WINDUP: ATTACK decided (E3, E5 or E6)
     WINDUP --> STRIKE: after 1.2 s, lunge at 3.5 m/s
     STRIKE --> RECOVER: after 0.3 s, hit if within 1.6 m and 60 deg
     RECOVER --> NORMAL: after 2 s, 6 s cooldown starts
@@ -159,7 +170,7 @@ The same physical facts lead to different decisions depending on context. This t
 ## Explainability and telemetry
 
 - **Live, every frame:** the F1 overlay shows condition, source freshness, the current decision line (action, `[rule]`, reason) and ghost phase.
-- **Logged, on change only:** the game runs `GhostRuntimePipeline` with `ChangeOnlyTelemetry = true` ([`GhostRuntime.cs`](../Assets/PHYSXR/Ghost/GhostRuntime.cs)). A `DECISION` record is written only when the action, the rule ID or the reason differs from the last record. Numbers inside the reason (for example a hysteresis countdown) are ignored, so a held decision is not re-logged every frame. Each record has a sequential `dec` ID, the `rule` (`INNER`, `S`, `W`, `E0`–`E5`, `E2`, `DWELL`, `G0`), the verbatim `reason`, the previous action, and `cause_evt` only when the inner rule that won was R3 or R5 (the only rules that read the knock's disturbance pulse) or the hysteresis dwell is holding an action that event caused (`1978b09`; earlier builds credited every decision made while the pulse was active). Each event that reaches the decision layer also writes one `PHYS_EVENT_OUTCOME` record: `ACTED`, `OUTRANKED` (R3/R5 conditions held but another rule won) or `NOT_QUALIFIED`. `BEHAVIOUR` and `ATTACK` records reference the same `dec`.
+- **Logged, on change only:** the game runs `GhostRuntimePipeline` with `ChangeOnlyTelemetry = true` ([`GhostRuntime.cs`](../Assets/PHYSXR/Ghost/GhostRuntime.cs)). A `DECISION` record is written only when the action, the rule ID or the reason differs from the last record. Numbers inside the reason (for example a hysteresis countdown) are ignored, so a held decision is not re-logged every frame. Each record has a sequential `dec` ID, the `rule` (`INNER`, `S`, `W`, `E0`–`E6`, `X1`–`X3`, `DWELL`, `G0`), the verbatim `reason`, the previous action, and `cause_evt` only when the rule that won reads the knock's disturbance pulse (inner R3 or R5, or the sensor-response X3) or the hysteresis dwell is holding an action that event caused (`1978b09`; earlier builds credited every decision made while the pulse was active). Each event that reaches the decision layer also writes one `PHYS_EVENT_OUTCOME` record: `ACTED`, `OUTRANKED` (R3/R5 conditions held but another rule won) or `NOT_QUALIFIED`. `BEHAVIOUR` and `ATTACK` records reference the same `dec`.
 - **Other mode:** in its default mode (used by some unit tests, not by the game) the pipeline writes four stage records on every evaluation instead.
 - **Gap:** a decision can be logged with `cause_evt` while no `BEHAVIOUR START` follows, for example while the ghost is still dormant. Such a decision is now marked: a dormant ghost writes `BEHAVIOUR event=NOT_SHOWN reason=DORMANT` once per non-FOLLOW decision, so a log never implies a visible reaction that did not happen. Joining an event to a *visible* behaviour in a logged trial is still open (issue L6 in [`TechnicalSpec_MilestoneStatus.md`](TechnicalSpec_MilestoneStatus.md#open-issues)).
 
@@ -195,4 +206,4 @@ The policy has no randomness, no learned parameters and no wall-clock reads; tim
 | INVESTIGATE | Investigating | Walks (2.0 m/s) to the investigate anchor nearest the player, lingers 2 s. Before the encounter it prefers anchors ≥ 5 m from the player whose NavMesh path stays ≥ 4 m from them, and stops if it closes in to within 4 m, so a search is a walk that never closes in on the player (self-test Q23). A further shake during the search moves it to another anchor with a thud (`BEHAVIOUR event=RESEARCH evt=N`, at most one thud per second) | Leaves the player and searches a spot; searches again at each new shake | R3, X3 (physical) |
 | PROTECT | Protecting | Guards the anchor for the current objective | Hum; lights held steady | R1 (physical) |
 | RETREAT | Retreating | Moves to the farthest anchor at 3.0 m/s | Recoils with a hiss | R2 (surge), E0 (lantern) |
-| ATTACK | Attacking | WINDUP 1.2 s lunge → STRIKE 0.3 s → RECOVER 2 s | Wind-up sound and pose, red pulse on hit | E5, E3 (never sensors) |
+| ATTACK | Attacking | WINDUP 1.2 s lunge → STRIKE 0.3 s → RECOVER 2 s | Wind-up sound and pose, red pulse on hit | E5, E3, E6 (never sensors) |
