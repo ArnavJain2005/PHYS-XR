@@ -153,15 +153,15 @@ Milestones, acceptance matrix and issue register: [`Docs/TechnicalSpec_Milestone
 
 ## Team and ownership
 
-PHYS-XR is a B.Tech Cyber Physical Systems project (IAVR and ESDP, Semester 5) at the School of Electrical Engineering, Manipal Institute of Technology, Manipal, academic year 2026–27. The team, as listed in the synopsis, with roles as revised by the team on 22 Oct 2026:
+PHYS-XR is a three-person B.Tech Cyber Physical Systems project (IAVR and ESDP, Semester 5) at the School of Electrical Engineering, Manipal Institute of Technology, Manipal, academic year 2026–27.
 
-| Member | Role |
-|---|---|
-| Arnav Jain | Unity core & XR game |
-| Arya M | Dashboard & Live Telemetry |
-| Nandhitha Chowdary Surapaneni | ESP32 firmware |
+| Member | Role in the project synopsis | Contribution |
+|---|---|---|
+| Arnav Jain | Unity core & XR game | Wrote and integrated most of the code: the Unity game and XR input, the decision system and the ESP32 firmware |
+| Arya M | Dashboard & Live Telemetry | Hardware assembly, testing and the dashboard concept, together with Nandhitha |
+| Nandhitha Chowdary Surapaneni | ESP32 firmware | Hardware assembly, testing and the dashboard concept, together with Arya |
 
-The commit history of this repository is under Arnav Jain's account. Parts of the code and documentation were developed with AI coding assistance, which the commits record.
+Arnav Jain integrated and committed all contributions, so the commit history is under one account; [`CONTRIBUTORS.md`](CONTRIBUTORS.md) records who did what. Parts of the code and documentation were written with AI coding assistance (Claude Code), directed, reviewed and tested by the author; the commit trailers record which.
 
 ---
 
