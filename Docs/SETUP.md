@@ -1,6 +1,27 @@
 # Setup and running
 
-Full installation and run instructions. For the shortest path to a running simulated demo, use the [Quick Start](../README.md#quick-start) in the main README. Hardware work must follow [`HARDWARE_ACCEPTANCE.md`](HARDWARE_ACCEPTANCE.md); firmware details are in [`Firmware/README.md`](../Firmware/README.md).
+Full installation and run instructions. The main README has the [two-minute path](../README.md#try-it-in-2-minutes); the [Quick Start from source](#quick-start-from-source) below is the full version. Hardware work must follow [`HARDWARE_ACCEPTANCE.md`](HARDWARE_ACCEPTANCE.md); firmware details are in [`Firmware/README.md`](../Firmware/README.md).
+
+## Quick Start from source
+
+The software demo needs no hardware: Windows, **Unity 6000.5.8f1** (from `ProjectSettings/ProjectVersion.txt`) and, for the tests, a .NET SDK that builds `net9.0`.
+
+1. **Clone** the repository (see [Get the code](#get-the-code)).
+2. **Open** the folder in Unity Hub with 6000.5.8f1. The first import takes a while.
+3. **Run.** Open `Assets/PHYSXR/Scenes/Bootstrap.unity` and press Play, keeping the Game view focused.
+4. **Simulate the sensors.** On the menu, click **`Sensors:`** until it reads **`Sensors:  Simulated sensors`**, then click **Begin**.
+5. **Watch the ghost think.** Press **F1**; the overlay's `decision` line shows the action, `[rule]` and reason.
+   - Walk into the corridor and look at The Hollow. You get one lunge (`ATTACK [E5]`), and then it follows you.
+   - **Before picking up the fuse**, stand at least 5 m from The Hollow, outside its 3.5 m threat zone. Press **`2`** (someone NEAR) and then **`5`** (a knock).
+   - Expect `INVESTIGATE`. The ghost walks off to search near you. Press **`1`** to clear the presence.
+   - This is simulated input through the real validator and rules.
+6. **Run the tests** (no Unity needed): see [Automated tests](#5-automated-tests). The harness should end with `SUITES RUN: 26, TOTAL FAILED: 0`, and the firmware host test with `53 checks, 0 failed`.
+
+### Controls
+
+**Desktop:** WASD and mouse to move and look · Shift to sprint · Space to jump · E to interact · F or right mouse for the lantern · Esc to pause · F1 for the developer overlay. Keys `1`–`9` drive the simulated station (only in Simulated mode). Speeds, cooldowns and the fault-injection keys are in [`ARCHITECTURE.md`](ARCHITECTURE.md#controls).
+
+**Quest Touch (PC VR over Quest Link):** left stick to move (click to sprint) · right stick to turn · right trigger or A to interact · left trigger for the lantern · B to jump · left menu button to pause.
 
 ## Installation and setup
 
@@ -9,7 +30,7 @@ Full installation and run instructions. For the shortest path to a running simul
 | Tool | Version | Needed for | Verified |
 |---|---|---|---|
 | Unity Editor | **6000.5.8f1** (`ProjectSettings/ProjectVersion.txt`) | Opening, playing, building | Yes (builds on 21 Oct) |
-| Unity packages | URP 17.5.0, Input System 1.20.0, uGUI 2.5.0 (all in `Packages/manifest.json`) | Game | Yes |
+| Unity packages | URP 17.5.0, Input System 1.20.0, uGUI 2.5.0, OpenXR 1.17.1, XR Interaction Toolkit 3.5.1, XR Management 4.7.0 (all in `Packages/manifest.json`) | Game; PC VR | Yes |
 | .NET SDK | Any SDK that builds `net9.0` (C# pinned to 9 to match Unity) | `Tools/TestHarness` | Yes, SDK 10.0.402 on 22 Oct |
 | C++17 compiler | e.g. g++ | Firmware host test | Yes, g++ (WinLibs) |
 | Python 3 | Standard library only | `esp32_sim.py`, `analyze_telemetry.py` | Yes, 3.14 |
@@ -17,7 +38,7 @@ Full installation and run instructions. For the shortest path to a running simul
 | CP210x or CH340 USB driver | | ESP32 COM port | Station shows as CP210x on the dev PC |
 | Windows 10/11 | | USB serial (kernel32) and the player | Yes |
 
-`Packages/manifest.json` also lists XR (OpenXR 1.18.0, XR Management), AI Navigation and inference packages. The game does not use them.
+The XR packages provide PC VR through OpenXR with the Oculus Touch profile. `Packages/manifest.json` also lists AI Navigation, AI Assistant and inference packages; the game's NavMesh uses the built-in `UnityEngine.AI` API, and no game code references the other two.
 
 ### Get the code
 
@@ -42,7 +63,7 @@ Without `-buildPath`, the output goes to `Builds/M2_Windows/PHYS-XR.exe`. `Build
 ### Flash the firmware (after the hardware safety checks)
 
 > [!CAUTION]
-> Do not power the station with this firmware until checklist steps **A1–A3** pass with the USB cable unplugged. A1 is the ECHO divider: an unprotected 5 V echo can damage GPIO 26. A2 is the SCL pin. See [Bring-up order](HARDWARE_ACCEPTANCE.md#overview-bring-up-order). The firmware has not yet been flashed to the station.
+> Do not power the station with this firmware until checklist steps **A1–A3** pass with the USB cable unplugged. A1 is the ECHO divider: an unprotected 5 V echo can damage GPIO 26. A2 is the SCL pin. See [Bring-up order](HARDWARE_ACCEPTANCE.md#overview-bring-up-order). The accepted station runs `physxr_station` 1.0.0; its `#HELLO` identity line appears in the logged telemetry ([`Evidence/`](../Evidence/README.md)).
 
 ```bash
 arduino-cli lib install "VL53L0X"
@@ -125,7 +146,7 @@ dotnet run -c Release --project Tools/TestHarness -- --serial-monitor AUTO 30
 
 ### 4b. Meta Quest 2 / Quest 3 (PC VR)
 
-The team has demonstrated the game with the physical station on Meta Quest 2 and Quest 3, running the Windows build as PC VR through OpenXR (for example over Quest Link). The project carries the OpenXR, XR Interaction Toolkit and Oculus Touch profile settings. Touch controllers are mapped in `DesktopInputAdapter`: left stick to move (click to sprint), right stick to turn, right trigger or A to interact, left trigger for the lantern, B to jump, left menu button to pause. Step-by-step headset setup is not yet written down here.
+The team has demonstrated the game with the physical station on Meta Quest 2 and Quest 3, running the Windows build as **PC VR through OpenXR over Quest Link**. There is no standalone (on-headset) Quest build: the station's USB-serial link needs the Windows PC. The project carries the OpenXR, XR Interaction Toolkit and Oculus Touch profile settings; Touch controllers are mapped in `DesktopInputAdapter` ([controls](#controls)). Step-by-step headset setup is not yet written down here.
 
 > A **simulation run** proves the software chain from the validator onwards. A **hardware run** additionally proves wiring, firmware, calibration, USB timing and the device identity check. Only the second is evidence for the project's central claim.
 

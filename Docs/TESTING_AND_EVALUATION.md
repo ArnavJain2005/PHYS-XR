@@ -1,6 +1,6 @@
 # Testing and evaluation
 
-Detailed test inventory, verification log, telemetry schema and the planned evaluation protocol behind the evidence summary in the [main README](../README.md#evidence). The acceptance matrix (Technical Spec section G) lives in [`TechnicalSpec_MilestoneStatus.md`](TechnicalSpec_MilestoneStatus.md#acceptance-matrix-section-g); hardware procedures in [`HARDWARE_ACCEPTANCE.md`](HARDWARE_ACCEPTANCE.md).
+Detailed test inventory, verification log, telemetry schema and the planned evaluation protocol behind the evidence summary in the [main README](../README.md#evidence-snapshot). The acceptance matrix (Technical Spec section G) lives in [`TechnicalSpec_MilestoneStatus.md`](TechnicalSpec_MilestoneStatus.md#acceptance-matrix-section-g); hardware procedures in [`HARDWARE_ACCEPTANCE.md`](HARDWARE_ACCEPTANCE.md).
 
 Results are dated. A result is fresh only if its date says so; older figures are kept as historical records.
 
