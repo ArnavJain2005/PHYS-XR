@@ -2,7 +2,7 @@
 
 The detailed reference behind the architecture summary in the [main README](../README.md#architecture). It covers the implemented runtime structure, ownership boundaries, every software module, the communication protocol and its guarantees, the deployment topology and the repository layout. The decision logic has its own reference: [`GHOST_DECISION_SYSTEM.md`](GHOST_DECISION_SYSTEM.md).
 
-Status vocabulary and current evidence: [`TechnicalSpec_MilestoneStatus.md`](TechnicalSpec_MilestoneStatus.md). Nothing here implies that the physical station has been verified; it has not.
+Status vocabulary and current evidence: [`TechnicalSpec_MilestoneStatus.md`](TechnicalSpec_MilestoneStatus.md). The project team accepted the physical station on 26 Oct 2026, and 15 live station runs from 22–24 Oct 2026 are logged in [`Evidence/`](../Evidence/README.md).
 
 ## Contents
 
@@ -71,6 +71,21 @@ flowchart TD
 
 <sub>Solid arrows carry runtime data each frame; dotted arrows are observation only. The pipeline also logs `PKT_RX`, `PKT_REJECT` and `PHYS_EVENT`. Telemetry can never change a decision (test TELJ-06 / T13). The ghost reports its phase and cooldown back into `WorldState`, which closes the loop for E0, E1, E3 and E5.</sub>
 
+### Layers at a glance
+
+| Layer | What it does | Key code | Boundary it guarantees |
+|---|---|---|---|
+| Sensing station | Samples the sensors, rejects invalid readings, filters, classifies proximity with hysteresis, qualifies knocks as numbered events | [`physxr_station.ino`](../Firmware/physxr_station/physxr_station.ino), [`physxr_semantics.h`](../Firmware/physxr_station/physxr_semantics.h) | State lines carry semantic values only; raw readings appear only in `#DIAG` diagnostic lines |
+| Transport | Frames lines from USB serial, UDP or the in-game simulator and stamps their Unity arrival time | `SerialLineReceiver`, `UDPReceiver`, `SimulatedSensorStation`, `SensorFeed` | Simulated and real input take the same path from here on |
+| Validation and freshness | Accepts or rejects each line with a reason code; orders lines per boot; accepts each event once; tracks FRESH (≤ 0.5 s) / STALE / UNAVAILABLE | `PacketValidator`, `PhysicalCommunicationPipeline`, `PhysicalEventManager` | Stale, duplicate, out-of-order or foreign data never reaches the agent |
+| World state | Builds the one `WorldState` the agent sees: physical + player + virtual + ghost | `WorldStateManager` | Physical fields stay neutral unless the source is FRESH and the run is not virtual-only; an accepted event becomes a 3 s disturbance pulse, never started while paused |
+| Decision | Chooses a `GhostAction` with a rule ID and reason | `RuleBasedDecisionProvider`, `SensorResponseProfile`, `EncounterDecisionLayer` | Pure, deterministic C# on an injected game clock: no Unity APIs, sockets or randomness |
+| Ghost execution | Turns the action into movement, pose and sound; reports attack phase and cooldown back | `GhostRuntimePipeline`, `GhostMotionController`, `HollowVisual` | Executes, never chooses; a terminal gate stops the cycle when the run ends |
+| Player and input | Desktop and Quest Touch input drive the same intents | `DesktopInputAdapter`, `PlayerController` | One input abstraction for keyboard, mouse and Touch controllers |
+| Telemetry | Records packets, events, decision changes and behaviours as JSON Lines | `TelemetryService`, `JsonLinesTelemetrySink` | Observational only: a full or failing sink cannot change a decision (test TELJ-06) |
+
+The UDP receiver is exercised by the Python simulator `esp32_sim.py`; the station firmware itself sends over USB serial only.
+
 ### Ownership boundaries
 
 | Layer | Owns | Must never |
@@ -117,7 +132,7 @@ sequenceDiagram
 | 8–9 | `GhostRuntimePipeline` → `GhostMotionController` | Execution state Investigating: walk to the anchor nearest the player and linger |
 | all | Telemetry | `PKT_RX`, `PHYS_EVENT`, `DECISION` with `cause_evt=n`, `BEHAVIOUR START` |
 
-<sub>One knock must produce one reaction. The firmware repeats each event on three lines so a lost line cannot lose the event; the `(boot, eventId)` check then makes sure those three lines start one 3 s disturbance pulse, not three. With the **simulator** in place of steps 1–3, the chain is verified up to the decision (SENS, SER-18, self-test P02). A logged trial joining a caused decision to its visible behaviour is still missing ([L6](TechnicalSpec_MilestoneStatus.md#open-issues)), and steps 1–3 on the **real station** have not been run. R3 needs the player outside the ghost's 3.5 m threat zone.</sub>
+<sub>One knock must produce one reaction. The firmware repeats each event on three lines so a lost line cannot lose the event; the `(boot, eventId)` check then makes sure those three lines start one 3 s disturbance pulse, not three. With the **simulator** in place of steps 1–3, the chain is verified up to the decision (SENS, SER-18, self-test P02). On the **real station**, the 15 logged live runs of 22–24 Oct 2026 produced 70 knock-caused decisions, 44 of them followed by a logged `BEHAVIOUR START` ([L6](TechnicalSpec_MilestoneStatus.md#open-issues), [`Evidence/`](../Evidence/README.md)). R3 needs the player outside the ghost's 3.5 m threat zone. With a single ranging sensor reporting, proximity arrives at LOW confidence and the same path ends in X3 INVESTIGATE instead of R3.</sub>
 
 ## Software modules
 
@@ -294,6 +309,7 @@ flowchart TD
 | F1 | Developer overlay: condition, freshness, link, decision, rule, reason, ghost phase |
 | `1` `2` `3` / `4` / `5` | *Simulated sensors only*: presence NONE/NEAR/VERY_NEAR · toggle confidence · one disturbance event |
 | `6` `7` `8` / `9` | *Simulated sensors only*: resend event · stale packet · reboot (fault injection) · stop/resume station |
+| Quest Touch controllers | PC VR over Quest Link: see [`SETUP.md`](SETUP.md#controls) |
 
 ## Repository structure
 
