@@ -22,7 +22,7 @@ How Blackthorn House and The Hollow look and sound, why, and where each piece li
 
 ## The game and gallery
 
-You arrive at Blackthorn House three weeks after its caretaker vanished. The power is out, and something tall stands at the end of the corridor.
+*The Presence* is a short first-person horror game designed as a run of under five minutes, with one location and one antagonist. You arrive at Blackthorn House three weeks after its caretaker vanished. The power is out, and something tall stands at the end of the corridor.
 
 1. **Find the fuse** on the kitchen table. The first time you see The Hollow clearly, it lunges once. The lunge is telegraphed and can be interrupted.
 2. **Restore the power** in the utility room. The surge drives the ghost back, and a checkpoint is saved.

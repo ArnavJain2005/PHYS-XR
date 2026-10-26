@@ -5,7 +5,9 @@ Unity, and what has been verified. Firmware details (pins, protocol, calibration
 
 > **Status (26 Oct 2026).** The project team has accepted the physical hardware system: the VL53L0X time-of-flight and MPU6050 sensors are calibrated and functional, and the full physical integration was demonstrated on Meta Quest 2 and Meta Quest 3 (team-confirmed). The station runs `physxr_station` firmware 1.0.0 (`#HELLO proto=1;fw=1.0.0;dev=phys-xr-01`, I²C on SCL 23), and 15 live runs from 22-24 Oct are logged in [`Evidence/`](../Evidence/README.md). The text below is kept as the record of the 21 Oct bring-up.
 
-**Status (21 Oct 2026, evening): software complete and re-verified; not yet run with this firmware on the
+> **HC-SR04 (26 Oct 2026):** the HC-SR04 is fitted but gives no valid readings (owner-confirmed after inspecting the assembled station, 26 Oct 2026; `us_ok=0` in every `SENSOR_DIAG` record of the 15 logged live runs), so the firmware reports proximity at LOW confidence.
+
+**Historical record, superseded by the status above. Status (21 Oct 2026, evening): software complete and re-verified; not yet run with this firmware on the
 physical station.** The firmware compiles against the real Pololu VL53L0X 1.3.1 (repeated: 0 warnings,
 `VL53L0X.cpp` linked). The station's board is now connected as **COM6** (Silicon Labs CP210x) but still runs
 an old bench sketch; `physxr_station` has not been flashed. A read-only look and a USB-serial player
@@ -18,7 +20,7 @@ says otherwise. The ordered hardware procedure is [`HARDWARE_ACCEPTANCE.md`](HAR
 > |---|---|---|
 > | **HC-SR04 ECHO → GPIO 26 voltage protection** (divider or level shifter; ECHO is 5 V) | Reported present, **not measured** | Without it the 5 V echo can damage GPIO 26. Measure ≤ 3.3 V (checklist A1, C4). |
 > | **I²C SCL: GPIO 22 or 23** | **Unresolved** (latest code 23; poster and I²C scanner 22) | The firmware tries 23 then 22 and reports `scl=` in `#HELLO`; the wire must be traced and recorded (A2, C2). |
-> | **Ultrasonic not ranging** | The old sketch printed `SONAR No echo` on every cycle (21 Oct) | If it persists after flashing, confidence stays LOW and R1 PROTECT / R3 INVESTIGATE never fire. Check 5 V supply, TRIG/ECHO not swapped, divider orientation, ground (A4, A5, C4). |
+> | **Ultrasonic not ranging** | The old sketch printed `SONAR No echo` on every cycle (21 Oct) | **Still the case on 26 Oct 2026:** fitted, no valid readings (owner-confirmed), so confidence stays LOW and R1 PROTECT / R3 INVESTIGATE never fire on the station. Check 5 V supply, TRIG/ECHO not swapped, divider orientation, ground (A4, A5, C4). |
 > | **SDA 21 and common ground** | Not confirmed | No I²C devices without them (A3). |
 > | **ToF field of view** | The old sketch read 42–52 mm with nothing intended in front | Would hold presence at VERY_NEAR; clear the field of view (A6). |
 

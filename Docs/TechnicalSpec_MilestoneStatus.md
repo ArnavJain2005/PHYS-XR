@@ -45,7 +45,7 @@ Last updated 21 Oct 2026 (game implementation pass on top of `d9ef09d`; gameplay
 | Bootstrap wiring | `App/AppBootstrap.cs`, `App/SensorService.cs`, `App/MainMenu.cs` |
 | ScreenFader, GameUI | `Game/UI/GameUI.cs` (uGUI) |
 | Ending | `Game/Gameplay/EndingSequence.cs` |
-| `PlatformRigSpawner`, `XRInputAdapter`, `PhysxrSettings` assets | Not built (desktop only; settings are code constants and `GameSettings`). |
+| `PlatformRigSpawner`, `XRInputAdapter`, `PhysxrSettings` assets | Not built as specified. PC VR uses the OpenXR and XR Interaction Toolkit project settings, with Touch controllers mapped in `DesktopInputAdapter`; settings are code constants and `GameSettings`. |
 
 Deviations, recorded:
 - **Dev hotkeys.** The spec's letter keys (D, S, R, X) collide with WASD, so the number row is used (1–9).
@@ -195,7 +195,7 @@ These come from the project synopsis (*PHYS-XR: Embodied AI for Mixed-Reality Ga
 | Record event, decision and timing data | **Implemented** (JSON Lines telemetry + analyzer) |
 | Compare virtual-only with physical-plus-virtual | **Planned**; both conditions and their logging exist, no trials yet |
 | Evaluate latency, decision correctness, reliability, clarity | **Planned**; needs hardware and participants |
-| Mixed-reality prototype on Meta Quest | **Planned**; desktop only today |
+| Mixed-reality prototype on Meta Quest (synopsis wording) | **Not built as mixed reality.** Delivered as PC VR through OpenXR over Quest Link with Touch controllers, demonstrated on Quest 2 and Quest 3 (team-confirmed, 26 Oct 2026; no recording in the repository). No standalone Quest or mixed-reality build |
 
 ### Subsystem status
 
@@ -272,7 +272,7 @@ The five levels are kept separate on purpose: passing a test is not the same as 
 | L1 | **Closed by team hardware acceptance (26 Oct 2026).** **Station never run with `physxr_station`** | Board on COM6 runs an old bench sketch; 0 contract lines ever accepted | The central physical→agent claim is unproven | **P0** | Checklist A → B → C | `#HELLO dev=phys-xr-01` seen and `FRESH` in game |
 | L2 | **Closed by team hardware acceptance (26 Oct 2026).** **ECHO 5 V into GPIO 26: protection unmeasured** | "Reported present" only | Can damage the ESP32 | **P0 (safety)** | Meter check A1 (USB unplugged), C4 powered | GPIO 26 ≤ 3.3 V recorded with photo |
 | L3 | **Closed by team hardware acceptance (26 Oct 2026).** **SCL 22 vs 23 unresolved; TRIG/ECHO 25/26 vs poster 5/18** | Conflicting sources | No I²C devices, or no ultrasonic | P0 | Continuity A2/A5; compare with `#HELLO scl=` | Pins recorded in `Firmware/README.md` §1 |
-| L4 | **Closed by team hardware acceptance (26 Oct 2026).** **Ultrasonic never ranged** (`SONAR No echo` under the old sketch) | 21 Oct read-only capture | Confidence stuck LOW → R1 and R3 cannot fire on hardware | P0 | A4/A5/C4: 5 V supply, wiring, divider orientation, obstruction | `us_ok=1` with a plausible `us_cm` |
+| L4 | **Open (26 Oct 2026):** the HC-SR04 is fitted but gives no valid readings (owner-confirmed after inspecting the assembled station, 26 Oct 2026; `us_ok=0` in every `SENSOR_DIAG` record of the 15 logged live runs), so the firmware reports proximity at LOW confidence. The team's hardware acceptance covers the ToF and MPU sensors, not this one. Original entry: **Ultrasonic never ranged** (`SONAR No echo` under the old sketch) | 21 Oct read-only capture | Confidence stuck LOW → R1 and R3 cannot fire on hardware | P0 | A4/A5/C4: 5 V supply, wiring, divider orientation, obstruction | `us_ok=1` with a plausible `us_cm` |
 | L5 | **Closed by team hardware acceptance (26 Oct 2026).** **Thresholds uncalibrated**; ToF read 42–52 mm with nothing intended in view | Firmware constants; old-sketch reading | False NEAR/VERY_NEAR, false or missed knocks | P1 | Clear the ToF field of view; `Firmware/README.md` §5 calibration; D2–D9 | 5 min idle → 0 events; 20 taps → 20 events |
 | L6 | **Largely resolved (26 Oct 2026):** in 15 live station runs, 44 of 70 knock-caused decisions are followed by a logged `BEHAVIOUR START` (`Evidence/`). Original entry: **Event → visible behaviour join not demonstrated** | 22 Oct SIMULATED run: 2 decisions caused by events, `caused_joined=0`. The self-test knock (P02) happens while the ghost is still **dormant**, so the decision is made but no `BEHAVIOUR START` follows. P02 checks the decision, not the visible response | T27 evidence missing; a reviewer cannot yet trace knock → visible ghost reaction in a log | P1 | Add a self-test (or run the demo script) with the knock after the ghost manifests; re-run the analyzer | `caused_joined ≥ 1` in a logged trial (simulated, then hardware) |
 | L7 | **Intermittent player self-test early exit** | 4 runs exited 1 with no `SELFTEST END`; one coincided with a Windows low-virtual-memory event | Flaky evidence and demo risk | P2 | Re-run with the Editor closed and free commit recorded per run | 20 consecutive passes with memory logged, or a reproduced cause |
@@ -375,3 +375,10 @@ Only after Phase 3 exits; none are committed scope.
 | Additional physical inputs (button, light sensor from the proposal) | New semantic fields need contract versioning (`v=2`) and rule review |
 | Richer explainability | Expose the decision trace (inner candidate, hysteresis, outer rule) in a viewer |
 | Broader evaluation | More rooms, stations, participants |
+
+## Background reading
+
+From the project synopsis:
+
+- D. Schmalstieg and T. Höllerer, *Augmented Reality: Principles and Practice*, Addison-Wesley, 2016.
+- S. M. LaValle, *Virtual Reality*, Cambridge University Press, 2023 ([draft](http://lavalle.pl/vr/)).

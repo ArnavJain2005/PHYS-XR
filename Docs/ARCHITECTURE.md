@@ -1,6 +1,6 @@
 # PHYS-XR architecture reference
 
-The detailed reference behind the architecture summary in the [main README](../README.md#architecture). It covers the implemented runtime structure, ownership boundaries, every software module, the communication protocol and its guarantees, the deployment topology and the repository layout. The decision logic has its own reference: [`GHOST_DECISION_SYSTEM.md`](GHOST_DECISION_SYSTEM.md).
+The detailed reference behind the sensor-station summary and architecture diagram in the [main README](../README.md#the-sensor-station). It covers the implemented runtime structure, ownership boundaries, every software module, the communication protocol and its guarantees, the deployment topology and the repository layout. The decision logic has its own reference: [`GHOST_DECISION_SYSTEM.md`](GHOST_DECISION_SYSTEM.md).
 
 Status vocabulary and current evidence: [`TechnicalSpec_MilestoneStatus.md`](TechnicalSpec_MilestoneStatus.md). The project team accepted the physical station on 26 Oct 2026, and 15 live station runs from 22–24 Oct 2026 are logged in [`Evidence/`](../Evidence/README.md).
 
@@ -9,6 +9,7 @@ Status vocabulary and current evidence: [`TechnicalSpec_MilestoneStatus.md`](Tec
 - [System architecture](#system-architecture)
 - [Software modules](#software-modules)
 - [Communication protocol and integration](#communication-protocol-and-integration)
+- [Station data flow](#station-data-flow)
 - [Deployment topology](#deployment-topology)
 - [Game flow and controls](#game-flow-and-controls)
 - [Engineering highlights](#engineering-highlights)
@@ -24,7 +25,7 @@ The design (synopsis, Technical Implementation Specification) and the implementa
 |---|---|---|---|
 | Transport | ESP32 → Unity over local Wi-Fi/UDP | **USB serial at 115200 baud is the station's link**; UDP 47800 kept and used by `esp32_sim.py` | Desktop-only serial (kernel32). A Quest build needs the UDP path or another transport ([Phase 6](TechnicalSpec_MilestoneStatus.md#phase-6--optional-research-extensions)) |
 | Platform | Meta Quest mixed reality | **PC VR through OpenXR**, demonstrated by the team on Meta Quest 2 and Quest 3 with Touch controllers (`DesktopInputAdapter`), plus Windows desktop with keyboard and mouse | Untethered (standalone Quest) builds would need the UDP path or another transport |
-| Sensors | Distance sensor + push button (light sensor optional) | **VL53L0X ToF + HC-SR04 ultrasonic + MPU6050** | Proximity with a confidence level, plus disturbance; no button or light input |
+| Sensors | Distance sensor + push button (light sensor optional) | **VL53L0X ToF + HC-SR04 ultrasonic + MPU6050** in the firmware. On the accepted station the HC-SR04 is fitted but gives no valid readings (owner-confirmed after inspecting the assembled station, 26 Oct 2026; `us_ok=0` in every `SENSOR_DIAG` record of the 15 logged live runs), so the firmware reports proximity at LOW confidence | Proximity with a confidence level, plus disturbance; no button or light input |
 
 ### Implemented runtime architecture
 
@@ -125,7 +126,7 @@ sequenceDiagram
 
 | Step | Component | What happens |
 |---|---|---|
-| 1–2 | Firmware | ToF and sonar agree on NEAR, so confidence is HIGH; the IMU deviation stays above ON for 3 samples, which qualifies event *n* |
+| 1–2 | Firmware | ToF and sonar agree on NEAR, so confidence is HIGH (this HIGH path needs both ranging sensors valid; see the note below the table); the IMU deviation stays above ON for 3 samples, which qualifies event *n* |
 | 3 | Firmware → `SerialLineReceiver` | The state line carrying event *n* is sent on 3 consecutive lines; Unity stamps arrival time `t2` |
 | 4 | `PhysicalCommunicationPipeline`, `PhysicalEventManager` | Validate, order per boot, check freshness; `(boot, n)` accepted once, the 2 repeats logged `DUPLICATE` |
 | 5 | `GameFlowController` → `WorldStateManager` | `NotifyAcceptedEvent`, only while the run is `Playing` |
@@ -133,7 +134,7 @@ sequenceDiagram
 | 8–9 | `GhostRuntimePipeline` → `GhostMotionController` | Execution state Investigating: walk to the anchor nearest the player and linger |
 | all | Telemetry | `PKT_RX`, `PHYS_EVENT`, `DECISION` with `cause_evt=n`, `BEHAVIOUR START` |
 
-<sub>One knock must produce one reaction. The firmware repeats each event on three lines so a lost line cannot lose the event; the `(boot, eventId)` check then makes sure those three lines start one 3 s disturbance pulse, not three. With the **simulator** in place of steps 1–3, the chain is verified up to the decision (SENS, SER-18, self-test P02). On the **real station**, the 15 logged live runs of 22–24 Oct 2026 produced 70 knock-caused decisions, 44 of them followed by a logged `BEHAVIOUR START` ([L6](TechnicalSpec_MilestoneStatus.md#open-issues), [`Evidence/`](../Evidence/README.md)). R3 needs the player outside the ghost's 3.5 m threat zone. With a single ranging sensor reporting, proximity arrives at LOW confidence and the same path ends in X3 INVESTIGATE instead of R3.</sub>
+<sub>One knock must produce one reaction. The firmware repeats each event on three lines so a lost line cannot lose the event; the `(boot, eventId)` check then makes sure those three lines start one 3 s disturbance pulse, not three. With the **simulator** in place of steps 1–3, the chain is verified up to the decision (SENS, SER-18, self-test P02). On the **real station**, the 15 logged live runs of 22–24 Oct 2026 produced 70 knock-caused decisions, 44 of them followed by a logged `BEHAVIOUR START` ([L6](TechnicalSpec_MilestoneStatus.md#open-issues), [`Evidence/`](../Evidence/README.md)). R3 needs the player outside the ghost's 3.5 m threat zone and HIGH confidence. When proximity arrives at LOW confidence (for example, when only one ranging source is valid), R1 and R3 cannot fire; with the default sensor-response profile, the same knock with presence NEAR or VERY_NEAR ends in X3 INVESTIGATE instead, the LOW-confidence counterpart of R3 ([rules](GHOST_DECISION_SYSTEM.md#encounter-layer-game-arbitration)). LOW confidence on its own does not identify which sensors are fitted.</sub>
 
 ## Software modules
 
@@ -260,11 +261,17 @@ v=1;dev=phys-xr-01;boot=2864130047;seq=1235;ts=987702;presence=VERY_NEAR;confide
 
 - No authentication or encryption on either transport; the device ID is an identity check, not security. Intended for a trusted, local bench.
 - UDP listens on all interfaces on port 47800 when that mode is selected (Windows Firewall may prompt).
-- USB serial uses kernel32 directly because the project targets .NET Standard 2.1 (no `System.IO.Ports`), so it is **Windows desktop only**. On other platforms it reports `FAULTED: only supported on the Windows desktop build`.
+- USB serial uses kernel32 directly because the project targets .NET Standard 2.1 (no `System.IO.Ports`), so it is **Windows only** (desktop play and PC VR both run on the Windows PC). On other platforms it reports `FAULTED: only supported on the Windows desktop build`.
 
 ### Serial vs. UDP: migration implications
 
 The firmware currently speaks serial only. Moving to Wi-Fi/UDP (needed for an untethered Quest) means: adding Wi-Fi and UDP send to the sketch; keeping the identical line format (the validator and pipeline need no change); deciding network discovery (fixed IP or broadcast); re-validating freshness thresholds against Wi-Fi jitter; and re-running SER-equivalent tests on UDP.
+
+## Station data flow
+
+<img src="media/station_flow.svg" alt="Data flow: a VL53L0X time-of-flight sensor and an MPU6050 on the I2C bus (SDA 21, SCL 23) feed an ESP32 running physxr_station firmware 1.0.0, which sends semantic state lines over USB serial at 115200 baud, 10 Hz and on change, to Unity, where they are validated, ordered, de-duplicated and checked for freshness before becoming the presence, confidence and disturbance fields of WorldState" width="900">
+
+<sub>The game-facing data path for proximity and knocks, drawn from the pins, I²C addresses, sample rates and baud rate in [`physxr_station.ino`](../Firmware/physxr_station/physxr_station.ino). It shows only the two sensors in this path; the complete station wiring is in the deployment topology below and in [`Firmware/README.md`](../Firmware/README.md).</sub>
 
 ## Deployment topology
 
@@ -273,7 +280,7 @@ flowchart TD
     subgraph Desk["Tabletop station"]
         S1[VL53L0X] -- I2C --> ESP[ESP32]
         S3[MPU6050] -- I2C --> ESP
-        S2[HC-SR04] -- "via divider" --> ESP
+        S2["HC-SR04<br/>no valid readings"] -- "via divider" --> ESP
     end
     ESP -- "USB, CP210x" --> PORT(("COM port<br/>one owner"))
     PORT --> GAME["PHYS-XR.exe<br/>or Unity Editor"]

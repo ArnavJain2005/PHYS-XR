@@ -6,6 +6,8 @@ software evidence is in [`HARDWARE_SERIAL.md`](HARDWARE_SERIAL.md) §6 and
 [`TechnicalSpec_MilestoneStatus.md`](TechnicalSpec_MilestoneStatus.md). Background on pins, protocol and
 calibration: [`Firmware/README.md`](../Firmware/README.md).
 
+> **HC-SR04 and this checklist (26 Oct 2026).** The HC-SR04 is fitted but gives no valid readings (owner-confirmed after inspecting the assembled station, 26 Oct 2026; `us_ok=0` in every `SENSOR_DIAG` record of the 15 logged live runs), so the firmware reports proximity at LOW confidence. The "not run" / "not performed" wording and the empty Result cells in this file are the checklist as written on 21–22 Oct; the team's acceptance is recorded in the status note under the bring-up table, and the per-step results were not recorded here.
+
 **How to record.** Fill in the Result column with PASS / FAIL and a short observation (a value, a
 screenshot name). Steps marked **STOP** must pass before you continue: fix the cause, then repeat the step.
 Note the date, the tester, the build commit and the COM port at the top of your copy.
