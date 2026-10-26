@@ -4,15 +4,15 @@ Images used by the [main README](../../README.md) and the docs. Every image here
 
 ## Still needed
 
-Each item has a `TODO(media)` comment at the place in the README where it belongs. Use the file name given, so the README only needs its comment swapped for the link.
+Each item has a visible **TODO(media)** note at the place in the README where it belongs, naming the exact file. These notes are for the staging branch and must be replaced (or removed with the item listed here as outstanding) before merge. Never substitute a mock-up or an unrelated clip.
 
 | File to add | What it should show | Length / size | Where it goes |
 |---|---|---|---|
-| `split_screen_knock_demo.mp4`, plus a poster frame `split_screen_knock_demo.jpg` | Left half: the real room, someone leaning in to the station and knocking it. Right half: the headset view at the same moment, the ghost turning and walking off to search. One continuous take, F1 overlay visible on the game side | 60–90 s, 1920×1080, 30 fps or more; poster 1280×720 JPEG | README top. GitHub does not play an `.mp4` committed to the repo inside a README: upload the video by dragging it into an issue or PR comment (or attach it to a Release) and link the poster to that URL |
-| `gameplay_loop.gif` | Normal play without the station: the corridor, the first sighting lunge, the lantern stagger | 8–12 s, 800 px wide, 15 fps, under 10 MB | README top, under the video |
-| `station_photo.jpg` | The physical station as accepted: ESP32, VL53L0X and MPU6050 on their mount, with the USB cable to the PC in shot | 1600×1067 JPEG, well lit, neutral background | README, "The sensor station" |
-| `quest_headset_clip.mp4`, plus a poster frame `quest_headset_clip.jpg` | The game running on Meta Quest 2 or Quest 3 as PC VR over Quest Link, recorded from the headset, with the station driving a reaction | 20–40 s, the headset's native capture resolution | README, "Status and roadmap", next to the Quest line |
-| `social_preview.png` | The Hollow hero frame with the project name, for GitHub's social preview (Settings → General → Social preview) | 1280×640 PNG, under 1 MB | Repository settings, not the README |
+| `Docs/media/physxr-physical-loop-demo.mp4` | Split screen. Left: the real room, someone leaning in to the station and knocking it. Right: the game at the same moment, the ghost turning and walking off to search. One continuous take, F1 overlay visible | 60–90 s, 1920×1080, 30 fps or more | README top. GitHub does not play a committed `.mp4` inline in a README; also upload it through an issue/PR comment or a Release and link a poster frame to that URL |
+| `Docs/media/the-presence-gameplay.gif` | Normal play: the corridor, the first-sighting lunge, the lantern stagger | 8–12 s, about 800 px wide, under 10 MB | README, under the hero image |
+| `Docs/media/physxr-sensor-station.jpg` | The actual assembled station, as it is, connected to the PC | about 1600×1067 JPEG, well lit | README, "The sensor station" |
+| `Docs/media/quest-link-demo.mp4` | An authentic PC VR recording over Quest Link (Quest 2 or Quest 3), with the station driving a reaction | 20–40 s, the headset's capture resolution | README, "Status and roadmap" |
+| `Docs/media/social-preview-1200x630.png` | The Hollow hero frame with the project name, for GitHub's social preview (Settings → General → Social preview) | 1200×630 PNG, under 1 MB | Repository settings, not the README |
 
 ## In use
 

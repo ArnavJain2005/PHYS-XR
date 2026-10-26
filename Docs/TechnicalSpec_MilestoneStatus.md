@@ -375,3 +375,10 @@ Only after Phase 3 exits; none are committed scope.
 | Additional physical inputs (button, light sensor from the proposal) | New semantic fields need contract versioning (`v=2`) and rule review |
 | Richer explainability | Expose the decision trace (inner candidate, hysteresis, outer rule) in a viewer |
 | Broader evaluation | More rooms, stations, participants |
+
+## Background reading
+
+From the project synopsis:
+
+- D. Schmalstieg and T. Höllerer, *Augmented Reality: Principles and Practice*, Addison-Wesley, 2016.
+- S. M. LaValle, *Virtual Reality*, Cambridge University Press, 2023 ([draft](http://lavalle.pl/vr/)).

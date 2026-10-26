@@ -1,6 +1,6 @@
 # Setup and running
 
-Full installation and run instructions. The main README has the [two-minute path](../README.md#try-it-in-2-minutes); the [Quick Start from source](#quick-start-from-source) below is the full version. Hardware work must follow [`HARDWARE_ACCEPTANCE.md`](HARDWARE_ACCEPTANCE.md); firmware details are in [`Firmware/README.md`](../Firmware/README.md).
+Full installation and run instructions. The main README has the [short path](../README.md#try-it); the [Quick Start from source](#quick-start-from-source) below is the full version. Hardware work must follow [`HARDWARE_ACCEPTANCE.md`](HARDWARE_ACCEPTANCE.md); firmware details are in [`Firmware/README.md`](../Firmware/README.md).
 
 ## Quick Start from source
 
