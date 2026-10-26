@@ -11,6 +11,7 @@ Status vocabulary and current evidence: [`TechnicalSpec_MilestoneStatus.md`](Tec
 - [Communication protocol and integration](#communication-protocol-and-integration)
 - [Deployment topology](#deployment-topology)
 - [Game flow and controls](#game-flow-and-controls)
+- [Engineering highlights](#engineering-highlights)
 - [Repository structure](#repository-structure)
 
 ## System architecture
@@ -310,6 +311,19 @@ flowchart TD
 | `1` `2` `3` / `4` / `5` | *Simulated sensors only*: presence NONE/NEAR/VERY_NEAR · toggle confidence · one disturbance event |
 | `6` `7` `8` / `9` | *Simulated sensors only*: resend event · stale packet · reboot (fault injection) · stop/resume station |
 | Quest Touch controllers | PC VR over Quest Link: see [`SETUP.md`](SETUP.md#controls) |
+
+## Engineering highlights
+
+| Challenge | Approach | Why it matters |
+|---|---|---|
+| Sensor data arrives late, twice, out of order, or from a rebooted board | Per-boot sequence ordering, `(boot, eventId)` de-duplication, arrival-time freshness, resync after reboot; every rejection has a reason code | A flaky cable or a reset never becomes a phantom ghost reaction. In 15 live runs, 29,896 lines arrived with 4 rejected |
+| A physical reading must not make a VR jump-scare unfair | Attacks need in-game conditions and an encounter-specific 1.5 s telegraph that sensor warnings cannot charge | The player always gets the full warning, whatever happens in the room |
+| Hardware is not always available | An in-game simulator and a Python UDP simulator speak the exact same line format, into the same validator | Every behaviour can be developed and regression-tested without the station |
+| Game AI is hard to test inside an engine | Decision logic is plain C# on an injected clock; 382 tests run with `dotnet` in seconds | Rule changes are proven before anyone opens the Editor |
+| "Why did the ghost do that?" | Rule IDs and reason strings on every decision; change-only `DECISION` telemetry | Behaviour can be explained live and audited afterwards |
+| Crediting a knock with a decision it did not cause | `cause_evt` only for rules that actually read the knock; one `PHYS_EVENT_OUTCOME` per event | Analysis measures real sensor influence, not coincidence |
+| Firmware is hard to unit-test on a microcontroller | The semantic core is header-only C++ with no Arduino dependency, host-tested on a PC | Classification, fusion and event logic are checked without hardware (53/53) |
+| One input layer for desk and headset | `DesktopInputAdapter` maps keyboard, mouse and Quest Touch controllers to the same intents | The same game, rules and self-tests serve both platforms |
 
 ## Repository structure
 

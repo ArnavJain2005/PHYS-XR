@@ -4,6 +4,7 @@ How Blackthorn House and The Hollow look and sound, why, and where each piece li
 
 ## Contents
 
+- [The game and gallery](#the-game-and-gallery)
 - [At a glance](#at-a-glance)
 - [Direction](#direction)
 - [Baseline (before this pass)](#baseline-before-this-pass)
@@ -18,6 +19,35 @@ How Blackthorn House and The Hollow look and sound, why, and where each piece li
 - [Cost and platform notes](#cost-and-platform-notes)
 - [Asset provenance](#asset-provenance)
 - [Rebuilding the Ghost mesh](#rebuilding-the-ghost-mesh)
+
+## The game and gallery
+
+You arrive at Blackthorn House three weeks after its caretaker vanished. The power is out, and something tall stands at the end of the corridor.
+
+1. **Find the fuse** on the kitchen table. The first time you see The Hollow clearly, it lunges once. The lunge is telegraphed and can be interrupted.
+2. **Restore the power** in the utility room. The surge drives the ghost back, and a checkpoint is saved.
+3. **Get out.** Leaving the utility room commits the encounter: The Hollow appears between you and the front door, warns, and attacks if you come within reach.
+4. **Your only tool** is a candle lantern. Raise it at the right moment and the ghost staggers and retreats. Miss, and you wait for it to recharge.
+5. **Escape** to the ending, where a recording plays and a figure watches from the upper window.
+
+The Hollow is a *character* before it is a system. It trails you at a distance, stops and stares when something is wrong, searches the house when it hears a knock in the real room, recoils from light, and lunges only after a visible warning.
+
+<table>
+  <tr>
+    <td width="50%"><img src="media/first_sighting_corridor_2026-10-22.jpg" alt="First-person view down a dark corridor lit by a red emergency lamp, with The Hollow raising its arms at the far end" width="100%"><br><sub><b>First sighting.</b> A red emergency lamp, a corridor, and the ghost's one telegraphed lunge (rule E5).</sub></td>
+    <td width="50%"><img src="media/entry_hall_moonlight_2026-10-22.jpg" alt="Dark entry hall with cold moonlight through the windows, a dim red emergency lamp and a chandelier in silhouette" width="100%"><br><sub><b>Two temperatures of light.</b> Cold moonlight, sparse red emergency lamps, and the lantern as the warmest, closest light.</sub></td>
+  </tr>
+  <tr>
+    <td><img src="media/encounter_dining_hall_2026-10-22.jpg" alt="The Hollow standing in a dark dining hall beside a balustrade, a candle chandelier in the distance" width="100%"><br><sub><b>The encounter.</b> Lights near the ghost sag and stutter, and the colour grade tightens as it closes in.</sub></td>
+    <td><img src="media/power_restored_utility_2026-10-22.jpg" alt="Tiled utility room with the fuse box lit and the caption Power restored" width="100%"><br><sub><b>Power restored.</b> The surge raises the in-game threat level, and the ghost retreats (rule R2).</sub></td>
+  </tr>
+  <tr>
+    <td><img src="media/ending_window_silhouette_2026-10-22.jpg" alt="House facade at night with three lit windows and a figure silhouetted in the upper right window" width="100%"><br><sub><b>The ending.</b> The silhouette in the window is built from the new ghost meshes.</sub></td>
+    <td><img src="media/menu_sensor_panel_2026-10-24.jpg" alt="Title menu for The Presence with a physical-sensor panel showing USB serial COM6, a FAULT marker and the message COM6 not found" width="100%"><br><sub><b>Menu sensor panel.</b> Live station identity, readings and faults. In this capture no station was plugged in, and the panel says so.</sub></td>
+  </tr>
+</table>
+
+<sub>Six real desktop captures from local Windows builds. The five in-game frames come from the game's scripted `-physxr-capture` tour (22 Oct 2026). It teleports the player and triggers beats directly, so it shows real rendering, not organic play. The menu frame comes from the menu's capture mode (24 Oct 2026). None of these frames is a headset recording or shows the station driving the ghost.</sub>
 
 ## At a glance
 
