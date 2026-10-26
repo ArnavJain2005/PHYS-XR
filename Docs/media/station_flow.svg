@@ -1,0 +1,63 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 980 300" width="980" height="300" font-family="Segoe UI, Helvetica, Arial, sans-serif" role="img" aria-labelledby="t d">
+  <title id="t">PHYS-XR sensor station data flow</title>
+  <desc id="d">A VL53L0X time-of-flight sensor and an MPU6050 motion sensor connect over I2C to an ESP32 running physxr_station firmware, which sends semantic state lines over USB serial at 115200 baud to Unity, where they are validated and become the physical part of WorldState.</desc>
+  <defs>
+    <marker id="a" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse">
+      <path d="M0,0 L10,5 L0,10 z" fill="#4a5560"/>
+    </marker>
+  </defs>
+  <rect x="0" y="0" width="980" height="300" rx="14" fill="#f7f8fa"/>
+
+  <!-- Sensors -->
+  <rect x="20" y="40" width="190" height="86" rx="10" fill="#ffffff" stroke="#2e7d32" stroke-width="2"/>
+  <text x="115" y="68" text-anchor="middle" font-size="16" font-weight="700" fill="#1b1f23">VL53L0X ToF</text>
+  <text x="115" y="90" text-anchor="middle" font-size="13" fill="#3d4650">proximity · I²C 0x29</text>
+  <text x="115" y="110" text-anchor="middle" font-size="13" fill="#3d4650">ranging at 25 Hz</text>
+
+  <rect x="20" y="166" width="190" height="86" rx="10" fill="#ffffff" stroke="#2e7d32" stroke-width="2"/>
+  <text x="115" y="194" text-anchor="middle" font-size="16" font-weight="700" fill="#1b1f23">MPU6050</text>
+  <text x="115" y="216" text-anchor="middle" font-size="13" fill="#3d4650">knocks · I²C 0x68</text>
+  <text x="115" y="236" text-anchor="middle" font-size="13" fill="#3d4650">sampled at 100 Hz</text>
+
+  <path d="M210,83 C240,83 240,146 268,146" fill="none" stroke="#4a5560" stroke-width="2" marker-end="url(#a)"/>
+  <path d="M210,209 C240,209 240,146 268,146" fill="none" stroke="#4a5560" stroke-width="2" marker-end="url(#a)"/>
+  <text x="240" y="276" text-anchor="middle" font-size="12" font-weight="700" fill="#1b1f23">I²C bus</text>
+  <text x="240" y="292" text-anchor="middle" font-size="12" fill="#4a5560">SDA 21 · SCL 23</text>
+
+  <!-- ESP32 -->
+  <rect x="270" y="70" width="200" height="152" rx="10" fill="#ffffff" stroke="#c62828" stroke-width="2"/>
+  <text x="370" y="98" text-anchor="middle" font-size="16" font-weight="700" fill="#1b1f23">ESP32</text>
+  <text x="370" y="118" text-anchor="middle" font-size="13" fill="#3d4650">physxr_station fw 1.0.0</text>
+  <text x="370" y="146" text-anchor="middle" font-size="13" fill="#3d4650">presence classes</text>
+  <text x="370" y="164" text-anchor="middle" font-size="13" fill="#3d4650">with hysteresis</text>
+  <text x="370" y="188" text-anchor="middle" font-size="13" fill="#3d4650">knocks → numbered</text>
+  <text x="370" y="206" text-anchor="middle" font-size="13" fill="#3d4650">DISTURBANCE events</text>
+
+  <!-- USB serial -->
+  <line x1="470" y1="146" x2="548" y2="146" stroke="#4a5560" stroke-width="2" marker-end="url(#a)"/>
+  <text x="509" y="128" text-anchor="middle" font-size="12" font-weight="700" fill="#1b1f23">USB serial</text>
+  <text x="509" y="166" text-anchor="middle" font-size="12" fill="#4a5560">115200 8N1</text>
+  <text x="509" y="184" text-anchor="middle" font-size="12" fill="#4a5560">10 Hz and</text>
+  <text x="509" y="200" text-anchor="middle" font-size="12" fill="#4a5560">on change</text>
+
+  <!-- Unity validation -->
+  <rect x="550" y="70" width="210" height="152" rx="10" fill="#ffffff" stroke="#1565c0" stroke-width="2"/>
+  <text x="655" y="98" text-anchor="middle" font-size="16" font-weight="700" fill="#1b1f23">Unity validation</text>
+  <text x="655" y="124" text-anchor="middle" font-size="13" fill="#3d4650">SerialLineReceiver</text>
+  <text x="655" y="142" text-anchor="middle" font-size="13" fill="#3d4650">PacketValidator</text>
+  <text x="655" y="168" text-anchor="middle" font-size="13" fill="#3d4650">order per boot · dedup</text>
+  <text x="655" y="186" text-anchor="middle" font-size="13" fill="#3d4650">events · fresh ≤ 0.5 s</text>
+  <text x="655" y="206" text-anchor="middle" font-size="13" fill="#3d4650">reason code per reject</text>
+
+  <line x1="760" y1="146" x2="798" y2="146" stroke="#4a5560" stroke-width="2" marker-end="url(#a)"/>
+
+  <!-- WorldState -->
+  <rect x="800" y="70" width="160" height="152" rx="10" fill="#ffffff" stroke="#6a1b9a" stroke-width="2"/>
+  <text x="880" y="98" text-anchor="middle" font-size="16" font-weight="700" fill="#1b1f23">WorldState</text>
+  <text x="880" y="128" text-anchor="middle" font-size="13" fill="#3d4650">presence</text>
+  <text x="880" y="146" text-anchor="middle" font-size="13" fill="#3d4650">confidence</text>
+  <text x="880" y="164" text-anchor="middle" font-size="13" fill="#3d4650">disturbance (3 s)</text>
+  <text x="880" y="196" text-anchor="middle" font-size="12" fill="#4a5560">→ decision rules</text>
+
+  <text x="655" y="252" text-anchor="middle" font-size="12" fill="#4a5560">State lines carry semantic values only; raw readings stay in #DIAG lines.</text>
+</svg>
