@@ -25,7 +25,7 @@ The design (synopsis, Technical Implementation Specification) and the implementa
 |---|---|---|---|
 | Transport | ESP32 → Unity over local Wi-Fi/UDP | **USB serial at 115200 baud is the station's link**; UDP 47800 kept and used by `esp32_sim.py` | Desktop-only serial (kernel32). A Quest build needs the UDP path or another transport ([Phase 6](TechnicalSpec_MilestoneStatus.md#phase-6--optional-research-extensions)) |
 | Platform | Meta Quest mixed reality | **PC VR through OpenXR**, demonstrated by the team on Meta Quest 2 and Quest 3 with Touch controllers (`DesktopInputAdapter`), plus Windows desktop with keyboard and mouse | Untethered (standalone Quest) builds would need the UDP path or another transport |
-| Sensors | Distance sensor + push button (light sensor optional) | **VL53L0X ToF + HC-SR04 ultrasonic + MPU6050** | Proximity with a confidence level, plus disturbance; no button or light input |
+| Sensors | Distance sensor + push button (light sensor optional) | **VL53L0X ToF + HC-SR04 ultrasonic + MPU6050** in the firmware. On the accepted station the HC-SR04 is fitted but gives no valid readings (owner-confirmed after inspecting the assembled station, 26 Oct 2026; `us_ok=0` in every `SENSOR_DIAG` record of the 15 logged live runs), so the firmware reports proximity at LOW confidence | Proximity with a confidence level, plus disturbance; no button or light input |
 
 ### Implemented runtime architecture
 
@@ -126,7 +126,7 @@ sequenceDiagram
 
 | Step | Component | What happens |
 |---|---|---|
-| 1–2 | Firmware | ToF and sonar agree on NEAR, so confidence is HIGH; the IMU deviation stays above ON for 3 samples, which qualifies event *n* |
+| 1–2 | Firmware | ToF and sonar agree on NEAR, so confidence is HIGH (this HIGH path needs both ranging sensors valid; see the note below the table); the IMU deviation stays above ON for 3 samples, which qualifies event *n* |
 | 3 | Firmware → `SerialLineReceiver` | The state line carrying event *n* is sent on 3 consecutive lines; Unity stamps arrival time `t2` |
 | 4 | `PhysicalCommunicationPipeline`, `PhysicalEventManager` | Validate, order per boot, check freshness; `(boot, n)` accepted once, the 2 repeats logged `DUPLICATE` |
 | 5 | `GameFlowController` → `WorldStateManager` | `NotifyAcceptedEvent`, only while the run is `Playing` |
@@ -261,7 +261,7 @@ v=1;dev=phys-xr-01;boot=2864130047;seq=1235;ts=987702;presence=VERY_NEAR;confide
 
 - No authentication or encryption on either transport; the device ID is an identity check, not security. Intended for a trusted, local bench.
 - UDP listens on all interfaces on port 47800 when that mode is selected (Windows Firewall may prompt).
-- USB serial uses kernel32 directly because the project targets .NET Standard 2.1 (no `System.IO.Ports`), so it is **Windows desktop only**. On other platforms it reports `FAULTED: only supported on the Windows desktop build`.
+- USB serial uses kernel32 directly because the project targets .NET Standard 2.1 (no `System.IO.Ports`), so it is **Windows only** (desktop play and PC VR both run on the Windows PC). On other platforms it reports `FAULTED: only supported on the Windows desktop build`.
 
 ### Serial vs. UDP: migration implications
 
@@ -280,7 +280,7 @@ flowchart TD
     subgraph Desk["Tabletop station"]
         S1[VL53L0X] -- I2C --> ESP[ESP32]
         S3[MPU6050] -- I2C --> ESP
-        S2[HC-SR04] -- "via divider" --> ESP
+        S2["HC-SR04<br/>no valid readings"] -- "via divider" --> ESP
     end
     ESP -- "USB, CP210x" --> PORT(("COM port<br/>one owner"))
     PORT --> GAME["PHYS-XR.exe<br/>or Unity Editor"]

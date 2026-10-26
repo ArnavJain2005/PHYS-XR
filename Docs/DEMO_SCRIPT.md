@@ -1,6 +1,8 @@
 # PHYS-XR faculty demonstration: run sheet
 
-Windows desktop build only (no VR). Two parts:
+> **Historical document.** This run sheet was prepared on 21–22 Oct 2026 for a desktop demonstration and is kept as written. Since then the encounter rules gained E6 and the sensor-response rules X1–X3, the self-test counts changed (see [`TESTING_AND_EVALUATION.md`](TESTING_AND_EVALUATION.md)), the station was accepted (with the HC-SR04 fitted but giving no valid readings, so physical proximity arrives at LOW confidence and a knock with someone near produces X3 INVESTIGATE rather than R3), and the game was demonstrated as PC VR over Quest Link. The script below still works on Simulated sensors.
+
+As written on 21–22 Oct: Windows desktop build only (no VR). Two parts:
 
 1. **Tonight:** a short hardware run that decides whether the live demo uses the real ESP32 station.
 2. **Tomorrow:** the demo script, written for **Simulated sensors** (the fallback), with the matching

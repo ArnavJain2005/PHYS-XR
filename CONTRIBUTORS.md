@@ -1,17 +1,25 @@
 # Contributors
 
-PHYS-XR is a three-person B.Tech Cyber Physical Systems project (IAVR and ESDP, Semester 5) at the School of Electrical Engineering, Manipal Institute of Technology, Manipal, academic year 2026–27.
+PHYS-XR is a three-person team project: a B.Tech Cyber Physical Systems project (IAVR and ESDP, Semester 5) at the School of Electrical Engineering, Manipal Institute of Technology, Manipal, academic year 2026–27.
 
-| Member | Role in the project synopsis | Contribution |
-|---|---|---|
-| Arnav Jain | Unity core & XR game | Wrote and integrated most of the code: the Unity game and XR input, the decision system and the ESP32 firmware |
-| Arya M | Dashboard & Live Telemetry | Hardware assembly, testing and the dashboard concept, together with Nandhitha Chowdary Surapaneni |
-| Nandhitha Chowdary Surapaneni | ESP32 firmware | Hardware assembly, testing and the dashboard concept, together with Arya M |
+| Member | Contribution |
+|---|---|
+| **Arnav Jain** (team lead) | Unity core and the XR game, the Ghost decision system, and overall software and integration leadership |
+| **Arya M** | Implemented a dashboard prototype independently, for evaluation. It is not a shipped or validated feature of the game |
+| **Nandhitha Chowdary Surapaneni** | Assembly and debugging of the hardware station |
+
+## Project-level work
+
+The station firmware sketches, the firmware semantic core and its host tests, sensor calibration, and the formal acceptance and validation work are credited to the **project team**. Individual attribution for this work is not stated here until the team lead has confirmed it with the team.
+
+## Role assignments in the project synopsis
+
+For the record, the project synopsis assigned these planned roles: Arnav Jain, Unity core & XR game; Arya M, Dashboard & Live Telemetry; Nandhitha Chowdary Surapaneni, ESP32 firmware. These were planning assignments. The contributions above, not these roles, describe the work.
 
 ## How contributions reached the repository
 
-Arnav Jain integrated and committed all contributions, so the whole commit history is under one account (`Dr-Dre420` / Arnav Jain). This file is the record of who did what; update it when a contribution is added.
+Arnav Jain integrated and committed the team's work, so the commit history is under one account (`Dr-Dre420` / Arnav Jain). The history was not rewritten, and commits carry no co-author lines for teammates. This file is the record of who did what.
 
 ## AI assistance
 
-Parts of the code and documentation were written with AI coding assistance (Claude Code), directed, reviewed and tested by the author; the commit trailers record which.
+AI coding tools were used to support implementation and review; design decisions, integration, and validation were directed by the project team.
