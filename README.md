@@ -1,6 +1,6 @@
 <div align="center">
 
-<h1><img src="Docs/media/physxr-title.gif" alt="PHYS-XR · The Presence — illustrated animated title with the ghost and sensor pulses" width="800"></h1>
+<h1><img src="Docs/media/physxr-title.gif" alt="PHYS-XR · The Presence — elegant italic title revealed by a small drifting ghost" width="800"></h1>
 
 ### A VR horror game whose ghost can sense the real room, using a physical sensor station
 
