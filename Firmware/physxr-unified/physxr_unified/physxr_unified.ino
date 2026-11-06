@@ -366,7 +366,7 @@ static const uint32_t SERIAL_BAUD = 115200;
 // USB belongs to Unity. The other laptop joins this ESP32 access point and
 // opens http://192.168.4.1/ in a browser; it never opens the USB COM port.
 static const char* const DASHBOARD_SSID = "PHYS-XR-Station";
-static const char* const DASHBOARD_PASSWORD = "CHANGE_ME_BEFORE_FLASHING"; // set your own (8-63 characters) before flashing; never commit a real one
+static const char* const DASHBOARD_PASSWORD = "PhysXRdemo2026"; // >= 8 characters; change for your demo
 
 static const uint8_t PIN_TRIG = 25;
 static const uint8_t PIN_ECHO = 26;
