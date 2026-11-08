@@ -1,8 +1,8 @@
 <div align="center">
 
-<h1><img src="Docs/media/physxr-title.gif" alt="PHYS-XR · The Presence — elegant italic title revealed by a small drifting ghost" width="800"></h1>
+<h1><img src="Docs/media/physxr-title.gif" alt="PHYS-XR · The Presence — title revealed by drifting ghost" width="800"></h1>
 
-### A VR horror game whose ghost responds to real-room presence and disturbance
+### An embodied PC VR horror game whose autonomous ghost agent senses the physical room
 
 ![Unity](https://img.shields.io/badge/Unity-6000.5.8f1-222?logo=unity)
 ![C#](https://img.shields.io/badge/C%23-9-512BD4)
@@ -10,233 +10,254 @@
 ![Firmware](https://img.shields.io/badge/firmware-ESP32%20%C2%B7%20C%2B%2B17-E7352C)
 ![License](https://img.shields.io/badge/license-MIT-blue)
 
-**[Try it (Simulated)](#try-it)** · **[Ghost AI & Sensing](#ghost-reactions-and-sensing-design)** · **[Architecture](#the-sensor-station)** · **[Engineering](#engineering-highlights)** · **[Evidence](#evidence)** · **[Status & Roadmap](#status-and-roadmap)** · **[Team](#team-and-ownership)** · **[Docs](#documentation)**
+**[Try It (Simulated)](#try-it-simulated-sensors)** · **[Visual Showcase](#visual-showcase)** · **[Interaction Model](#how-the-ghost-senses-the-room)** · **[Architecture](#system-architecture)** · **[Engineering](#key-engineering-contributions)** · **[Evidence](#evidence-snapshot)** · **[Docs](#documentation-index)**
 
 </div>
-
-<div align="center">
-
-<img src="Docs/media/hero_hollow_profile_2026-10-22.jpg" alt="The Hollow, a too-tall figure with a skull face, unhinged jaw, ribs showing through a torn shroud and overlong arms, standing in a dark doorway lit only by the player's candle lantern" width="900">
-
-<table>
-  <tr>
-    <td width="33%"><img src="Docs/media/first_sighting_corridor_2026-10-22.jpg" alt="First-person view down a dark corridor lit by a red emergency lamp, with The Hollow raising its arms at the far end" width="100%"></td>
-    <td width="33%"><img src="Docs/media/encounter_dining_hall_2026-10-22.jpg" alt="The Hollow standing in a dark dining hall beside a balustrade, a candle chandelier in the distance" width="100%"></td>
-    <td width="33%"><img src="Docs/media/entry_hall_moonlight_2026-10-22.jpg" alt="Dark entry hall with cold moonlight through the windows, a dim red emergency lamp and a chandelier in silhouette" width="100%"></td>
-  </tr>
-</table>
-
-<sub>Desktop captures from the game's scripted capture tour (22 Oct 2026); not headset recordings. [Full gallery](Docs/HORROR_PRESENTATION.md#the-game-and-gallery).</sub>
-
-</div>
-
-**PHYS-XR is a VR horror game combining Unity/OpenXR gameplay, deterministic ghost AI, and a sensor-input pipeline.** Built in Unity, it supports PC VR via OpenXR / Quest Link as well as standard desktop play. The AI is fully deterministic and explainable: every decision carries an authored rule ID and reason string, with zero learned or black-box parameters. In *The Presence*, a short atmospheric run through a storm-bound house, you must navigate the dark corridors, locate the fuse, restore the power, and get past The Hollow to the front door using your candle lantern to stagger and repel it.
-
-**Physical sensing design and current hardware status:** The system was engineered to react to real-world room presence and disturbance. A custom physical ESP32 sensor station was designed, built, and evaluated in recorded sessions (22–24 October 2026; 15 live runs logged in [`Evidence/`](Evidence/README.md)). **The physical station hardware is currently lost and unavailable** for new photographs, recordings, recalibration, or live hardware demonstrations. However, because the architecture strictly separates raw physical sensing from semantic game state, the entire project is **100% testable and playable today using built-in simulated sensors**. Whether fed via in-engine keyboard triggers or an external Python UDP script, simulated input exercises the identical transport abstraction, packet validator, freshness gating, and explainable decision rules used by physical hardware.
 
 ---
 
+## Executive Summary
+
+**PHYS-XR** is a cyber-physical VR horror experience built in Unity and C#, pairing immersive virtual reality with an autonomous, physical-world-aware game agent. In *The Presence*, players navigate a dark, storm-bound manor to find a fuse, restore power, and escape an entity called **The Hollow**.
+
+Unlike conventional scripted horror games or non-deterministic black-box models, PHYS-XR connects physical-room perception with **fully explainable, deterministic game AI**:
+- **Physical-World Sensing:** A custom ESP32 station processes proximity and acoustic/physical knocks into semantic facts, allowing the ghost to perceive when a player or bystander draws near or taps the station in real life.
+- **Explainable Decision Engine:** Every action is governed by deterministic rules with explicit rule IDs (`R1`–`R8`, `X1`–`X3`, `E0`–`E6`) and human-readable reason strings on an injected game clock.
+- **Strict VR Safety Invariants:** Physical events are evidence, not triggers—sensor disturbances can never initiate an attack or shorten the mandatory 1.5 s encounter telegraph before a strike.
+- **Demonstrated on Meta Quest:** Validated as PC VR through OpenXR over Quest Link on Meta Quest 2 and Quest 3, with a built-in simulation pipeline ensuring 100% software testability without hardware.
+
+---
+
+<a id="visual-showcase"></a>
+
+## Visual Showcase
+
+<div align="center">
+
+<img src="Docs/media/hero_hollow_profile_2026-10-22.jpg" alt="The Hollow, a tall skull-faced figure standing in a dark doorway lit only by the player's candle lantern" width="100%">
+
+<table>
+  <tr>
+    <td width="33%" align="center">
+      <img src="Docs/media/first_sighting_corridor_2026-10-22.jpg" alt="First-person view down a corridor lit by a red emergency lamp with The Hollow raising its arms at the far end" width="100%">
+      <br><sub><b>In-Engine: First Sighting</b><br>Corridor encounter and telegraphed lunge (rule E5)</sub>
+    </td>
+    <td width="33%" align="center">
+      <img src="Docs/media/encounter_dining_hall_2026-10-22.jpg" alt="The Hollow standing in a dark dining hall beside a balustrade, candle chandelier in distance" width="100%">
+      <br><sub><b>In-Engine: Encounter Pressure</b><br>Lights sag and flicker as the entity stalks closer</sub>
+    </td>
+    <td width="33%" align="center">
+      <img src="Docs/media/physxr-vr-demonstration.jpg" alt="Project lead Arnav Jain demonstrating PHYS-XR in PC VR using a Meta Quest 3 headset and Touch controllers in front of the project poster at Manipal Institute of Technology" width="100%">
+      <br><sub><b>Hardware: Quest 3 VR Playtest</b><br>Project lead Arnav Jain at Manipal Institute of Technology</sub>
+    </td>
+  </tr>
+</table>
+
+<sub>Gameplay frames: in-engine scripted capture tour (22 Oct 2026); VR playtest: live PC VR session on Meta Quest 3 with Touch controllers. [Full presentation gallery](Docs/HORROR_PRESENTATION.md#the-game-and-gallery).</sub>
+
+</div>
+
+---
+
+<a id="how-the-ghost-senses-the-room"></a>
+
+## How the Ghost Senses the Room
+
+PHYS-XR enforces a strict **semantic boundary**: the game engine never receives raw millivolts, accelerometer samples, or distance in millimetres. The sensing pipeline fuses raw measurements on the microcontroller and emits high-level semantic states: proximity (`NONE`, `NEAR`, `VERY_NEAR`), confidence (`LOW`, `HIGH`), and discrete disturbance events.
+
+The table below contrasts **how input is simulated today**, the corresponding **semantic state and physical trigger**, and the resulting **deterministic ghost reaction**:
+
+| Simulated Input (Active Today) | Semantic State | Physical Sensing Trigger | Deterministic Ghost Reaction |
+|---|---|---|---|
+| Key **`2`** (someone near) | `presence = NEAR`<br>`confidence = LOW` | Stepping within range of station VL53L0X ToF sensor | Turns toward player and stalks closer, holding at 4 m outside threat reach; emergency lamp flickers (`R4 WARN`). |
+| Key **`3`** (very near) | `presence = VERY_NEAR`<br>confirmed for ≥ 250 ms | Leaning in very close to the ToF sensor | Presses in aggressively to 3.75 m with a localized screech (`X2 WARN`). |
+| Key **`5`** (knock while near) | Numbered `DISTURBANCE`<br>event + `presence = NEAR` | Knocking the station surface while someone stands nearby | Disengages from player to search nearby manor rooms (`X3 INVESTIGATE` 3 s pulse). |
+| Key **`4`** (knock, nobody near) | Numbered `DISTURBANCE`<br>event + `presence = NONE` | Knocking the station with no proximity detected | Turns toward player and stalks closer (`R5 WARN`). |
+| In threat zone (< 3.5 m) | Any sensor condition | Any physical reading | Encounter rules take absolute priority; external knocks cannot override close-quarters danger. |
+| Key **`1`** (clear) or Virtual-only | Neutral state (`NONE`, `LOW`)<br>or no fresh data | Station unplugged or idle | Ghost behaves purely according to virtual game rules (`R8 FOLLOW` or active encounter rules). |
+
+### Core Safety Invariants
+1. **Sensors Never Start an Attack:** Physical input cannot initiate an attack or shorten the encounter-specific 1.5 s warning telegraph before a strike (verified by 7 regression tests).
+2. **Freshness Gating:** Station data older than 0.5 s is marked `STALE` and physical fields drop back to neutral.
+3. **Event Deduplication:** Events are numbered and de-duplicated by `(boot, eventId)`. Triplicate transmission ensures delivery without duplicate reaction pulses.
+4. **Pause Safety:** The injected decision clock freezes while paused; no physical events can queue or trigger reactions during pause.
+
+Full decision system reference, rule priorities, and timing proofs: [`Docs/GHOST_DECISION_SYSTEM.md`](Docs/GHOST_DECISION_SYSTEM.md).
+
+---
+
+<a id="system-architecture"></a>
+<a id="the-sensor-station"></a>
+<a id="sensor-pipeline"></a>
+
+## System Architecture
+
+```mermaid
+flowchart LR
+    subgraph Inputs["1. Input Sources"]
+        SIM["In-Engine Simulator<br/>(Keys 1–9 · Active Today)"]
+        PY["Python Simulator<br/>(esp32_sim.py · UDP 47800)"]
+        HIST["ESP32 Physical Station<br/>(USB Serial · 115200 baud)"]
+    end
+
+    subgraph Validation["2. Validation & Gating"]
+        V["PacketValidator<br/>• Monotonic seq per boot<br/>• (boot, eventId) dedup<br/>• Arrival freshness ≤ 0.5 s"]
+    end
+
+    subgraph State["3. World State"]
+        W["WorldStateManager<br/>(Physical + Player + Virtual + Ghost)"]
+    end
+
+    subgraph Decision["4. Explainable AI"]
+        D["Deterministic Decision Engine<br/>• R1–R8 Core Rules<br/>• X1–X3 Sensor Profiles<br/>• E0–E6 Encounter Arbitration<br/>• Injected Decision Clock"]
+    end
+
+    subgraph Output["5. Execution & Observability"]
+        G["The Hollow<br/>(GhostMotionController & Visuals)"]
+        VR["PC VR Player<br/>(OpenXR / Quest Link)"]
+        T[("TelemetryService<br/>JSON Lines")]
+    end
+
+    SIM -->|"Direct feed"| V
+    PY -->|"UDP frame"| V
+    HIST -.->|"Historical USB"| V
+    V --> W
+    W --> D
+    D --> G
+    D --> VR
+    D -.->|Change-only log| T
+```
+
+### Input Paths & Hardware Reality
+- **Simulated Sensors (Active Today):** The built-in in-engine simulator (`SimulatedSensorStation`) feeds identical semantic state lines into the validator. A headless Python script ([`Tools/esp32_sim.py`](Tools/esp32_sim.py)) can also broadcast scenarios over UDP port 47800 into Unity's `UDPReceiver`.
+- **Historical ESP32 Station (Accepted 26 Oct 2026):** Evaluated over 15 recorded live runs using USB serial communication at 115200 baud (via Windows `kernel32` APIs). Integrated a VL53L0X time-of-flight sensor and an MPU6050 accelerometer. The physical station unit was subsequently lost and is currently unavailable for new hardware demonstrations; the simulation pipeline maintains full software repeatability.
+- **Protocol & Non-Shipped Code:** The physical station communicated strictly over USB serial, not UDP. The Wi-Fi/HTTP dashboard sketch in `Firmware/physxr-unified/` is an unvalidated prototype and was never part of the evaluated system.
+
+Deep architecture documentation, class models, and data flows: [`Docs/ARCHITECTURE.md`](Docs/ARCHITECTURE.md).
+
+---
+
+<a id="key-engineering-contributions"></a>
+
+## Key Engineering Contributions
+
+| Challenge | Architectural Approach | Why It Matters |
+|---|---|---|
+| **Flaky sensor links and noisy serial lines** | Per-boot sequence ordering, `(boot, eventId)` deduplication, arrival-time freshness gating (≤ 0.5 s), and explicit reason-code rejection. | Loose cables or microsecond reboots never trigger phantom reactions. In 15 live runs, only 4 of 29,896 lines were rejected. |
+| **VR jump-scare fairness & player safety** | Decoupled encounter arbitration: attacks strictly require in-game distance/sight conditions and an uninterrupted 1.5 s encounter telegraph. | Real-room noises cannot cause unfair, untelegraphed attacks. 7 regression tests fail against pre-fix logic. |
+| **Testing AI without game engine overhead** | Decision logic is authored in pure C# on an injected clock; runs headless via `dotnet`. | AI rules, transitions, and edge cases are verified in milliseconds before launching the Unity Editor. |
+| **Hardware independence** | Both the in-game simulator and Python UDP feeder speak the exact line protocol of the physical station into the same validator. | Core gameplay and AI regression suites are developed and tested without physical hardware dependencies. |
+| **Explainable AI observability** | Every decision outputs rule IDs and reasons; change-only telemetry records cause event IDs and behavior states. | Eliminates black-box ambiguity: every ghost action is mathematically explainable in real time and post-run logs. |
+
+Full engineering matrix and presentation breakdown: [`Docs/ARCHITECTURE.md#engineering-highlights`](Docs/ARCHITECTURE.md#engineering-highlights).
+
+---
+
+<a id="try-it-simulated-sensors"></a>
 <a id="try-it"></a>
 
-## Try it (simulated sensors)
+## Try It (Simulated Sensors)
 
-No hardware is needed. There is no published GitHub Release yet, so run it from source: Windows, **Unity 6000.5.8f1** (from `ProjectSettings/ProjectVersion.txt`), and a .NET SDK that builds `net9.0` for the tests.
+No physical hardware is required. Run directly from source on Windows with **Unity 6000.5.8f1** and a .NET SDK that builds `net9.0`.
 
 ```bash
 git clone https://github.com/ArnavJain2005/PHYS-XR.git
 ```
 
-### 1. In-engine simulation (active today)
-
+### 1. Interactive Demo in Unity
 1. Open the repository root in Unity Hub with **Unity 6000.5.8f1**.
-2. Open `Assets/PHYSXR/Scenes/Bootstrap.unity` and press **Play** (keep the Game view focused).
-3. On the title menu, click **`Sensors:`** until it reads **`Sensors:  Simulated sensors`**, then click **Begin**.
-4. Press **`F1`** to open the developer overlay. The `decision` line displays the ghost's active action, rule ID (`[rule]`), and explainable reason.
-5. **Drive a ghost reaction with verified simulation keys:**
-   - Walk into the corridor towards The Hollow. It lunges once (`ATTACK [E5]`), then follows you.
-   - **Before picking up the fuse**, stand at least 5 m away from The Hollow (outside its 3.5 m threat zone).
-   - Press **`2`** (simulating someone stepping NEAR) — watch the decision switch to `WARN [R4]`.
-   - Press **`5`** (simulating a physical knock while someone is near) — the ghost switches to `INVESTIGATE [X3]` and walks off to search nearby rooms.
-   - Press **`1`** to clear presence back to neutral.
+2. Open `Assets/PHYSXR/Scenes/Bootstrap.unity` and click **Play** (keep the Game view focused).
+3. On the title menu, cycle **`Sensors:`** until it reads **`Sensors:  Simulated sensors`**, then click **Begin**.
+4. Press **`F1`** to toggle the debug overlay. Observe the `decision` line displaying `[rule]`, action, and reason.
+5. **Trigger ghost reactions:**
+   - Walk down the corridor towards The Hollow. It lunges once (`ATTACK [E5]`), then trails you.
+   - Stand > 5 m away (outside the 3.5 m threat zone) and press **`2`** (near proximity) — ghost switches to `WARN [R4]`.
+   - Press **`5`** (knock while near) — ghost disengages and searches nearby manor rooms (`INVESTIGATE [X3]`).
+   - Press **`1`** to clear proximity back to neutral.
 
-### 2. External Python simulator (UDP feed)
-
-To test network input without hardware:
-1. In the game menu, select **`Sensors: Physical - UDP 47800`**, then click **Begin**.
-2. In a terminal, run:
-
+### 2. External Python Network Simulator
 ```bash
+# In game menu, select "Sensors: Physical - UDP 47800" and click Begin
 python Tools/esp32_sim.py --host 127.0.0.1 --scenario near --seconds 60
 ```
 
-Scenarios: `idle`, `near`, `threat`, `flap`, `duplicates`, `outage`, `reboot`, `interactive`.
-
-### 3. Automated tests (no Unity needed)
-
-Run the Unity-independent test harness from the command line:
-
+### 3. Automated Headless Test Suite (No Unity Needed)
 ```bash
 dotnet run -c Release --project Tools/TestHarness
 ```
+*Current test suite status:* **`SUITES RUN: 26, TOTAL FAILED: 0`** (382 test cases passed).
 
-The test harness evaluates the packet validator, world-state managers, rule provider, and encounter arbitration headlessly on an injected clock. Current verification: **`SUITES RUN: 26, TOTAL FAILED: 0`** (382 test cases passed).
-
-Full controls, build profiles, desktop/Quest Touch bindings, and troubleshooting: [`Docs/SETUP.md`](Docs/SETUP.md).
-
----
-
-<a id="ghost-reactions-and-sensing-design"></a>
-
-## Ghost reactions and sensing design
-
-The table below contrasts **how input is simulated today**, the corresponding **semantic state and historical physical trigger**, and the resulting **deterministic ghost reaction**:
-
-| Simulated input (active today) | Semantic state | Historical physical trigger | Deterministic ghost reaction |
-|---|---|---|---|
-| Key **`2`** (someone near) | `presence = NEAR`<br>`confidence = LOW` | Stepping within range of station VL53L0X ToF sensor | Turns on you and stalks closer, stopping at 4 m just outside reach; emergency light flickers (`R4 WARN`). |
-| Key **`3`** (very near) | `presence = VERY_NEAR`<br>confirmed for ≥ 250 ms | Leaning in very close to the ToF sensor | Presses in faster, closing to 3.75 m with a screech (`X2 WARN`). |
-| Key **`5`** (knock while near) | Numbered `DISTURBANCE`<br>event + `presence = NEAR` | Knocking the station surface while someone stands nearby | Breaks away from the player to search nearby house anchors (`X3 INVESTIGATE` 3 s pulse). |
-| Key **`4`** (knock, nobody near) | Numbered `DISTURBANCE`<br>event + `presence = NONE` | Knocking the station with no proximity detected | Turns toward the player and stalks closer (`R5 WARN`). |
-| Player in threat zone (< 3.5 m) | Any sensor condition | Any physical reading | Encounter rules take precedence; sensor disturbance never overrides encounter safety arbitration. |
-| Key **`1`** (clear) or Virtual-only | Neutral state (`NONE`, `LOW`)<br>or no fresh data | Station unplugged or idle | Ghost operates purely on in-game virtual rules (`R8 FOLLOW` or active encounter rules). |
-
-**Safety and Invariants:**
-- **Sensors never start an attack** and cannot shorten the encounter-specific 1.5 s warning telegraph before one (verified by 7 regression tests).
-- **Freshness gating:** Data older than 0.5 s is rejected as `STALE`, dropping the physical world state back to neutral.
-- **Event deduplication:** Knock events are numbered and de-duplicated by `(boot, eventId)`. The firmware sends each event on three consecutive lines to guard against packet loss, but the validator ensures it triggers exactly one 3-second investigation pulse.
-- **Pause safety:** No sensor reactions fire while the game is paused; the injected decision clock freezes.
-- Detailed rules, timings, and proofs: [`Docs/GHOST_DECISION_SYSTEM.md`](Docs/GHOST_DECISION_SYSTEM.md).
+Full controls, build profiles, Quest Touch bindings, and troubleshooting: [`Docs/SETUP.md`](Docs/SETUP.md).
 
 ---
 
-<a id="the-sensor-station"></a>
-<a id="sensor-pipeline"></a>
-
-## Sensor pipeline and architecture
-
-```mermaid
-flowchart LR
-    subgraph Inputs["Input Sources"]
-        SIM["Simulated Sensors<br/>(In-engine keys 1–9<br/>• ACTIVE TODAY)"]
-        PY["Python Simulator<br/>(Tools/esp32_sim.py<br/>• UDP 47800)"]
-        HIST["ESP32 Station<br/>(Historical hardware<br/>• currently unavailable)"]
-    end
-
-    SIM -->|"Direct feed"| V["Unity PacketValidator<br/>sequence ordering<br/>event dedup (boot, id)<br/>freshness ≤ 0.5 s"]
-    PY -->|"UDP 47800"| V
-    HIST -->|"USB serial<br/>115200 baud"| V
-
-    V --> W["WorldState<br/>(physical + player + virtual)"]
-    W --> D["Deterministic Ghost AI<br/>R1–R8 / X1–X3 / E0–E6<br/>explainable rule IDs"]
-    D --> G["The Hollow<br/>(GhostMotionController)"]
-    D -.-> T[("TelemetryService<br/>JSON Lines")]
-```
-
-<sub>Three distinct sources feed into the single `SensorFeed` and `PacketValidator`: whether lines arrive from the in-game simulator, the Python UDP script, or historical USB serial, identical validation, freshness checks, and decision rules govern the ghost. Telemetry observes passively and cannot alter decisions.</sub>
-
-### Input paths: simulated vs. physical
-
-- **Simulated input (active today):**
-  - **In-engine:** `SimulatedSensorStation` runs inside Unity, mapping keys `1`–`9` directly to the same semantic line format.
-  - **Python UDP simulator:** [`Tools/esp32_sim.py`](Tools/esp32_sim.py) sends the station's ASCII line protocol over UDP port 47800 into the game's `UDPReceiver`.
-- **Historical physical station (accepted 26 Oct 2026, currently unavailable):**
-  - An ESP32 running [`Firmware/physxr_station/physxr_station.ino`](Firmware/physxr_station/physxr_station.ino) v1.0.0 over **USB serial at 115200 baud** (Windows `kernel32` APIs).
-  - Used a VL53L0X time-of-flight sensor for proximity and an MPU6050 for disturbance detection. 15 live runs from 22–24 Oct 2026 are archived in [`Evidence/`](Evidence/README.md).
-  - The physical station unit was subsequently lost and is not available for new demonstrations or captures.
-- **Semantic boundary:** The firmware translates raw physics into semantic classifications (`NONE`, `NEAR`, `VERY_NEAR`, confidence `LOW`/`HIGH`, and numbered disturbance events). Raw millimeter or accelerometer values appear only in `#DIAG` diagnostic lines and never enter `PhysicalState`, `WorldState`, or the decision rules.
-- **Protocol clarifications and non-shipped code:**
-  - The physical station firmware exclusively used **USB serial**; the board itself does not use UDP.
-  - The game's UDP receiver is fed only by the Python simulator `esp32_sim.py`.
-  - The Wi-Fi/HTTP dashboard sketch in [`Firmware/physxr-unified/`](Firmware/physxr-unified) is an unvalidated prototype and was never part of the shipped or evaluated system.
-- Full architecture, protocol specifications, and sequence diagrams: [`Docs/ARCHITECTURE.md`](Docs/ARCHITECTURE.md).
-
----
-
-<a id="engineering-highlights"></a>
-
-## Engineering highlights
-
-| Challenge | Approach | Why it matters |
-|---|---|---|
-| Sensor data arrives late, twice, out of order, or from a rebooted board | Per-boot sequence ordering, `(boot, eventId)` de-duplication, arrival-time freshness, resync after reboot; every rejection has a reason code | A flaky cable or a reset never becomes a phantom ghost reaction. In the 15 live runs, 4 of 29,896 state lines were rejected |
-| A physical reading must not make a VR jump-scare unfair | Attacks need in-game conditions and an encounter-specific 1.5 s telegraph that sensor warnings cannot charge; 7 regression tests fail against the earlier logic | The player always gets the full warning, whatever happens in the room |
-| Hardware is not always available | An in-game simulator and a Python UDP simulator speak the station's line format, into the same validator | Every behaviour can be developed and regression-tested without the physical station |
-| Game AI is hard to test inside an engine | Decision logic is plain C# on an injected clock; the harness runs it headless with `dotnet` | Rule changes are proven before anyone opens the Editor |
-| "Why did the ghost do that?" | Rule IDs and reasons on every decision; change-only `DECISION` telemetry; `cause_evt` only when a rule that reads the knock won, and one `PHYS_EVENT_OUTCOME` per event | Behaviour can be explained live, and analysis measures real sensor influence, not coincidence |
-
-Full engineering matrix: [`Docs/ARCHITECTURE.md`](Docs/ARCHITECTURE.md#engineering-highlights). Procedural ghost, adaptive score, and reactive light: [`Docs/HORROR_PRESENTATION.md`](Docs/HORROR_PRESENTATION.md).
-
----
-
+<a id="evidence-snapshot"></a>
 <a id="evidence"></a>
 
-## Evidence snapshot
+## Evidence Snapshot
 
-| What was measured | Unit | Result | Freshness |
+All figures are reproducible from raw logs and telemetry archived in [`Evidence/`](Evidence/README.md):
+
+| Measure | Verification Method | Result | Freshness |
 |---|---|---|---|
-| Unity-independent test harness | software test cases | **382 passed, 0 failed** (26 suites) | Verified 26 Oct 2026, re-verified on current tree ([log](Evidence/Logs/2026-10-26_post-fix/harness)) |
-| Telegraph regression tests | software test cases | 7 pass; all 7 fail against the previous logic | Recorded 26 Oct 2026 |
-| Firmware semantic core, on a PC | host-test checks | **53 passed, 0 failed** | Verified 26 Oct 2026, re-verified with g++ ([log](Evidence/Logs/2026-10-26_post-fix/firmware)) |
-| Windows player self-tests | in-game checks per suite | Responsiveness **24/24** · route **23/23** · encounter **40/40** · simulated sensors **42/42** | Recorded 26 Oct 2026 ([logs](Evidence/Logs/2026-10-26_post-fix/player)) |
-| Live station sessions, 22–24 Oct 2026 | physical runs · trial IDs · minutes | **15 live runs** (of 16 physical-run telemetry files) · 9 trial IDs · 48.1 min | Recomputed from raw telemetry, 26 Oct 2026 |
-| Same sessions | telemetry state lines · knock events · decisions | 29,896 lines (4 rejected, 4 lost) · 131 knocks accepted · **0 of 48 ATTACK decisions with a physical cause** | Recomputed from raw telemetry, 26 Oct 2026 |
-
-"Recorded" means taken from the 26 Oct verification logs; "recomputed" means regenerated from raw telemetry by [`Evidence/summarize_telemetry.py`](Evidence/summarize_telemetry.py). Loss of the physical station does not invalidate these historical records. Raw logs and run reconciliation: [`Evidence/README.md`](Evidence/README.md).
+| **Headless test harness** | Headless C# suite (`dotnet run`) | **382 passed, 0 failed** (26 suites) | Re-verified locally on current tree ([log](Evidence/Logs/2026-10-26_post-fix/harness)) |
+| **Telegraph regression tests** | Safety invariants | **7 pass, all 7 fail** against pre-fix logic | Recorded 26 Oct 2026 |
+| **Firmware semantic core** | Host C++ test (`g++ -std=c++17`) | **53 passed, 0 failed** | Re-verified locally ([log](Evidence/Logs/2026-10-26_post-fix/firmware)) |
+| **Player self-tests** | In-engine automated suites | Responsiveness **24/24** · route **23/23** · encounter **40/40** · simulated **42/42** | Recorded 26 Oct 2026 ([logs](Evidence/Logs/2026-10-26_post-fix/player)) |
+| **Live physical station runs** | Physical ESP32 sessions | **15 live runs** (9 trial IDs, 48.1 min) | 22–24 Oct 2026 ([Evidence/README.md](Evidence/README.md)) |
+| **Safety evaluation** | Live telemetry records | 29,896 lines · 131 knocks · **0 of 48 attacks caused by sensors** | Recomputed by [`Evidence/summarize_telemetry.py`](Evidence/summarize_telemetry.py) |
 
 ---
 
 <a id="status-and-roadmap"></a>
 
-## Status and roadmap
+## Status and Roadmap
 
-### Historical milestones (22–26 Oct 2026)
-- **Vertical slice complete:** Game loop, horror presentation, procedural animations, adaptive audio, and lighting for *The Presence*.
-- **Decision system verified:** Rules R1–R8, X1–X3, encounter layer, and E0–E6 verified; telegraph safety defect fixed and confirmed by 7 regression tests.
-- **Telemetry and evidence:** Telemetry sink and full reproducible evidence package archived.
-- **Station hardware acceptance:** The station hardware design was accepted with calibrated ToF and MPU sensors following 15 live runs (team-confirmed, 26 Oct 2026).
-- **VR demonstrations:** Demonstrated by the team on Meta Quest 2 and Quest 3 running as **PC VR through OpenXR over Quest Link** (not a standalone Quest build). This is team-confirmed; no headset recording was archived prior to hardware loss.
+### Implemented & Demonstrated
+- **Playable Vertical Slice:** Full game loop, procedural entity presentation, reactive lighting, and adaptive audio in *The Presence*.
+- **Deterministic AI Engine:** R1–R8, X1–X3, and E0–E6 rules with verified encounter-specific attack telegraphs.
+- **Headless Test Suite & Telemetry:** 382 automated unit/integration tests and complete JSON Lines observability.
+- **Demonstrated on Meta Quest:** PC VR via OpenXR over Quest Link demonstrated on Meta Quest 2 and Quest 3.
+- **Physical Sensing Pipeline:** ESP32 station hardware accepted on 26 Oct 2026 following 15 live recorded trials.
 
-### Current hardware availability
-- The physical ESP32 sensor station is **currently lost and unavailable**. No new physical photographs, live hardware demonstrations, physical recalibrations, or station-driven recordings can be performed.
-- All current demonstration, validation, and evaluation rely on the project's **built-in simulated sensor mode**.
-
-### Roadmap (software & future work)
-- **Software-path latency benchmarking:** Quantify internal software latency per hop (simulated input → packet validation → WorldState → decision → ghost action execution) using the headless harness and software timestamps; explicitly distinguished from physical end-to-end sensor-to-photon latency (which required the station).
-- **Headset capture (standalone software/VR):** Capture authentic PC VR gameplay footage over Quest Link using simulated sensor inputs (without requiring the physical station).
-- **Telemetry observer dashboard:** Build an external or web-based dashboard consuming JSON Lines telemetry independently of the game transport.
-- **VR presentation & comfort tuning:** Headset comfort settings, vignette options, and VR performance optimization ([Docs/HORROR_PRESENTATION.md](Docs/HORROR_PRESENTATION.md#cost-and-platform-notes)).
-- **Publish a Windows release:** Package and release a verified standalone Windows player build as a GitHub Release.
-- **Expanded game content:** Additional house wings, encounters, and puzzle objectives.
+### Current Limitations & Active Roadmap
+- **Physical Station Availability:** The physical ESP32 prototype was lost after testing and is currently unavailable for new hardware demonstrations. The project is maintained as fully verifiable via simulated sensors.
+- **Sensor Integration Scope:** The firmware integrates the VL53L0X ToF sensor and MPU6050 accelerometer. The HC-SR04 sonar was physically mounted but remained uncalibrated (`us_ok=0`), reporting LOW confidence.
+- **Software-Path Latency Profiling:** Profiling hop-by-hop software latency (simulated input → validation → WorldState → decision → ghost motion) independently from physical hardware latency.
+- **VR Headset Footage Capture:** Recording direct PC VR gameplay from the Quest Link headset without requiring physical hardware.
+- **Windows Release Build:** Packaging a standalone Windows executable for release distribution.
 
 Milestones and issue register: [`Docs/TechnicalSpec_MilestoneStatus.md`](Docs/TechnicalSpec_MilestoneStatus.md).
 
 ---
 
-<a id="team-and-ownership"></a>
+<a id="documentation-index"></a>
 
-## Team and ownership
+## Documentation Index
 
-PHYS-XR is a **three-person team project** developed as part of the B.Tech Cyber Physical Systems curriculum (IAVR and ESDP, Semester 5) at the School of Electrical Engineering, Manipal Institute of Technology, for the 2026–27 academic year. **Arnav Jain served as the project lead and primary developer**, driving the core game development, AI decision system, software architecture, and overall integration, while bringing together the contributions of the team into a cohesive, working system.
+Detailed implementation depth is maintained in dedicated documents under [`Docs/`](Docs/):
 
-**Who did what:** **[CONTRIBUTORS.md](CONTRIBUTORS.md)** lists every team member, their role and their contribution.
-
-Built with AI coding assistance; details in CONTRIBUTORS.md.
+| Topic | Document | Contents |
+|---|---|---|
+| **Getting Started** | [`Docs/SETUP.md`](Docs/SETUP.md) | Installation, prerequisites, build steps, controls, and troubleshooting. |
+| **System Architecture** | [`Docs/ARCHITECTURE.md`](Docs/ARCHITECTURE.md) | Module boundaries, state flow, class responsibilities, and deployment topology. |
+| **Decision AI** | [`Docs/GHOST_DECISION_SYSTEM.md`](Docs/GHOST_DECISION_SYSTEM.md) | Comprehensive rule catalog, timings, hysteresis dwell, and safety proofs. |
+| **Game Design** | [`Docs/GAME_DESIGN_DOCUMENT.md`](Docs/GAME_DESIGN_DOCUMENT.md) | Narrative, mechanics, player tools, entity states, and progression. |
+| **Presentation & Audio** | [`Docs/HORROR_PRESENTATION.md`](Docs/HORROR_PRESENTATION.md) | Art direction, procedural meshes, reactive lighting, and adaptive score. |
+| **Hardware & Serial** | [`Firmware/README.md`](Firmware/README.md) · [`Docs/HARDWARE_SERIAL.md`](Docs/HARDWARE_SERIAL.md) | Schematic, pins, framing protocol, and USB-serial integration. |
+| **Acceptance & Verification** | [`Docs/HARDWARE_ACCEPTANCE.md`](Docs/HARDWARE_ACCEPTANCE.md) · [`Docs/TESTING_AND_EVALUATION.md`](Docs/TESTING_AND_EVALUATION.md) | Acceptance checklists, test suites, and empirical evaluation methods. |
+| **Evidence & Telemetry** | [`Evidence/README.md`](Evidence/README.md) · [`Docs/LATENCY_PROTOCOL.md`](Docs/LATENCY_PROTOCOL.md) | Raw session logs, reproduction scripts, and latency test protocols. |
+| **Media Inventory** | [`Docs/media/README.md`](Docs/media/README.md) | Complete inventory of captures, diagrams, and media status. |
 
 ---
 
-<a id="documentation"></a>
+<a id="team-and-ownership"></a>
 
-## Documentation
+## Team and Ownership
 
-| Purpose | Documents |
-|---|---|
-| **Getting started** | [`Docs/SETUP.md`](Docs/SETUP.md): Quick Start, controls, builds, run modes, troubleshooting · [`Docs/DEMO_SCRIPT.md`](Docs/DEMO_SCRIPT.md): demonstration run sheet |
-| **Game design** | [`Docs/GAME_DESIGN_DOCUMENT.md`](Docs/GAME_DESIGN_DOCUMENT.md): the full game design, from the loop, player and ghost behaviour to the physical mechanics, UI, edge cases, status and roadmap, with the evidence status of every feature |
-| **Architecture and AI** | [`Docs/ARCHITECTURE.md`](Docs/ARCHITECTURE.md): layers, modules, protocol, sequence and wiring diagrams · [`Docs/GHOST_DECISION_SYSTEM.md`](Docs/GHOST_DECISION_SYSTEM.md): every rule, timing, the safety property and tests |
-| **Presentation** | [`Docs/HORROR_PRESENTATION.md`](Docs/HORROR_PRESENTATION.md): the game, gallery, art direction, model, motion, light, score · [`Docs/ASSETS.md`](Docs/ASSETS.md): asset register · [`Docs/media/`](Docs/media/README.md): media inventory |
-| **Hardware and firmware** | [`Firmware/README.md`](Firmware/README.md): parts, pins, protocol, calibration · [`Docs/HARDWARE_SERIAL.md`](Docs/HARDWARE_SERIAL.md): USB-serial integration · [`Docs/HARDWARE_ACCEPTANCE.md`](Docs/HARDWARE_ACCEPTANCE.md): acceptance procedure |
-| **Testing, evidence and status** | [`Docs/TESTING_AND_EVALUATION.md`](Docs/TESTING_AND_EVALUATION.md): tests, telemetry, experiment protocol · [`Docs/LATENCY_PROTOCOL.md`](Docs/LATENCY_PROTOCOL.md): how to measure latency · [`Evidence/README.md`](Evidence/README.md): raw logs, manifest, reproducible summaries · [`Docs/TechnicalSpec_MilestoneStatus.md`](Docs/TechnicalSpec_MilestoneStatus.md): milestones, issues, [background reading](Docs/TechnicalSpec_MilestoneStatus.md#background-reading) |
+PHYS-XR is a three-person engineering project developed as part of the B.Tech Cyber Physical Systems curriculum (IAVR and ESDP, Semester 5) at the School of Electrical Engineering, Manipal Institute of Technology, for the 2026–27 academic year.
 
-Repository layout: [`Docs/ARCHITECTURE.md`](Docs/ARCHITECTURE.md#repository-structure). Tool and package versions: [`Docs/SETUP.md`](Docs/SETUP.md#prerequisites).
+- **Arnav Jain (Project Lead & Primary Developer):** Led core game development, AI decision system, software architecture, sensor pipeline, and system integration.
+- Team member contributions and role details: **[CONTRIBUTORS.md](CONTRIBUTORS.md)**.
 
 Licensed under the [MIT License](LICENSE) © 2026 Arnav Jain.

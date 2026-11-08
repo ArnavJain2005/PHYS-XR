@@ -16,12 +16,18 @@ Six in-game frames from the game's scripted `-physxr-capture` tour on 22 Oct 202
 | `hero_hollow_profile_2026-10-22.jpg` | 48,209 B | 1280×720 | The Hollow in a doorway, lantern light | README hero |
 | `first_sighting_corridor_2026-10-22.jpg` | 32,495 B | 960×540 | First sighting in the corridor (rule E5) | README, gallery |
 | `encounter_dining_hall_2026-10-22.jpg` | 29,232 B | 960×540 | The encounter in the dining hall | README, gallery |
-| `entry_hall_moonlight_2026-10-22.jpg` | 30,384 B | 960×540 | Entry hall, moonlight and emergency lamp | README, gallery |
+| `entry_hall_moonlight_2026-10-22.jpg` | 30,384 B | 960×540 | Entry hall, moonlight and emergency lamp | Gallery |
 | `power_restored_utility_2026-10-22.jpg` | 46,344 B | 960×540 | Utility room after the power is restored (rule R2) | Gallery |
 | `ending_window_silhouette_2026-10-22.jpg` | 22,584 B | 960×540 | The ending: a figure in the window | Gallery |
 | `menu_sensor_panel_2026-10-24.jpg` | 76,616 B | 960×540 | The menu's sensor panel with no station plugged in (menu capture mode, 24 Oct 2026) | Gallery |
 
 "Gallery" means [`HORROR_PRESENTATION.md`](../HORROR_PRESENTATION.md#the-game-and-gallery).
+
+### Photographs and live demonstration
+
+| File | Size | Dimensions | Shows | Used by |
+|---|---|---|---|---|
+| `physxr-vr-demonstration.jpg` | 181,077 B | 768×1024 | Live PC VR playtest session on Meta Quest 3 with Touch controllers (project lead Arnav Jain in front of project poster at Manipal Institute of Technology) | Main [`README.md`](../../README.md) visual showcase |
 
 ### Diagrams, title animation, and other files
 
